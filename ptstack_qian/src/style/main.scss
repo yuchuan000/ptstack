@@ -1,0 +1,32 @@
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+
+  /* 隐藏当前容器的滚动条 */
+  overflow: auto; /* 内容超出时可滚动，只是隐藏滚动条 */
+  /* 如果想彻底禁止滚动，就把auto改成hidden */
+  /* overflow: hidden; */
+
+  /* 适配webkit内核浏览器 */
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+  }
+
+  /* 适配Firefox */
+  scrollbar-width: none;
+}
+
+/* Element Plus 主题色配置 - 飞书蓝色 */
+:root {
+  --el-color-primary: #165dff;
+  --el-color-primary-light-3: #4080ff;
+  --el-color-primary-light-5: #6a9eff;
+  --el-color-primary-light-7: #94bfff;
+  --el-color-primary-light-8: #a9ccff;
+  --el-color-primary-light-9: #d7e8ff;
+  --el-color-primary-dark-2: #0e42d2;
+}
