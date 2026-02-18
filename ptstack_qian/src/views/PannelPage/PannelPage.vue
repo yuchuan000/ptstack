@@ -1,75 +1,89 @@
 <script setup>
-import { ref, onMounted, onUnmounted, markRaw } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useUserStore } from '@/stores/user'
-import { House, Setting, SwitchButton, Menu, CaretLeft, CaretRight, Document, DataLine } from '@element-plus/icons-vue'
+import { ref, onMounted, onUnmounted, markRaw } from 'vue' // 导入Vue响应式API和生命周期钩子
+import { useRouter, useRoute } from 'vue-router' // 导入Vue Router
+import { useUserStore } from '@/stores/user' // 导入用户状态管理
+import { ElMessageBox, ElMessage } from 'element-plus' // 导入Element Plus的消息提示组件
+import { House, Setting, Menu, CaretLeft, CaretRight, Tickets, Plus, Collection, Switch } from '@element-plus/icons-vue' // 导入Element Plus图标
+import { getFullUrl } from '@/utils/url' // 导入URL处理工具函数
 
-const router = useRouter()
-const route = useRoute()
-const userStore = useUserStore()
+const router = useRouter() // 获取路由实例
+const route = useRoute() // 获取当前路由信息
+const userStore = useUserStore() // 获取用户状态仓库
 
-const isMobile = ref(window.innerWidth < 768)
-const isTablet = ref(window.innerWidth >= 768 && window.innerWidth < 992)
-const drawerVisible = ref(false)
-const isCollapse = ref(false)
+const isMobile = ref(window.innerWidth < 768) // 判断是否为移动端
+const isTablet = ref(window.innerWidth >= 768 && window.innerWidth < 992) // 判断是否为平板端
+const drawerVisible = ref(false) // 移动端抽屉是否可见
+const isCollapse = ref(false) // 侧边栏是否折叠
 
+// 窗口大小改变时的处理函数
 const handleResize = () => {
-  isMobile.value = window.innerWidth < 768
-  isTablet.value = window.innerWidth >= 768 && window.innerWidth < 992
+  isMobile.value = window.innerWidth < 768 // 更新移动端判断
+  isTablet.value = window.innerWidth >= 768 && window.innerWidth < 992 // 更新平板端判断
 }
 
+// 组件挂载时添加窗口大小监听
 onMounted(() => {
-  window.addEventListener('resize', handleResize)
+  window.addEventListener('resize', handleResize) // 添加resize事件监听
 })
 
+// 组件卸载时移除窗口大小监听
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
+  window.removeEventListener('resize', handleResize) // 移除resize事件监听
 })
 
+// 菜单列表数据
 const menuList = ref([
   {
-    id: 'dashboard',
-    name: '首页',
-    icon: markRaw(House),
-    path: '/',
+    id: 'dashboard', // 菜单项ID
+    name: '首页', // 菜单项名称
+    icon: markRaw(House), // 菜单项图标，使用markRaw避免响应式
+    path: '/', // 菜单项路径
   },
   {
-    id: 'projects',
-    name: '项目管理',
-    icon: markRaw(Document),
-    path: '/projects',
+    id: 'articles', // 菜单项ID
+    name: '文章列表', // 菜单项名称
+    icon: markRaw(Tickets), // 菜单项图标
+    path: '/articles', // 菜单项路径
   },
   {
-    id: 'analytics',
-    name: '数据统计',
-    icon: markRaw(DataLine),
-    path: '/analytics',
+    id: 'create-article', // 菜单项ID
+    name: '写文章', // 菜单项名称
+    icon: markRaw(Plus), // 菜单项图标
+    path: '/article/create', // 菜单项路径
   },
   {
-    id: 'settings',
-    name: '设置',
-    icon: markRaw(Setting),
-    path: '/settings',
+    id: 'categories', // 菜单项ID
+    name: '分类管理', // 菜单项名称
+    icon: markRaw(Collection), // 菜单项图标
+    path: '/categories', // 菜单项路径
+  },
+  {
+    id: 'settings', // 菜单项ID
+    name: '设置', // 菜单项名称
+    icon: markRaw(Setting), // 菜单项图标
+    path: '/settings', // 菜单项路径
   },
 ])
 
+// 处理菜单点击
 const handleMenuClick = (path) => {
-  router.push(path)
+  router.push(path) // 跳转到对应路径
   if (isMobile.value) {
-    drawerVisible.value = false
+    drawerVisible.value = false // 移动端关闭抽屉
   }
 }
 
+// 处理退出登录
 const handleLogout = () => {
-  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
+  ElMessageBox.confirm('确定要退出登录吗？', '提示', { // 弹出确认对话框
+    confirmButtonText: '确定', // 确认按钮文本
+    cancelButtonText: '取消', // 取消按钮文本
+    type: 'warning', // 对话框类型
   }).then(() => {
-    userStore.logout()
-    ElMessage.success('退出登录成功')
-    router.push('/login')
-  }).catch(() => {})
+    userStore.logout() // 调用登出方法
+    ElMessage.success('退出登录成功') // 显示成功提示
+    router.push('/login') // 跳转到登录页
+  }).catch(() => {}) // 取消时不做任何操作
 }
 </script>
 
@@ -122,10 +136,11 @@ const handleLogout = () => {
           <div class="user-section">
             <div class="user-info">
               <div class="avatar">
-                {{ userStore.userInfo?.username?.charAt(0).toUpperCase() || 'U' }}
+                <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="avatar-img">
+                <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
               </div>
               <div v-if="!isCollapse" class="user-details">
-                <div class="username">{{ userStore.userInfo?.username || '用户' }}</div>
+                <div class="username">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}</div>
                 <div class="email">{{ userStore.userInfo?.email || 'user@example.com' }}</div>
               </div>
             </div>
@@ -137,7 +152,7 @@ const handleLogout = () => {
                 class="logout-btn"
                 plain
               >
-                <el-icon><SwitchButton /></el-icon>
+                <el-icon><Switch /></el-icon>
                 退出登录
               </el-button>
             </div>
@@ -150,7 +165,7 @@ const handleLogout = () => {
               class="logout-icon-btn"
               plain
             >
-              <el-icon><SwitchButton /></el-icon>
+              <el-icon><Switch /></el-icon>
             </el-button>
           </div>
         </div>
@@ -208,10 +223,11 @@ const handleLogout = () => {
         <div class="user-section">
           <div class="user-info">
             <div class="avatar">
-              {{ userStore.userInfo?.username?.charAt(0).toUpperCase() || 'U' }}
+              <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="avatar-img">
+              <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
             </div>
             <div class="user-details">
-              <div class="username">{{ userStore.userInfo?.username || '用户' }}</div>
+              <div class="username">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}</div>
               <div class="email">{{ userStore.userInfo?.email || 'user@example.com' }}</div>
             </div>
           </div>
@@ -222,7 +238,7 @@ const handleLogout = () => {
             class="logout-btn"
             plain
           >
-            <el-icon><SwitchButton /></el-icon>
+            <el-icon><Switch /></el-icon>
             退出登录
           </el-button>
         </div>
@@ -405,6 +421,13 @@ const handleLogout = () => {
   color: white;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-details {

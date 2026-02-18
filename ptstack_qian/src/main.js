@@ -6,6 +6,7 @@ import router from './router'
 
 // 样式
 import '@/style/main.scss'
+import 'element-plus/dist/index.css'
 
 const app = createApp(App)
 

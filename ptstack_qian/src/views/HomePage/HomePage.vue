@@ -1,46 +1,83 @@
 <script setup>
 import { useUserStore } from '@/stores/user'
-import { getProfile } from '@/api/auth'
 import { ref, onMounted } from 'vue'
-import { 
-  Trophy, 
-  Document, 
-  User, 
+import { useRouter } from 'vue-router'
+import {
+  Document,
+  User,
   Calendar,
   Plus,
   ArrowRight,
   Clock,
   Star,
-  Setting
+  ChatDotRound,
+  View,
+  UserFilled,
+  Bell,
+  Trophy
 } from '@element-plus/icons-vue'
+import { getArticles } from '@/api/articles'
+import { getFullUrl } from '@/utils/url'
 
+const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
-const profileData = ref(null)
+const recentArticles = ref([])
+const hotArticles = ref([])
 const currentTime = ref(new Date())
+
+const stats = ref({
+  articles: 0,
+  followers: 0,
+  following: 0,
+  views: 0
+})
+
+const announcement = ref({
+  show: true,
+  title: '系统公告',
+  content: '欢迎来到PTStack！这是一个分享技术文章的平台，欢迎大家发布优质内容！'
+})
 
 onMounted(() => {
   const timer = setInterval(() => {
     currentTime.value = new Date()
   }, 60000)
+  fetchRecentArticles()
+  fetchHotArticles()
+  fetchUserStats()
   return () => clearInterval(timer)
 })
 
-const handleGetProfile = async () => {
-  if (!userStore.accessToken) {
-    ElMessage.warning('请先登录')
-    return
-  }
-
-  loading.value = true
+const fetchRecentArticles = async () => {
   try {
-    const data = await getProfile()
-    profileData.value = data
-    ElMessage.success('获取用户信息成功')
-  } catch {
-    profileData.value = null
-  } finally {
-    loading.value = false
+    const res = await getArticles({ page: 1, pageSize: 6, sortBy: 'created_at', order: 'desc' })
+    recentArticles.value = res.articles || []
+  } catch (error) {
+    console.error('获取文章失败:', error)
+  }
+}
+
+const fetchHotArticles = async () => {
+  try {
+    const res = await getArticles({ page: 1, pageSize: 5, sortBy: 'view_count', order: 'desc' })
+    hotArticles.value = res.articles || []
+  } catch (error) {
+    console.error('获取热门文章失败:', error)
+  }
+}
+
+const fetchUserStats = async () => {
+  try {
+    const userInfo = userStore.userInfo || {}
+    stats.value = {
+      articles: userInfo.article_count || 0,
+      followers: userInfo.follower_count || 0,
+      following: userInfo.following_count || 0,
+      views: userInfo.total_views || 0
+    }
+  } catch (error) {
+    console.error('获取统计失败:', error)
   }
 }
 
@@ -60,194 +97,255 @@ const formatDate = () => {
     weekday: 'long'
   })
 }
+
+const goToCreate = () => {
+  router.push('/article/create')
+}
+
+const goToArticles = () => {
+  router.push('/articles')
+}
+
+const goToArticleDetail = (id) => {
+  router.push(`/article/${id}`)
+}
+
+const goToProfile = () => {
+  router.push(`/profile/${userStore.userInfo?.id}`)
+}
+
+const closeAnnouncement = () => {
+  announcement.value.show = false
+}
 </script>
 
 <template>
   <div class="home-page">
-    <div class="hero-section">
-      <div class="hero-content">
-        <div class="hero-left">
-          <div class="greeting-badge">
-            <el-icon><Clock /></el-icon>
-            <span>{{ formatDate() }}</span>
+    <div v-if="announcement.show" class="announcement-card">
+      <div class="announcement-icon">
+        <el-icon><Bell /></el-icon>
+      </div>
+      <div class="announcement-content">
+        <div class="announcement-title">{{ announcement.title }}</div>
+        <div class="announcement-text">{{ announcement.content }}</div>
+      </div>
+      <el-button text class="close-btn" @click="closeAnnouncement">
+        <el-icon><ArrowRight style="transform: rotate(45deg)" /></el-icon>
+      </el-button>
+    </div>
+
+    <div class="header-section">
+      <div class="header-left">
+        <div class="user-greeting">
+          <div class="user-avatar" @click="goToProfile">
+            <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="user-avatar-img">
+            <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
           </div>
-          <h1 class="hero-title">
-            {{ getGreeting() }}，
-            <span class="highlight">{{ userStore.userInfo?.username || '开发者' }}</span>
-            👋
-          </h1>
-          <p class="hero-subtitle">开始您的高效开发之旅，探索无限可能</p>
-          <div class="hero-actions">
-            <el-button type="primary" size="large" class="action-btn primary">
-              <el-icon><Plus /></el-icon>
-              快速开始
-            </el-button>
-            <el-button size="large" class="action-btn secondary">
-              了解更多
-              <el-icon><ArrowRight /></el-icon>
-            </el-button>
-          </div>
-        </div>
-        <div class="hero-right">
-          <div class="hero-illustration">
-            <div class="floating-card card-1">
-              <el-icon :size="28"><Document /></el-icon>
-              <span>项目管理</span>
+          <div class="greeting-content">
+            <div class="greeting-badge">
+              <el-icon><Clock /></el-icon>
+              <span>{{ formatDate() }}</span>
             </div>
-            <div class="floating-card card-2">
-              <el-icon :size="28"><Calendar /></el-icon>
-              <span>日程安排</span>
-            </div>
-            <div class="floating-card card-3">
-              <el-icon :size="28"><Trophy /></el-icon>
-              <span>成就达成</span>
-            </div>
+            <h1 class="page-title">
+              {{ getGreeting() }}，
+              <span class="highlight">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '开发者' }}</span>
+              👋
+            </h1>
+            <p class="page-subtitle">欢迎回来，继续探索和创作</p>
           </div>
         </div>
+      </div>
+      <div class="header-right">
+        <el-button type="primary" size="large" @click="goToCreate" class="create-btn">
+          <el-icon><Plus /></el-icon>
+          写文章
+        </el-button>
       </div>
     </div>
 
     <div class="stats-section">
-      <div class="stats-header">
-        <h2 class="section-title">数据概览</h2>
-        <el-button text class="view-all-btn">
-          查看全部
-          <el-icon><ArrowRight /></el-icon>
-        </el-button>
+      <div class="stat-card" @click="goToProfile">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);">
+          <el-icon><Document /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.articles }}</div>
+          <div class="stat-label">发布文章</div>
+        </div>
       </div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon-wrapper">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);">
-              <el-icon :size="28"><Document /></el-icon>
-            </div>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">0</div>
-            <div class="stat-label">项目数量</div>
-            <div class="stat-trend up">
-              <el-icon><ArrowRight /></el-icon>
-              <span>今日 +0</span>
-            </div>
-          </div>
-        </div>
 
-        <div class="stat-card">
-          <div class="stat-icon-wrapper">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #00b42a 0%, #23c343 100%);">
-              <el-icon :size="28"><User /></el-icon>
-            </div>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">1</div>
-            <div class="stat-label">活跃用户</div>
-            <div class="stat-trend up">
-              <el-icon><ArrowRight /></el-icon>
-              <span>在线</span>
-            </div>
-          </div>
+      <div class="stat-card" @click="goToProfile">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #00b42a 0%, #23c343 100%);">
+          <el-icon><UserFilled /></el-icon>
         </div>
-
-        <div class="stat-card">
-          <div class="stat-icon-wrapper">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);">
-              <el-icon :size="28"><Calendar /></el-icon>
-            </div>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">0</div>
-            <div class="stat-label">今日任务</div>
-            <div class="stat-trend">
-              <span>暂无安排</span>
-            </div>
-          </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.followers }}</div>
+          <div class="stat-label">订阅者</div>
         </div>
+      </div>
 
-        <div class="stat-card">
-          <div class="stat-icon-wrapper">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #f53f3f 0%, #f76560 100%);">
-              <el-icon :size="28"><Star /></el-icon>
-            </div>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">0</div>
-            <div class="stat-label">收藏项目</div>
-            <div class="stat-trend">
-              <span>等待收藏</span>
-            </div>
-          </div>
+      <div class="stat-card" @click="goToProfile">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);">
+          <el-icon><User /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.following }}</div>
+          <div class="stat-label">订阅</div>
+        </div>
+      </div>
+
+      <div class="stat-card" @click="goToProfile">
+        <div class="stat-icon" style="background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);">
+          <el-icon><View /></el-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.views }}</div>
+          <div class="stat-label">总阅读</div>
         </div>
       </div>
     </div>
 
-    <div class="content-grid">
-      <div class="panel quick-start-panel">
-        <div class="panel-header">
-          <h3 class="panel-title">快速开始</h3>
-        </div>
-        <div class="quick-actions">
-          <div class="quick-action-item">
-            <div class="action-icon" style="background: #f2f3f5; color: #165dff;">
-              <el-icon :size="24"><Plus /></el-icon>
+    <div class="main-content">
+      <div class="content-left">
+        <div class="content-card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="title-icon" style="background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);">
+                <el-icon><Document /></el-icon>
+              </div>
+              <div class="title-text">
+                <div class="title-main">最新文章</div>
+                <div class="title-sub">探索社区最新发布的内容</div>
+              </div>
             </div>
-            <div class="action-info">
-              <div class="action-name">创建项目</div>
-              <div class="action-desc">开始一个新项目</div>
-            </div>
-            <el-icon class="action-arrow"><ArrowRight /></el-icon>
+            <el-button text @click="goToArticles" class="view-all-btn">
+              查看全部
+              <el-icon><ArrowRight /></el-icon>
+            </el-button>
           </div>
-          <div class="quick-action-item">
-            <div class="action-icon" style="background: #f2f3f5; color: #00b42a;">
-              <el-icon :size="24"><Setting /></el-icon>
+
+          <div class="articles-list" v-loading="loading">
+            <div v-if="recentArticles.length === 0" class="empty-state">
+              <div class="empty-icon">
+                <el-icon :size="48"><Document /></el-icon>
+              </div>
+              <div class="empty-text">暂无文章</div>
+              <div class="empty-desc">快来发布你的第一篇文章吧</div>
             </div>
-            <div class="action-info">
-              <div class="action-name">系统设置</div>
-              <div class="action-desc">配置您的偏好</div>
+            <div v-else>
+              <div
+                v-for="article in recentArticles"
+                :key="article.id"
+                class="article-item"
+                @click="goToArticleDetail(article.id)"
+              >
+                <div class="article-content">
+                  <div class="article-title">{{ article.title }}</div>
+                  <div v-if="article.summary" class="article-summary">{{ article.summary }}</div>
+                  <div class="article-meta">
+                    <span class="meta-item">
+                      <el-icon><Calendar /></el-icon>
+                      {{ new Date(article.created_at).toLocaleDateString('zh-CN') }}
+                    </span>
+                    <span class="meta-item" v-if="article.view_count !== undefined">
+                      <el-icon><View /></el-icon>
+                      {{ article.view_count || 0 }}
+                    </span>
+                    <span class="meta-item" v-if="article.like_count !== undefined">
+                      <el-icon><Star /></el-icon>
+                      {{ article.like_count || 0 }}
+                    </span>
+                    <span class="meta-item" v-if="article.comment_count !== undefined">
+                      <el-icon><ChatDotRound /></el-icon>
+                      {{ article.comment_count || 0 }}
+                    </span>
+                  </div>
+                </div>
+                <el-icon class="article-arrow"><ArrowRight /></el-icon>
+              </div>
             </div>
-            <el-icon class="action-arrow"><ArrowRight /></el-icon>
-          </div>
-          <div class="quick-action-item" @click="handleGetProfile">
-            <div class="action-icon" style="background: #f2f3f5; color: #ff7d00;">
-              <el-icon :size="24"><User /></el-icon>
-            </div>
-            <div class="action-info">
-              <div class="action-name">用户信息</div>
-              <div class="action-desc">查看您的资料</div>
-            </div>
-            <el-icon class="action-arrow"><ArrowRight /></el-icon>
           </div>
         </div>
       </div>
 
-      <div class="panel activity-panel">
-        <div class="panel-header">
-          <h3 class="panel-title">最近活动</h3>
-          <el-button text class="view-all-btn">
-            全部
-            <el-icon><ArrowRight /></el-icon>
-          </el-button>
-        </div>
-        <div class="activity-list">
-          <div class="empty-state">
-            <div class="empty-icon">
-              <el-icon :size="48"><Document /></el-icon>
+      <div class="content-right">
+        <div class="content-card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="title-icon" style="background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);">
+                <el-icon><Trophy /></el-icon>
+              </div>
+              <div class="title-text">
+                <div class="title-main">热门文章</div>
+                <div class="title-sub">阅读量最高的文章</div>
+              </div>
             </div>
-            <div class="empty-text">暂无活动记录</div>
-            <div class="empty-desc">开始使用 PTStack，记录您的每一步</div>
+          </div>
+
+          <div class="hot-articles-list">
+            <div v-if="hotArticles.length === 0" class="empty-state-small">
+              <div class="empty-text-small">暂无热门文章</div>
+            </div>
+            <div v-else>
+              <div
+                v-for="(article, index) in hotArticles"
+                :key="article.id"
+                class="hot-article-item"
+                @click="goToArticleDetail(article.id)"
+              >
+                <div class="hot-rank" :class="'rank-' + (index + 1)">
+                  {{ index + 1 }}
+                </div>
+                <div class="hot-article-content">
+                  <div class="hot-article-title">{{ article.title }}</div>
+                  <div class="hot-article-meta">
+                    <span class="meta-item">
+                      <el-icon><View /></el-icon>
+                      {{ article.view_count || 0 }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div v-if="profileData" class="profile-modal">
-      <div class="profile-content">
-        <div class="profile-header">
-          <h3>用户信息</h3>
-          <el-button text @click="profileData = null" class="close-btn">
-            <el-icon><ArrowRight /></el-icon>
-          </el-button>
+        <div class="content-card">
+          <div class="card-header">
+            <div class="card-title">
+              <div class="title-icon" style="background: linear-gradient(135deg, #00b42a 0%, #23c343 100%);">
+                <el-icon><Plus /></el-icon>
+              </div>
+              <div class="title-text">
+                <div class="title-main">快捷操作</div>
+                <div class="title-sub">快速访问常用功能</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="quick-actions">
+            <div class="action-item" @click="goToCreate">
+              <div class="action-icon" style="background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);">
+                <el-icon><Plus /></el-icon>
+              </div>
+              <div class="action-title">写文章</div>
+            </div>
+
+            <div class="action-item" @click="goToArticles">
+              <div class="action-icon" style="background: linear-gradient(135deg, #00b42a 0%, #23c343 100%);">
+                <el-icon><Document /></el-icon>
+              </div>
+              <div class="action-title">浏览文章</div>
+            </div>
+
+            <div class="action-item" @click="goToProfile">
+              <div class="action-icon" style="background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="action-title">我的主页</div>
+            </div>
+          </div>
         </div>
-        <pre>{{ JSON.stringify(profileData, null, 2) }}</pre>
       </div>
     </div>
   </div>
@@ -257,41 +355,116 @@ const formatDate = () => {
 .home-page {
   display: flex;
   flex-direction: column;
-  gap: 40px;
-  padding: 8px 0 40px 0;
+  gap: 20px;
 }
 
-.hero-section {
-  background: linear-gradient(135deg, #f7f8fa 0%, #ffffff 100%);
-  border-radius: 20px;
-  padding: 48px 64px;
-  overflow: hidden;
-  position: relative;
+.announcement-card {
+  background: linear-gradient(135deg, #fff7e6 0%, #fff1db 100%);
+  border: 1px solid #ffd591;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(22, 93, 255, 0.08) 0%, transparent 70%);
-    border-radius: 50%;
+.announcement-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+
+  .el-icon {
+    font-size: 20px;
   }
 }
 
-.hero-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 60px;
-  position: relative;
-  z-index: 1;
+.announcement-content {
+  flex: 1;
+  min-width: 0;
 }
 
-.hero-left {
+.announcement-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ff7d00;
+  margin-bottom: 2px;
+}
+
+.announcement-text {
+  font-size: 13px;
+  color: #86909c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.close-btn {
+  padding: 4px;
+  color: #c9cdd4;
+
+  &:hover {
+    color: #86909c;
+  }
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.header-left {
   flex: 1;
-  max-width: 600px;
+}
+
+.user-greeting {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.user-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
+  }
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.greeting-content {
+  flex: 1;
 }
 
 .greeting-badge {
@@ -299,24 +472,23 @@ const formatDate = () => {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: white;
+  background: #f7f8fa;
   border-radius: 100px;
   font-size: 14px;
   color: #4e5969;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 
   .el-icon {
     color: #165dff;
   }
 }
 
-.hero-title {
-  font-size: 44px;
+.page-title {
+  font-size: 32px;
   font-weight: 700;
   color: #1d2129;
   line-height: 1.2;
-  margin-bottom: 16px;
+  margin: 0 0 8px 0;
 
   .highlight {
     background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
@@ -326,296 +498,243 @@ const formatDate = () => {
   }
 }
 
-.hero-subtitle {
-  font-size: 18px;
-  color: #86909c;
-  line-height: 1.6;
-  margin-bottom: 32px;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 16px;
-}
-
-.action-btn {
-  height: 48px;
-  padding: 0 24px;
+.page-subtitle {
   font-size: 15px;
-  font-weight: 500;
-  border-radius: 10px;
-  display: inline-flex;
+  color: #86909c;
+  margin: 0;
+}
+
+.create-btn {
+  border-radius: 12px;
+  height: 48px;
+  padding: 0 28px;
+  display: flex;
   align-items: center;
   gap: 8px;
-
-  &.primary {
-    background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(22, 93, 255, 0.4);
-    }
-  }
-
-  &.secondary {
-    border-color: #e5e6eb;
-    color: #1d2129;
-
-    &:hover {
-      border-color: #165dff;
-      color: #165dff;
-    }
-  }
-}
-
-.hero-right {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.hero-illustration {
-  position: relative;
-  width: 360px;
-  height: 300px;
-}
-
-.floating-card {
-  position: absolute;
-  background: white;
-  padding: 20px 24px;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 15px;
   font-weight: 500;
-  color: #1d2129;
-  border: 1px solid #f2f3f5;
-  animation: float 3s ease-in-out infinite;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
 
-  .el-icon {
-    color: #165dff;
-  }
-
-  &.card-1 {
-    top: 20px;
-    left: 0;
-    animation-delay: 0s;
-  }
-
-  &.card-2 {
-    top: 120px;
-    right: 0;
-    animation-delay: 0.5s;
-  }
-
-  &.card-3 {
-    bottom: 20px;
-    left: 40px;
-    animation-delay: 1s;
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-12px);
+  &:hover {
+    background: linear-gradient(135deg, #4080ff 0%, #165dff 100%);
+    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
   }
 }
 
 .stats-section {
-  .stats-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-  }
-}
-
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1d2129;
-}
-
-.view-all-btn {
-  color: #86909c;
-  font-size: 14px;
-  padding: 0;
-  height: auto;
-
-  &:hover {
-    color: #165dff;
-  }
-}
-
-.stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: 16px;
 }
 
 .stat-card {
   background: white;
   border-radius: 16px;
-  padding: 28px;
+  padding: 20px;
   display: flex;
   align-items: center;
-  gap: 20px;
-  border: 1px solid #f2f3f5;
-  transition: all 0.3s ease;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   cursor: pointer;
+  transition: all 0.2s ease;
 
   &:hover {
-    border-color: #165dff;
-    box-shadow: 0 8px 24px rgba(22, 93, 255, 0.08);
     transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   }
 }
 
-.stat-icon-wrapper {
-  flex-shrink: 0;
-}
-
 .stat-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  flex-shrink: 0;
+
+  .el-icon {
+    font-size: 24px;
+  }
 }
 
-.stat-info {
-  flex: 1;
+.stat-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .stat-value {
-  font-size: 36px;
+  font-size: 26px;
   font-weight: 700;
   color: #1d2129;
   line-height: 1;
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #86909c;
 }
 
-.stat-trend {
-  font-size: 13px;
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+}
+
+.content-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.content-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.content-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 0;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+
+  .el-icon {
+    font-size: 18px;
+  }
+}
+
+.title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title-main {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d2129;
+}
+
+.title-sub {
+  font-size: 12px;
   color: #86909c;
+}
+
+.view-all-btn {
+  color: #4e5969;
+  font-size: 14px;
+  padding: 0;
+  height: auto;
   display: flex;
   align-items: center;
   gap: 4px;
 
-  &.up {
-    color: #00b42a;
-  }
-
-  .el-icon {
-    font-size: 12px;
-  }
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-.panel {
-  background: white;
-  border-radius: 16px;
-  padding: 28px;
-  border: 1px solid #f2f3f5;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.panel-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1d2129;
-}
-
-.quick-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.quick-action-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 12px;
-  background: #f7f8fa;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
   &:hover {
-    background: #f2f3f5;
-    transform: translateX(4px);
-  }
-}
-
-.action-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.action-info {
-  flex: 1;
-}
-
-.action-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1d2129;
-  margin-bottom: 4px;
-}
-
-.action-desc {
-  font-size: 13px;
-  color: #86909c;
-}
-
-.action-arrow {
-  color: #c9cdd4;
-  font-size: 16px;
-  transition: transform 0.2s ease;
-
-  .quick-action-item:hover & {
-    transform: translateX(4px);
     color: #165dff;
   }
 }
 
-.activity-list {
-  min-height: 200px;
+.articles-list {
+  padding: 16px 24px 24px;
+}
+
+.article-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f7f8fa;
+
+    .article-arrow {
+      color: #165dff;
+      transform: translateX(4px);
+    }
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #f7f8fa;
+  }
+}
+
+.article-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.article-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d2129;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-summary {
+  font-size: 13px;
+  color: #86909c;
+  margin-bottom: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #86909c;
+
+  .el-icon {
+    font-size: 14px;
+  }
+}
+
+.article-arrow {
+  color: #c9cdd4;
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 
 .empty-state {
@@ -623,7 +742,7 @@ const formatDate = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: 48px 20px;
   text-align: center;
 }
 
@@ -644,100 +763,226 @@ const formatDate = () => {
   color: #86909c;
 }
 
-.profile-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+.hot-articles-list {
+  padding: 16px 24px 24px;
+}
+
+.hot-article-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    .hot-article-title {
+      color: #165dff;
+    }
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #f7f8fa;
+  }
+}
+
+.hot-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #f7f8fa;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  font-size: 12px;
+  font-weight: 600;
+  color: #86909c;
+  flex-shrink: 0;
+
+  &.rank-1 {
+    background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+    color: white;
+  }
+
+  &.rank-2 {
+    background: linear-gradient(135deg, #ff9a2e 0%, #ffb84d 100%);
+    color: white;
+  }
+
+  &.rank-3 {
+    background: linear-gradient(135deg, #ffb84d 0%, #ffd591 100%);
+    color: white;
+  }
 }
 
-.profile-content {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
+.hot-article-content {
+  flex: 1;
+  min-width: 0;
 }
 
-.profile-header {
+.hot-article-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2129;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.hot-article-meta {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+}
 
-  h3 {
-    font-size: 20px;
-    font-weight: 600;
-    color: #1d2129;
-  }
+.empty-state-small {
+  padding: 32px 20px;
+  text-align: center;
+}
 
-  .close-btn {
-    padding: 8px;
-    color: #86909c;
+.empty-text-small {
+  font-size: 14px;
+  color: #86909c;
+}
 
-    &:hover {
-      color: #1d2129;
-    }
+.quick-actions {
+  padding: 16px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f7f8fa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e8f3ff;
+    transform: translateX(4px);
   }
 }
 
-pre {
-  background: #1e293b;
-  color: #e2e8f0;
-  padding: 20px;
+.action-icon {
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
-  overflow-x: auto;
-  font-size: 13px;
-  line-height: 1.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+
+  .el-icon {
+    font-size: 20px;
+  }
+}
+
+.action-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2129;
 }
 
 @media (max-width: 1200px) {
-  .stats-grid {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+
+  .content-right {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 1024px) {
-  .hero-section {
-    padding: 32px;
+@media (max-width: 992px) {
+  .stats-section {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .hero-content {
-    flex-direction: column;
-  }
-
-  .hero-illustration {
-    display: none;
-  }
-
-  .content-grid {
+  .content-right {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 640px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 768px) {
+  .home-page {
+    gap: 16px;
   }
 
-  .hero-title {
-    font-size: 32px;
-  }
-
-  .hero-actions {
+  .header-section {
     flex-direction: column;
+    align-items: flex-start;
+    padding: 24px;
   }
 
-  .action-btn {
+  .user-greeting {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .user-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .create-btn {
     width: 100%;
+    justify-content: center;
+  }
+
+  .stats-section {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .main-content {
+    gap: 16px;
+  }
+
+  .card-header {
+    padding: 16px 20px 0;
+  }
+
+  .articles-list {
+    padding: 12px 20px 20px;
+  }
+
+  .article-summary {
+    display: none;
+  }
+
+  .hot-articles-list {
+    padding: 12px 20px 20px;
+  }
+
+  .quick-actions {
+    padding: 12px 20px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-section {
+    grid-template-columns: 1fr;
   }
 }
 </style>

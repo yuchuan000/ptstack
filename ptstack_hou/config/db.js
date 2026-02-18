@@ -13,6 +13,14 @@ const pool = mysql.createPool({
   // 连接池优化配置
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
+  // 增加连接超时和重连配置
+  connectTimeout: 10000,
+  acquireTimeout: 10000,
+  timeout: 60000,
+  // 连接重试配置
+  reconnect: true,
+  // 增加最大包大小限制（64MB）
+  maxAllowedPacket: 67108864,
 });
 
 // 测试数据库连接
