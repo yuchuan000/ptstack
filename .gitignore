@@ -51,3 +51,6 @@ coverage/
 # Personal notes
 进度备忘.txt
 *.txt
+
+# Uploads
+ptstack_hou/public/uploads/

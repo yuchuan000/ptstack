@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "nodemon ./bin/www",
-    "format": "prettier --write \"**/*.{js,json,md}\""
+    "format": "prettier --write \"**/*.{js,json,md}\"",
+    "setup-db": "node scripts/setup-database.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

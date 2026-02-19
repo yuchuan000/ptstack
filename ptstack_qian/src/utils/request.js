@@ -7,7 +7,7 @@ import { jwtDecode } from 'jwt-decode' // 导入JWT解码库
 // 创建axios实例
 const request = axios.create({
   baseURL: 'http://localhost:3000', // 后端API基础地址
-  timeout: 10000, // 请求超时时间，单位毫秒
+  timeout: 60000, // 请求超时时间，单位毫秒（增加到60秒）
   headers: {
     'Content-Type': 'application/json' // 默认请求头，设置内容类型为JSON
   }
@@ -68,9 +68,13 @@ request.interceptors.response.use(
   async (error) => {
     const userStore = useUserStore() // 获取用户状态仓库
     const originalRequest = error.config // 保存原始请求配置
+    const isAuthPage = router.currentRoute.value.path === '/login' || router.currentRoute.value.path === '/register'
 
-    // 如果是401错误且未重试过
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 如果是401错误且未重试过 - 排除登录和注册请求
+    const isLoginRequest = originalRequest.url?.includes('/auth/login')
+    const isRegisterRequest = originalRequest.url?.includes('/auth/register')
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest && !isRegisterRequest) {
       // 如果正在刷新token
       if (isRefreshing) {
         return new Promise((resolve) => {
@@ -114,26 +118,35 @@ request.interceptors.response.use(
           throw new Error('没有 Refresh Token') // 抛出错误
         }
       } catch (refreshError) {
-        ElMessage.error('登录已过期，请重新登录') // 提示用户
+        if (!isAuthPage) {
+          ElMessage.error('登录已过期，请重新登录') // 提示用户
+        }
         userStore.logout() // 登出
-        router.push('/login') // 跳转到登录页
+        if (!isAuthPage) {
+          router.push('/login') // 跳转到登录页
+        }
         return Promise.reject(refreshError) // 拒绝Promise
       } finally {
         isRefreshing = false // 重置刷新状态
       }
     }
 
-    // 处理其他错误
+    // 处理其他错误 - 登录/注册页面的错误由各自页面处理
     if (!error._handled && !originalRequest._skipErrorToast) {
-      let message = '请求失败' // 默认错误消息
-      if (error.code === 'ECONNABORTED') {
-        message = '请求超时，请检查网络连接' // 超时错误
-      } else if (!error.response) {
-        message = '网络连接失败，请检查网络' // 网络错误
-      } else {
-        message = error.response?.data?.message || message // 后端返回的错误消息
+      const isLoginRequest = originalRequest.url?.includes('/auth/login')
+      const isRegisterRequest = originalRequest.url?.includes('/auth/register')
+
+      if (!isLoginRequest && !isRegisterRequest) {
+        let message = '请求失败' // 默认错误消息
+        if (error.code === 'ECONNABORTED') {
+          message = '请求超时，请检查网络连接' // 超时错误
+        } else if (!error.response) {
+          message = '网络连接失败，请检查网络' // 网络错误
+        } else {
+          message = error.response?.data?.message || message // 后端返回的错误消息
+        }
+        ElMessage.error(message) // 显示错误提示
       }
-      ElMessage.error(message) // 显示错误提示
     }
     return Promise.reject(error) // 拒绝Promise
   }

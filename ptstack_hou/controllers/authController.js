@@ -9,11 +9,16 @@
 import { execute } from '../config/db.js'
 import bcrypt from 'bcrypt'
 import crypto from 'crypto'
+import dotenv from 'dotenv'
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../config/jwt.js'
 import { generateVerificationCode, sendVerificationEmail } from '../services/emailService.js'
 
+dotenv.config()
+
 // 密码加密盐值
 const SALT_ROUNDS = 10
+// 邮箱验证码有效期（分钟）
+const EMAIL_VERIFICATION_CODE_EXPIRES_IN = parseInt(process.env.EMAIL_VERIFICATION_CODE_EXPIRES_IN) || 15
 
 /**
  * @swagger
@@ -95,7 +100,7 @@ export const sendEmailVerification = async (req, res, next) => {
     
     // 生成6位验证码
     const verificationCode = generateVerificationCode()
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24小时后过期
+    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_CODE_EXPIRES_IN * 60 * 1000)
     
     // 保存到临时验证表
     await execute(
@@ -178,7 +183,7 @@ export const verifyEmailCode = async (req, res) => {
 
     const verification = verifications[0]
 
-    // 检查验证码是否过期（24小时）
+    // 检查验证码是否过期
     if (new Date(verification.verification_code_expires_at) < new Date()) {
       // 删除过期记录
       await execute(
@@ -426,12 +431,12 @@ export const login = async (req, res, next) => {
     
     // 查找用户（支持用户名或邮箱登录）
     const users = await execute(
-      'SELECT id, username, nickname, password, email, avatar, profile_completed FROM users WHERE username = ? OR email = ?',
+      'SELECT id, username, nickname, password, email, avatar, profile_completed, is_admin FROM users WHERE username = ? OR email = ?',
       [username, username]
     )
     
     if (users.length === 0) {
-      return res.status(401).json({ message: '用户名或密码错误' })
+      return res.status(401).json({ message: '账号或密码错误' })
     }
     
     const user = users[0]
@@ -439,7 +444,7 @@ export const login = async (req, res, next) => {
     // 使用bcrypt验证密码
     const isPasswordValid = await bcrypt.compare(password, user.password)
     if (!isPasswordValid) {
-      return res.status(401).json({ message: '用户名或密码错误' })
+      return res.status(401).json({ message: '账号或密码错误' })
     }
     
     // 生成 payload
@@ -447,7 +452,8 @@ export const login = async (req, res, next) => {
       id: user.id,
       username: user.username,
       nickname: user.nickname || user.username,
-      email: user.email
+      email: user.email,
+      is_admin: user.is_admin
     }
     
     // 生成 Access Token
@@ -462,7 +468,8 @@ export const login = async (req, res, next) => {
         nickname: user.nickname,
         email: user.email,
         avatar: user.avatar,
-        profileCompleted: user.profile_completed === 1
+        profileCompleted: user.profile_completed === 1,
+        isAdmin: user.is_admin === 1
       },
       accessToken
     }

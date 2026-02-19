@@ -4,11 +4,11 @@ import {
   createComment, 
   deleteComment 
 } from '../controllers/commentsController.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.get('/:articleId', getComments);
+router.get('/:articleId', optionalAuthMiddleware, getComments);
 router.post('/:articleId', authMiddleware, createComment);
 router.delete('/:id', authMiddleware, deleteComment);
 

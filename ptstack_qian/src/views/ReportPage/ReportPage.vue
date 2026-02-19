@@ -138,7 +138,7 @@ onMounted(() => {
               <div class="article-info">
                 <h3 class="article-title">{{ article.title }}</h3>
                 <div class="article-meta">
-                  <span class="meta-item">作者：{{ article.author_name }}</span>
+                  <span class="meta-item">作者：{{ article.author_nickname || article.author_name }}</span>
                   <span class="meta-item">发布于：{{ new Date(article.created_at).toLocaleDateString('zh-CN') }}</span>
                 </div>
                 <p v-if="article.summary" class="article-summary">{{ article.summary }}</p>

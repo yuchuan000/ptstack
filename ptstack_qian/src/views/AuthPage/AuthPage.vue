@@ -605,7 +605,7 @@ onUnmounted(() => {
                 type="primary"
                 size="large"
                 :loading="sendingEmail"
-                :disabled="!registerForm.email || emailRegex.test(registerForm.email) === false"
+                :disabled="!registerForm.email || emailRegex.test(registerForm.email) === false || emailCountdown > 0"
                 @click="handleSendVerification"
                 class="verify-button"
               >

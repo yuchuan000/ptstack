@@ -19,7 +19,8 @@ export const toggleCommentLike = async (req, res) => {
         'UPDATE comments SET like_count = like_count + 1 WHERE id = ?',
         [commentId]
       );
-      res.json({ message: '点赞成功', liked: true });
+      const result = await execute('SELECT like_count FROM comments WHERE id = ?', [commentId]);
+      res.json({ message: '点赞成功', liked: true, like_count: result[0].like_count });
     } else {
       await execute(
         'DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?',
@@ -29,7 +30,8 @@ export const toggleCommentLike = async (req, res) => {
         'UPDATE comments SET like_count = GREATEST(like_count - 1, 0) WHERE id = ?',
         [commentId]
       );
-      res.json({ message: '取消点赞成功', liked: false });
+      const result = await execute('SELECT like_count FROM comments WHERE id = ?', [commentId]);
+      res.json({ message: '取消点赞成功', liked: false, like_count: result[0].like_count });
     }
   } catch (error) {
     console.error('评论点赞失败:', error);

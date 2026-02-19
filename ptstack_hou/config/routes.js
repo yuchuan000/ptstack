@@ -8,6 +8,8 @@ import likesRouter from '../routes/likes.js'
 import commentLikesRouter from '../routes/commentLikes.js'
 import subscriptionsRouter from '../routes/subscriptions.js'
 import uploadRouter from '../routes/upload.js'
+import notificationsRouter from '../routes/notifications.js'
+import announcementsRouter from '../routes/announcements.js'
 
 const router = express.Router()
 
@@ -20,5 +22,7 @@ router.use('/likes', likesRouter)
 router.use('/comment-likes', commentLikesRouter)
 router.use('/subscriptions', subscriptionsRouter)
 router.use('/upload', uploadRouter)
+router.use('/notifications', notificationsRouter)
+router.use('/announcements', announcementsRouter)
 
 export default router

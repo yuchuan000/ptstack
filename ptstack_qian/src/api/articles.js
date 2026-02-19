@@ -171,6 +171,48 @@ export function deleteCategory(id) {
 }
 
 /**
+ * 申请创建分类
+ * @param {object} data - 分类数据
+ * @param {string} data.name - 分类名称
+ * @param {string} data.description - 分类描述
+ * @returns {Promise<{message: string, applicationId: number}>}
+ */
+export function applyCategory(data) {
+  return request({
+    url: '/articles/categories/apply',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 获取分类申请列表
+ * @returns {Promise<Array>}
+ */
+export function getCategoryApplications() {
+  return request({
+    url: '/articles/categories/applications',
+    method: 'get'
+  })
+}
+
+/**
+ * 审核分类申请
+ * @param {number|string} id - 申请ID
+ * @param {object} data - 审核数据
+ * @param {string} data.action - 操作类型 approve/reject
+ * @param {string} data.review_comment - 审核意见
+ * @returns {Promise<{message: string}>}
+ */
+export function reviewCategoryApplication(id, data) {
+  return request({
+    url: `/articles/categories/applications/${id}/review`,
+    method: 'put',
+    data
+  })
+}
+
+/**
  * 获取文章评论列表
  * @param {number|string} articleId - 文章ID
  * @param {object} params - 查询参数
@@ -262,5 +304,47 @@ export function checkCommentLikes(articleId) {
   return request({
     url: `/comment-likes/article/${articleId}/check`,
     method: 'get'
+  })
+}
+
+/**
+ * 分享文章
+ * @param {number|string} articleId - 文章ID
+ * @returns {Promise<{message: string, share_count: number}>}
+ */
+export function shareArticle(articleId) {
+  return request({
+    url: `/articles/${articleId}/share`,
+    method: 'post'
+  })
+}
+
+/**
+ * 获取用户的热门文章
+ * @param {number|string} userId - 用户ID
+ * @param {object} params - 查询参数
+ * @param {number|string} params.excludeId - 排除的文章ID
+ * @returns {Promise<{articles: Array, total: number}>}
+ */
+export function getUserHotArticles(userId, params) {
+  return request({
+    url: `/articles/user/${userId}/hot`,
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 获取用户的最新文章
+ * @param {number|string} userId - 用户ID
+ * @param {object} params - 查询参数
+ * @param {number|string} params.excludeId - 排除的文章ID
+ * @returns {Promise<{articles: Array, total: number}>}
+ */
+export function getUserLatestArticles(userId, params) {
+  return request({
+    url: `/articles/user/${userId}/latest`,
+    method: 'get',
+    params
   })
 }

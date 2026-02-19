@@ -14,13 +14,17 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   // 增加连接超时和重连配置
-  connectTimeout: 10000,
-  acquireTimeout: 10000,
+  connectTimeout: 30000,
+  acquireTimeout: 30000,
   timeout: 60000,
   // 连接重试配置
   reconnect: true,
   // 增加最大包大小限制（64MB）
   maxAllowedPacket: 67108864,
+  // 增加连接池健康检查
+  idleTimeout: 60000,
+  // 禁用SSL（本地开发环境）
+  ssl: false
 });
 
 // 测试数据库连接
@@ -36,15 +40,33 @@ async function testConnection() {
   }
 }
 
-// 执行SQL语句
-async function execute(sql, params = []) {
-  try {
-    const [results] = await pool.execute(sql, params);
-    return results;
-  } catch (error) {
-    console.error('SQL执行失败:', error.message);
-    throw error;
+// 执行SQL语句（带重试机制）
+async function execute(sql, params = [], retries = 3) {
+  let lastError;
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const [results] = await pool.execute(sql, params);
+      return results;
+    } catch (error) {
+      console.error(`SQL执行失败 (尝试 ${i + 1}/${retries}):`, error.message);
+      lastError = error;
+      
+      // 如果是连接错误，等待后重试
+      if (error.code === 'ECONNRESET' || error.code === 'EPIPE' || error.code === 'ECONNREFUSED') {
+        if (i < retries - 1) {
+          console.log('等待500ms后重试...');
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } else {
+        // 非连接错误，直接抛出
+        throw error;
+      }
+    }
   }
+  
+  // 所有重试都失败
+  throw lastError;
 }
 
 export { pool, testConnection, execute };

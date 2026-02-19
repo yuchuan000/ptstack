@@ -1,120 +1,304 @@
 <script setup>
-// 导入Vue的ref、reactive和onMounted函数
-import { ref, reactive, onMounted } from 'vue'
-// 导入Vue Router的useRouter函数
+import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
-// 导入用户状态管理store
 import { useUserStore } from '@/stores/user'
-// 导入Element Plus的ElMessage组件
 import { ElMessage } from 'element-plus'
-// 导入Element Plus图标组件
-import {
-  User,
-  Lock,
-  Check
-} from '@element-plus/icons-vue'
-// 导入更新个人资料和隐私设置的API函数
-import { updateProfile, updatePrivacySettings } from '@/api/users'
-// 导入页面标题组件
+import { User, Lock, Edit, Check, Close, Plus, Camera, RefreshLeft, ZoomIn, ZoomOut } from '@element-plus/icons-vue'
+import { updateProfile, uploadAvatar } from '@/api/auth'
 import PageHeader from '@/components/PageHeader/PageHeader.vue'
+import { getFullUrl } from '@/utils/url'
 
-// 创建路由实例，用于页面跳转
 const router = useRouter()
-// 创建用户状态管理实例
 const userStore = useUserStore()
 
-// 当前激活的选项卡：profile-个人资料，privacy-隐私设置
 const activeTab = ref('profile')
-// 加载状态标识
 const loading = ref(false)
+const uploadingAvatar = ref(false)
+const editingField = ref(null)
+const avatarDialogVisible = ref(false)
+const avatarPreview = ref('')
+const canvasRef = ref(null)
+const showCropper = ref(false)
+const scale = ref(1)
+const translateX = ref(0)
+const translateY = ref(0)
+const isDragging = ref(false)
+const startX = ref(0)
+const startY = ref(0)
+const imageRef = ref(null)
+const windowWidth = ref(window.innerWidth)
 
-// 个人资料表单数据
+const isMobile = computed(() => windowWidth.value < 768)
+
+const dialogWidth = computed(() => {
+  if (windowWidth.value < 768) return '90%'
+  if (windowWidth.value < 992) return '500px'
+  return '600px'
+})
+
+const handleResize = () => {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+  initForm()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
+
 const profileForm = reactive({
-  bio: '', // 个人简介
-  website: '' // 个人网站
+  nickname: '',
+  bio: '',
+  avatar: ''
 })
 
-// 隐私设置表单数据
+const tempForm = reactive({
+  nickname: '',
+  bio: '',
+  avatar: ''
+})
+
 const privacyForm = reactive({
-  show_followers: true, // 是否显示订阅者列表
-  show_following: true, // 是否显示订阅列表
-  show_articles: true, // 是否显示发布的文章
-  show_comments: true // 是否显示发表的评论
+  show_followers: true,
+  show_following: true,
+  show_articles: true,
+  show_comments: true
 })
 
-// 初始化表单数据的函数
+const tempAvatarFile = ref(null)
+
+const rules = {
+  nickname: [
+    { required: true, message: '请输入昵称', trigger: 'blur' },
+    { min: 1, max: 50, message: '昵称长度在 1 到 50 个字符', trigger: 'blur' }
+  ]
+}
+
 const initForm = () => {
-  // 设置个人简介，如果没有则用空字符串
+  profileForm.nickname = userStore.userInfo?.nickname || ''
   profileForm.bio = userStore.userInfo?.bio || ''
-  // 设置个人网站，如果没有则用空字符串
-  profileForm.website = userStore.userInfo?.website || ''
-  // 设置是否显示订阅者列表，默认值为true
+  profileForm.avatar = userStore.userInfo?.avatar || ''
+
+  tempForm.nickname = profileForm.nickname
+  tempForm.bio = profileForm.bio
+  tempForm.avatar = profileForm.avatar
+
   privacyForm.show_followers = userStore.userInfo?.show_followers !== false
-  // 设置是否显示订阅列表，默认值为true
   privacyForm.show_following = userStore.userInfo?.show_following !== false
-  // 设置是否显示发布的文章，默认值为true
   privacyForm.show_articles = userStore.userInfo?.show_articles !== false
-  // 设置是否显示发表的评论，默认值为true
   privacyForm.show_comments = userStore.userInfo?.show_comments !== false
 }
 
-// 保存个人资料的异步函数
-const handleSaveProfile = async () => {
+const startEdit = (field) => {
+  editingField.value = field
+  tempForm[field] = profileForm[field]
+}
+
+const cancelEdit = () => {
+  editingField.value = null
+}
+
+const saveField = async (field) => {
   try {
-    // 设置加载状态为true
     loading.value = true
-    // 调用API更新个人资料
-    const res = await updateProfile(profileForm)
-    // 更新用户状态管理中的用户信息
-    userStore.updateUserInfo(res.user)
-    // 显示成功提示
+    const data = { [field]: tempForm[field] }
+    const response = await updateProfile(data)
+    userStore.updateUserInfo(response.user)
+    profileForm[field] = tempForm[field]
     ElMessage.success('保存成功')
+    editingField.value = null
   } catch (error) {
-    // 在控制台输出错误信息
     console.error('保存失败:', error)
-    // 显示错误提示
-    ElMessage.error('保存失败')
+    ElMessage.error(error.response?.data?.message || '保存失败，请稍后重试')
   } finally {
-    // 无论成功或失败，都设置加载状态为false
     loading.value = false
   }
 }
 
-// 保存隐私设置的异步函数
+const openAvatarDialog = () => {
+  avatarDialogVisible.value = true
+  tempAvatarFile.value = null
+  avatarPreview.value = ''
+  showCropper.value = false
+  scale.value = 1
+  translateX.value = 0
+  translateY.value = 0
+}
+
+const closeAvatarDialog = () => {
+  avatarDialogVisible.value = false
+  tempAvatarFile.value = null
+  avatarPreview.value = ''
+  showCropper.value = false
+}
+
+const beforeAvatarUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  return true
+}
+
+const handleAvatarChange = (file) => {
+  if (file.raw) {
+    tempAvatarFile.value = file.raw
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      avatarPreview.value = e.target.result
+      showCropper.value = true
+      nextTick(() => {
+        initCropper()
+      })
+    }
+    reader.readAsDataURL(file.raw)
+  }
+}
+
+const initCropper = () => {
+  const canvas = canvasRef.value
+  if (!canvas) return
+
+  const ctx = canvas.getContext('2d')
+  const img = new Image()
+  img.onload = () => {
+    imageRef.value = img
+    const minSide = Math.min(img.width, img.height)
+    const initialScale = 300 / minSide
+    scale.value = initialScale
+    translateX.value = 0
+    translateY.value = 0
+    drawCanvas()
+  }
+  img.src = avatarPreview.value
+}
+
+const drawCanvas = () => {
+  const canvas = canvasRef.value
+  if (!canvas || !imageRef.value) return
+
+  const ctx = canvas.getContext('2d')
+  const size = 300
+
+  canvas.width = size
+  canvas.height = size
+
+  ctx.fillStyle = '#f7f8fa'
+  ctx.fillRect(0, 0, size, size)
+
+  const img = imageRef.value
+  const imgWidth = img.width * scale.value
+  const imgHeight = img.height * scale.value
+  const imgX = (size - imgWidth) / 2 + translateX.value
+  const imgY = (size - imgHeight) / 2 + translateY.value
+
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
+  ctx.clip()
+
+  ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight)
+
+  ctx.restore()
+}
+
+const changeScale = (type) => {
+  if (type === 'plus') {
+    scale.value = Math.min(scale.value * 1.1, 5)
+  } else if (type === 'minus') {
+    scale.value = Math.max(scale.value * 0.9, 0.1)
+  } else if (type === 'reset') {
+    scale.value = 1
+    translateX.value = 0
+    translateY.value = 0
+  }
+  drawCanvas()
+}
+
+const handleMouseDown = (e) => {
+  isDragging.value = true
+  startX.value = e.clientX - translateX.value
+  startY.value = e.clientY - translateY.value
+}
+
+const handleMouseMove = (e) => {
+  if (!isDragging.value) return
+  translateX.value = e.clientX - startX.value
+  translateY.value = e.clientY - startY.value
+  drawCanvas()
+}
+
+const handleMouseUp = () => {
+  isDragging.value = false
+}
+
+const getCroppedFile = () => {
+  return new Promise((resolve) => {
+    if (!canvasRef.value || !showCropper.value) {
+      resolve(tempAvatarFile.value)
+      return
+    }
+
+    canvasRef.value.toBlob((blob) => {
+      const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+      resolve(croppedFile)
+    }, 'image/jpeg', 0.9)
+  })
+}
+
+const saveAvatar = async () => {
+  try {
+    loading.value = true
+    let avatarUrl = profileForm.avatar
+
+    if (tempAvatarFile.value) {
+      uploadingAvatar.value = true
+      const fileToUpload = await getCroppedFile()
+      const uploadResponse = await uploadAvatar(fileToUpload)
+      avatarUrl = uploadResponse.url
+    }
+
+    const response = await updateProfile({ avatar: avatarUrl || undefined })
+    userStore.updateUserInfo(response.user)
+    profileForm.avatar = avatarUrl
+    ElMessage.success('保存成功')
+    closeAvatarDialog()
+  } catch (error) {
+    console.error('保存失败:', error)
+    ElMessage.error(error.response?.data?.message || '保存失败，请稍后重试')
+  } finally {
+    loading.value = false
+    uploadingAvatar.value = false
+  }
+}
+
 const handleSavePrivacy = async () => {
   try {
-    // 设置加载状态为true
     loading.value = true
-    // 调用API更新隐私设置
-    const res = await updatePrivacySettings(privacyForm)
-    // 更新用户状态管理中的用户信息
+    const res = await updateProfile(privacyForm)
     userStore.updateUserInfo(res.user)
-    // 显示成功提示
     ElMessage.success('隐私设置已保存')
   } catch (error) {
-    // 在控制台输出错误信息
     console.error('保存失败:', error)
-    // 显示错误提示
     ElMessage.error('保存失败')
   } finally {
-    // 无论成功或失败，都设置加载状态为false
     loading.value = false
   }
 }
 
-// 跳转到用户个人主页的函数
 const goToProfile = () => {
-  // 使用路由实例跳转到当前用户的个人主页
   router.push(`/profile/${userStore.userInfo?.id}`)
 }
-
-
-
-// 组件挂载时的生命周期钩子
-onMounted(() => {
-  // 初始化表单数据
-  initForm()
-})
 </script>
 
 <template>
@@ -150,49 +334,105 @@ onMounted(() => {
 
       <div class="tab-content">
         <div v-if="activeTab === 'profile'" class="tab-panel">
-          <div class="form-section">
+          <div class="view-section">
             <div class="section-header">
               <div class="section-title">个人资料</div>
-              <div class="section-desc">完善您的个人信息</div>
             </div>
 
-            <div class="form-content">
-              <div class="form-item">
-                <div class="form-label">个人简介</div>
-                <div class="form-input">
-                  <el-input
-                    v-model="profileForm.bio"
-                    type="textarea"
-                    :rows="4"
-                    placeholder="介绍一下自己吧..."
-                    maxlength="500"
-                    show-word-limit
-                    class="bio-input"
-                  />
+            <div class="profile-info">
+              <div class="info-item avatar-item">
+                <div class="info-label">头像</div>
+                <div class="info-value">
+                  <div class="avatar-display" @click="openAvatarDialog">
+                    <div class="avatar-wrapper">
+                      <el-upload
+                        class="avatar-uploader"
+                        :show-file-list="false"
+                        :auto-upload="false"
+                        accept="image/*"
+                      >
+                        <div class="avatar-container">
+                          <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" class="avatar-preview" />
+                          <span v-else class="avatar-placeholder">
+                            {{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}
+                          </span>
+                        </div>
+                      </el-upload>
+                      <div class="avatar-overlay">
+                        <el-icon><Camera /></el-icon>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="form-item">
-                <div class="form-label">个人网站</div>
-                <div class="form-input">
-                  <el-input
-                    v-model="profileForm.website"
-                    placeholder="https://example.com"
-                  />
+              <div class="info-item">
+                <div class="info-label">昵称</div>
+                <div class="info-value">
+                  <div v-if="editingField !== 'nickname'" class="field-display" @click="startEdit('nickname')">
+                    <span class="field-text">{{ userStore.userInfo?.nickname || '-' }}</span>
+                    <el-icon class="edit-icon"><Edit /></el-icon>
+                  </div>
+                  <div v-else class="field-edit">
+                    <el-input
+                      v-model="tempForm.nickname"
+                      size="large"
+                      class="edit-input"
+                      @keyup.enter="saveField('nickname')"
+                    />
+                    <div class="edit-actions">
+                      <el-button size="small" @click="cancelEdit">
+                        <el-icon><Close /></el-icon>
+                      </el-button>
+                      <el-button type="primary" size="small" @click="saveField('nickname')" :loading="loading">
+                        <el-icon><Check /></el-icon>
+                      </el-button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="form-footer">
-                <el-button
-                  type="primary"
-                  size="large"
-                  @click="handleSaveProfile"
-                  :loading="loading"
-                  class="save-btn"
-                >
-                  <el-icon><Check /></el-icon>
-                  保存修改
-                </el-button>
+              <div class="info-item">
+                <div class="info-label">个人简介</div>
+                <div class="info-value">
+                  <div v-if="editingField !== 'bio'" class="field-display" @click="startEdit('bio')">
+                    <span class="field-text bio-text">{{ userStore.userInfo?.bio || '暂无简介' }}</span>
+                    <el-icon class="edit-icon"><Edit /></el-icon>
+                  </div>
+                  <div v-else class="field-edit">
+                    <el-input
+                      v-model="tempForm.bio"
+                      type="textarea"
+                      :rows="4"
+                      size="large"
+                      class="edit-input"
+                      maxlength="500"
+                      show-word-limit
+                    />
+                    <div class="edit-actions">
+                      <el-button size="small" @click="cancelEdit">
+                        <el-icon><Close /></el-icon>
+                      </el-button>
+                      <el-button type="primary" size="small" @click="saveField('bio')" :loading="loading">
+                        <el-icon><Check /></el-icon>
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-item">
+                <div class="info-label">用户名</div>
+                <div class="info-value">
+                  <span class="field-text">{{ userStore.userInfo?.username }}</span>
+                </div>
+              </div>
+
+              <div class="info-item">
+                <div class="info-label">邮箱</div>
+                <div class="info-value">
+                  <span class="field-text">{{ userStore.userInfo?.email }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -255,6 +495,65 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <el-dialog
+      v-model="avatarDialogVisible"
+      title="修改头像"
+      :width="dialogWidth"
+      :fullscreen="isMobile"
+      :close-on-click-modal="false"
+      class="avatar-dialog"
+    >
+      <el-row :gutter="20" class="avatar-dialog-content">
+        <el-col :xs="24" :sm="24" :md="24" :lg="24">
+          <div v-if="!showCropper" class="upload-area">
+            <el-upload
+              class="avatar-uploader-dialog"
+              :show-file-list="false"
+              :auto-upload="false"
+              :before-upload="beforeAvatarUpload"
+              :on-change="handleAvatarChange"
+              accept="image/*"
+              drag
+            >
+              <div class="drop-zone">
+                <el-icon class="drop-icon"><Plus /></el-icon>
+                <div class="drop-text">将图片拖到此处，或点击上传</div>
+              </div>
+            </el-upload>
+          </div>
+          <div v-else class="cropper-area">
+            <div
+              class="cropper-container"
+              @mousedown="handleMouseDown"
+              @mousemove="handleMouseMove"
+              @mouseup="handleMouseUp"
+              @mouseleave="handleMouseUp"
+            >
+              <canvas ref="canvasRef" class="cropper-canvas" />
+              <div class="crop-circle-overlay" />
+            </div>
+            <el-space class="cropper-tools" justify="center">
+              <el-button size="small" @click="changeScale('minus')">
+                <el-icon><ZoomOut /></el-icon>
+              </el-button>
+              <el-button size="small" @click="changeScale('reset')">
+                <el-icon><RefreshLeft /></el-icon>
+              </el-button>
+              <el-button size="small" @click="changeScale('plus')">
+                <el-icon><ZoomIn /></el-icon>
+              </el-button>
+            </el-space>
+          </div>
+        </el-col>
+      </el-row>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="closeAvatarDialog">取消</el-button>
+          <el-button type="primary" @click="saveAvatar" :loading="loading">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -263,59 +562,6 @@ onMounted(() => {
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
-}
-
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  gap: 16px;
-}
-
-.header-main {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.back-btn {
-  background: white;
-  border: 1px solid #e5e6eb;
-  color: #4e5969;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: #f7f8fa;
-    border-color: #165dff;
-    color: #165dff;
-  }
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1d2129;
-  margin: 0;
-  letter-spacing: -0.3px;
-}
-
-.profile-btn {
-  border-radius: 10px;
-  height: 42px;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-  border: none;
-  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
-
-  &:hover {
-    background: linear-gradient(135deg, #4080ff 0%, #165dff 100%);
-    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
-  }
 }
 
 .content-card {
@@ -365,20 +611,17 @@ onMounted(() => {
 }
 
 .tab-panel {
-  max-width: 600px;
+  max-width: 700px;
 }
 
-.form-section,
-.privacy-section {
+.view-section {
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
 
 .section-header {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .section-title {
@@ -392,53 +635,155 @@ onMounted(() => {
   color: #86909c;
 }
 
-.form-content {
+.profile-info {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
-.form-item {
+.info-item {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+
+  &.avatar-item {
+    align-items: flex-start;
+  }
 }
 
-.form-label {
-  font-size: 14px;
+.info-label {
+  font-size: 13px;
   font-weight: 500;
+  color: #86909c;
+}
+
+.info-value {
+  font-size: 15px;
   color: #1d2129;
+  line-height: 1.6;
 }
 
-.form-input {
-  :deep(.el-input__wrapper) {
-    border-radius: 10px;
-    padding: 10px 14px;
-    box-shadow: 0 0 0 1px #e5e6eb inset;
-    transition: all 0.2s ease;
+.field-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: -8px -12px;
+
+  &:hover {
+    background: #f7f8fa;
+
+    .edit-icon {
+      opacity: 1;
+    }
   }
 
-  :deep(.el-textarea__inner) {
-    border-radius: 10px;
-    padding: 10px 14px;
-    box-shadow: 0 0 0 1px #e5e6eb inset;
-    transition: all 0.2s ease;
+  .field-text {
+    flex: 1;
+
+    &.bio-text {
+      color: #4e5969;
+    }
   }
 
-  :deep(.el-input__wrapper:hover),
-  :deep(.el-textarea__inner:hover) {
-    box-shadow: 0 0 0 1px #c9cdd4 inset;
-  }
-
-  :deep(.el-input__wrapper.is-focus),
-  :deep(.el-textarea__inner:focus) {
-    box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.2) inset !important;
+  .edit-icon {
+    font-size: 16px;
+    color: #86909c;
+    opacity: 0;
+    transition: opacity 0.2s ease;
   }
 }
 
-.bio-input {
-  :deep(.el-textarea__inner) {
-    resize: none;
+.field-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .edit-input {
+    width: 100%;
+  }
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.avatar-display {
+  cursor: pointer;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+
+  &:hover .avatar-overlay {
+    opacity: 1;
+  }
+}
+
+.avatar-uploader :deep(.el-upload) {
+  border: 2px dashed #e5e6eb;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: var(--el-transition-duration-fast);
+  width: 100px;
+  height: 100px;
+}
+
+.avatar-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 600;
+  color: white;
+}
+
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  .el-icon {
+    font-size: 28px;
+    color: white;
   }
 }
 
@@ -487,8 +832,8 @@ onMounted(() => {
 }
 
 .save-btn {
-  border-radius: 10px;
-  height: 44px;
+  border-radius: 8px;
+  height: 48px;
   padding: 0 28px;
   display: flex;
   align-items: center;
@@ -504,17 +849,96 @@ onMounted(() => {
   }
 }
 
+.avatar-dialog {
+  :deep(.el-dialog__body) {
+    padding: 20px;
+  }
+}
+
+.avatar-dialog-content {
+  width: 100%;
+}
+
+.upload-area {
+  width: 100%;
+}
+
+.avatar-uploader-dialog {
+  width: 100%;
+}
+
+.drop-zone {
+  border: 2px dashed #e5e6eb;
+  border-radius: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: #165dff;
+    background: #eaf2ff;
+  }
+
+  .drop-icon {
+    font-size: 48px;
+    color: #8c939d;
+    margin-bottom: 16px;
+  }
+
+  .drop-text {
+    font-size: 14px;
+    color: #86909c;
+  }
+}
+
+.cropper-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.cropper-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  cursor: move;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f7f8fa;
+  border: 2px solid #e5e6eb;
+}
+
+.cropper-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.crop-circle-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+}
+
+.cropper-tools {
+  width: 100%;
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  width: 100%;
+}
+
 @media (max-width: 768px) {
-  .header-section {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .profile-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
   .tabs-section {
     flex-direction: column;
     gap: 4px;
@@ -527,6 +951,11 @@ onMounted(() => {
   .save-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .cropper-container {
+    width: 250px;
+    height: 250px;
   }
 }
 </style>

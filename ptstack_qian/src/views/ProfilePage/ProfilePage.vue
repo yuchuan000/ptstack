@@ -92,8 +92,6 @@ const fetchUserProfile = async () => {
     // 保存用户信息
     user.value = res.user
 
-    // 重置选项卡为文章
-    activeTab.value = 'articles'
     // 清空文章列表
     articles.value = []
     // 清空评论列表
@@ -118,25 +116,6 @@ const fetchUserProfile = async () => {
     followersSearch.value = ''
     // 清空订阅搜索关键词
     followingSearch.value = ''
-
-    // 如果不是当前用户自己的主页
-    if (!isOwn.value) {
-      // 定义选项卡配置，包含是否显示的权限
-      const tabs = [
-        { key: 'articles', show: user.value.show_articles }, // 文章选项卡
-        { key: 'comments', show: user.value.show_comments }, // 评论选项卡
-        { key: 'followers', show: user.value.show_followers }, // 订阅者选项卡
-        { key: 'following', show: user.value.show_following } // 订阅选项卡
-      ]
-
-      // 找到第一个可见的选项卡
-      const firstVisibleTab = tabs.find(tab => tab.show)
-      // 如果有可见的选项卡
-      if (firstVisibleTab) {
-        // 切换到第一个可见的选项卡
-        activeTab.value = firstVisibleTab.key
-      }
-    }
   } catch (error) {
     // 在控制台输出错误信息
     console.error('获取用户信息失败:', error)
@@ -230,13 +209,20 @@ const fetchFollowing = async () => {
 
 // 切换订阅状态的异步函数
 const handleToggleSubscription = async (targetUser = null) => {
+  // 检查是否是事件对象
+  let actualTargetUser = targetUser
+  if (targetUser && typeof targetUser === 'object' && 'type' in targetUser) {
+    // 是事件对象，忽略
+    actualTargetUser = null
+  }
+
   try {
     // 如果指定了目标用户
-    if (targetUser) {
+    if (actualTargetUser) {
       // 调用API切换订阅状态
-      const res = await toggleSubscription(targetUser.id)
+      const res = await toggleSubscription(actualTargetUser.id)
       // 更新目标用户的订阅状态
-      targetUser.isSubscribed = res.isSubscribed
+      actualTargetUser.isSubscribed = res.isSubscribed
       // 显示成功提示
       ElMessage.success(res.isSubscribed ? '订阅成功' : '已取消订阅')
     } else {
@@ -489,6 +475,14 @@ const handleFollowersSearch = () => {
   }, 300)
 }
 
+// 初始化选项卡的函数
+const initActiveTab = () => {
+  const tabFromQuery = route.query.tab
+  if (tabFromQuery && ['articles', 'followers', 'following', 'comments'].includes(tabFromQuery)) {
+    activeTab.value = tabFromQuery
+  }
+}
+
 // 订阅搜索处理函数
 const handleFollowingSearch = () => {
   // 如果定时器已存在，清除定时器
@@ -502,10 +496,18 @@ const handleFollowingSearch = () => {
   }, 300)
 }
 
+// 监听路由查询参数tab的变化
+watch(() => route.query.tab, () => {
+  initActiveTab()
+  fetchActiveTabData()
+})
+
 // 监听路由参数userId的变化
 watch(() => route.params.userId, async () => {
   // 如果userId存在
   if (route.params.userId) {
+    // 初始化选项卡
+    initActiveTab()
     // 获取用户主页信息
     await fetchUserProfile()
     // 获取当前选项卡的数据
@@ -515,6 +517,8 @@ watch(() => route.params.userId, async () => {
 
 // 组件挂载时的生命周期钩子
 onMounted(async () => {
+  // 初始化选项卡
+  initActiveTab()
   // 获取用户主页信息
   await fetchUserProfile()
   // 获取当前选项卡的数据
@@ -554,11 +558,12 @@ onMounted(async () => {
             <div class="header-left">
               <div class="avatar">
                 <img v-if="user.avatar" :src="getFullUrl(user.avatar)" alt="avatar" class="avatar-img">
-                <span v-else>{{ user.username?.charAt(0).toUpperCase() || 'U' }}</span>
+                <span v-else>{{ (user.nickname || user.username)?.charAt(0).toUpperCase() || 'U' }}</span>
+                <span v-if="user.isAdmin" class="avatar-admin-badge">管</span>
               </div>
               <div class="user-info">
                 <div class="user-name-row">
-                  <h1 class="username">{{ user.username }}</h1>
+                  <h1 class="username">{{ user.nickname || user.username }}</h1>
                 </div>
                 <div class="user-meta">
                   <span class="meta-item">ID: {{ user.id }}</span>
@@ -566,10 +571,6 @@ onMounted(async () => {
                   <span class="meta-item">已加入 {{ Math.floor((new Date() - new Date(user.created_at)) / (1000 * 60 * 60 * 24)) }} 天</span>
                 </div>
                 <p v-if="user.bio" class="bio">{{ user.bio }}</p>
-                <div v-if="user.website" class="website-link">
-                  <el-icon><Link /></el-icon>
-                  <a :href="user.website" target="_blank">{{ user.website }}</a>
-                </div>
               </div>
             </div>
             <div class="header-right">
@@ -602,14 +603,14 @@ onMounted(async () => {
                 <div class="stat-value">{{ user.following_count }}</div>
                 <div class="stat-label">订阅</div>
               </div>
-              <div class="stat-divider" v-if="(user.follower_count !== null || user.following_count !== null) && (user.show_articles || isOwn)"></div>
-              <div class="stat-item" v-if="user.show_articles || isOwn">
-                <div class="stat-value">{{ articlesPagination.total }}</div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <div class="stat-value">{{ user.article_count || 0 }}</div>
                 <div class="stat-label">文章</div>
               </div>
-              <div class="stat-divider" v-if="(user.show_articles || isOwn) && (user.show_comments || isOwn)"></div>
-              <div class="stat-item" v-if="user.show_comments || isOwn">
-                <div class="stat-value">{{ commentsPagination.total }}</div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <div class="stat-value">{{ user.comment_count || 0 }}</div>
                 <div class="stat-label">评论</div>
               </div>
             </div>
@@ -619,11 +620,11 @@ onMounted(async () => {
             <div class="tabs-header">
               <div
                 v-for="tab in [
-                  { key: 'articles', label: '文章', show: user.show_articles || isOwn },
-                  { key: 'comments', label: '评论', show: user.show_comments || isOwn },
-                  { key: 'followers', label: '订阅者', show: user.show_followers || isOwn },
-                  { key: 'following', label: '订阅', show: user.show_following || isOwn }
-                ].filter(t => t.show)"
+                  { key: 'articles', label: '文章' },
+                  { key: 'comments', label: '评论' },
+                  { key: 'followers', label: '订阅者' },
+                  { key: 'following', label: '订阅' }
+                ]"
                 :key="tab.key"
                 class="tab-item"
                 :class="{ active: activeTab === tab.key }"
@@ -635,7 +636,7 @@ onMounted(async () => {
 
             <div class="tabs-content">
               <div v-if="activeTab === 'articles'" class="tab-panel">
-                <div v-if="user.show_articles || isOwn" class="articles-list">
+                <div class="articles-list">
                   <div v-if="articles.length === 0" class="empty-state">
                     <el-empty description="暂无文章" />
                   </div>
@@ -722,13 +723,10 @@ onMounted(async () => {
                     </div>
                   </div>
                 </div>
-                <div v-else class="hidden-state">
-                  <el-empty description="该用户未公开文章" />
-                </div>
               </div>
 
               <div v-if="activeTab === 'comments'" class="tab-panel">
-                <div v-if="user.show_comments || isOwn" class="comments-list">
+                <div class="comments-list">
                   <div v-if="comments.length === 0" class="empty-state">
                     <el-empty description="暂无评论" />
                   </div>
@@ -801,13 +799,10 @@ onMounted(async () => {
                     </div>
                   </div>
                 </div>
-                <div v-else class="hidden-state">
-                  <el-empty description="该用户未公开评论" />
-                </div>
               </div>
 
               <div v-if="activeTab === 'followers'" class="tab-panel">
-                <div v-if="user.show_followers || isOwn" class="users-list">
+                <div class="users-list">
                   <div v-if="followers.length === 0" class="empty-state">
                     <el-empty description="暂无订阅者" />
                   </div>
@@ -833,10 +828,11 @@ onMounted(async () => {
                       >
                         <div class="user-avatar" @click="goToProfile(follower.id)">
                           <img v-if="follower.avatar" :src="getFullUrl(follower.avatar)" alt="avatar" class="user-avatar-img">
-                          <span v-else>{{ follower.username?.charAt(0).toUpperCase() || 'U' }}</span>
+                          <span v-else>{{ (follower.nickname || follower.username)?.charAt(0).toUpperCase() || 'U' }}</span>
+                          <span v-if="follower.is_admin === 1" class="avatar-admin-badge">管</span>
                         </div>
                         <div class="user-info" @click="goToProfile(follower.id)">
-                          <div class="user-name">{{ follower.username }}</div>
+                          <div class="user-name">{{ follower.nickname || follower.username }}</div>
                           <div class="user-meta">
                             <span class="meta-item">
                               <el-icon><Calendar /></el-icon>
@@ -881,13 +877,10 @@ onMounted(async () => {
                     </div>
                   </div>
                 </div>
-                <div v-else class="hidden-state">
-                  <el-empty description="该用户未公开订阅者列表" />
-                </div>
               </div>
 
               <div v-if="activeTab === 'following'" class="tab-panel">
-                <div v-if="user.show_following || isOwn" class="users-list">
+                <div class="users-list">
                   <div v-if="following.length === 0" class="empty-state">
                     <el-empty description="暂无订阅" />
                   </div>
@@ -913,10 +906,11 @@ onMounted(async () => {
                       >
                         <div class="user-avatar" @click="goToProfile(followingUser.id)">
                           <img v-if="followingUser.avatar" :src="getFullUrl(followingUser.avatar)" alt="avatar" class="user-avatar-img">
-                          <span v-else>{{ followingUser.username?.charAt(0).toUpperCase() || 'U' }}</span>
+                          <span v-else>{{ (followingUser.nickname || followingUser.username)?.charAt(0).toUpperCase() || 'U' }}</span>
+                          <span v-if="followingUser.is_admin === 1" class="avatar-admin-badge">管</span>
                         </div>
                         <div class="user-info" @click="goToProfile(followingUser.id)">
-                          <div class="user-name">{{ followingUser.username }}</div>
+                          <div class="user-name">{{ followingUser.nickname || followingUser.username }}</div>
                           <div class="user-meta">
                             <span class="meta-item">
                               <el-icon><Calendar /></el-icon>
@@ -960,9 +954,6 @@ onMounted(async () => {
                       />
                     </div>
                   </div>
-                </div>
-                <div v-else class="hidden-state">
-                  <el-empty description="该用户未公开订阅列表" />
                 </div>
               </div>
             </div>
@@ -1055,13 +1046,35 @@ onMounted(async () => {
   font-weight: 600;
   color: white;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+}
+
+.avatar-admin-badge {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+  border: 2px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 1;
 }
 
 .avatar-img {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
+  overflow: hidden;
 }
 
 .user-info {
@@ -1452,7 +1465,8 @@ onMounted(async () => {
   flex-shrink: 0;
   cursor: pointer;
   transition: all 0.2s ease;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 
   &:hover {
     transform: scale(1.05);
@@ -1463,7 +1477,28 @@ onMounted(async () => {
 .user-avatar-img {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
+  overflow: hidden;
+}
+
+.user-avatar .avatar-admin-badge {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+  border: 2px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 1;
 }
 
 .user-info {

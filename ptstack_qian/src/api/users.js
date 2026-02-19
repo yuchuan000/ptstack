@@ -82,3 +82,43 @@ export function getUserComments(userId, params) {
     params
   })
 }
+
+/**
+ * 获取推荐关注用户
+ * @param {object} params - 查询参数
+ * @param {number} params.limit - 返回数量
+ * @returns {Promise<{users: Array}>}
+ */
+export function getRecommendedUsers(params) {
+  return request({
+    url: '/users/recommended',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 获取关注用户的Feed流
+ * @param {object} params - 查询参数
+ * @param {number} params.page - 页码
+ * @param {number} params.pageSize - 每页数量
+ * @returns {Promise<{articles: Array, total: number, page: number, pageSize: number}>}
+ */
+export function getFeed(params) {
+  return request({
+    url: '/users/feed',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 获取未读消息数
+ * @returns {Promise<{total: number, comments: number, likes: number, followers: number}>}
+ */
+export function getUnreadCount() {
+  return request({
+    url: '/users/unread-count',
+    method: 'get'
+  })
+}

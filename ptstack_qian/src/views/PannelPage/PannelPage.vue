@@ -1,10 +1,11 @@
 <script setup>
-import { ref, onMounted, onUnmounted, markRaw } from 'vue' // 导入Vue响应式API和生命周期钩子
+import { ref, computed, onMounted, onUnmounted, markRaw, nextTick, watch } from 'vue' // 导入Vue响应式API和生命周期钩子
 import { useRouter, useRoute } from 'vue-router' // 导入Vue Router
 import { useUserStore } from '@/stores/user' // 导入用户状态管理
-import { ElMessageBox, ElMessage } from 'element-plus' // 导入Element Plus的消息提示组件
-import { House, Setting, Menu, CaretLeft, CaretRight, Tickets, Plus, Collection, Switch } from '@element-plus/icons-vue' // 导入Element Plus图标
+import { ElMessageBox, ElMessage, ElDialog } from 'element-plus' // 导入Element Plus的消息提示组件
+import { House, Setting, Menu, CaretLeft, CaretRight, Tickets, Plus, Collection, Switch, Bell } from '@element-plus/icons-vue' // 导入Element Plus图标
 import { getFullUrl } from '@/utils/url' // 导入URL处理工具函数
+import { getUnreadPopupAnnouncements, markAnnouncementRead } from '@/api/announcements'
 
 const router = useRouter() // 获取路由实例
 const route = useRoute() // 获取当前路由信息
@@ -14,12 +15,57 @@ const isMobile = ref(window.innerWidth < 768) // 判断是否为移动端
 const isTablet = ref(window.innerWidth >= 768 && window.innerWidth < 992) // 判断是否为平板端
 const drawerVisible = ref(false) // 移动端抽屉是否可见
 const isCollapse = ref(false) // 侧边栏是否折叠
+const popupAnnouncements = ref([]) // 弹窗公告列表
+const currentPopupIndex = ref(0) // 当前显示的弹窗公告索引
+const showPopup = ref(false) // 是否显示弹窗
+const hasPopupShown = ref(false) // 是否已显示过本次会话的弹窗
+
+// 获取未读弹窗公告
+const fetchPopupAnnouncements = async () => {
+  try {
+    const res = await getUnreadPopupAnnouncements()
+    if (res.announcements && res.announcements.length > 0) {
+      popupAnnouncements.value = res.announcements
+      currentPopupIndex.value = 0
+      showPopup.value = true
+    }
+  } catch (error) {
+    console.error('获取弹窗公告失败:', error)
+  }
+}
+
+// 关闭当前弹窗并显示下一个
+const handleClosePopup = async () => {
+  const currentAnnouncement = popupAnnouncements.value[currentPopupIndex.value]
+
+  try {
+    await markAnnouncementRead(currentAnnouncement.id)
+  } catch (error) {
+    console.error('标记公告已读失败:', error)
+  }
+
+  if (currentPopupIndex.value < popupAnnouncements.value.length - 1) {
+    currentPopupIndex.value++
+  } else {
+    showPopup.value = false
+    hasPopupShown.value = true
+  }
+}
 
 // 窗口大小改变时的处理函数
 const handleResize = () => {
   isMobile.value = window.innerWidth < 768 // 更新移动端判断
   isTablet.value = window.innerWidth >= 768 && window.innerWidth < 992 // 更新平板端判断
 }
+
+// 监听用户信息加载
+watch(() => userStore.userInfo, (newUserInfo) => {
+  if (newUserInfo && !hasPopupShown.value) {
+    nextTick(() => {
+      fetchPopupAnnouncements()
+    })
+  }
+}, { immediate: true })
 
 // 组件挂载时添加窗口大小监听
 onMounted(() => {
@@ -58,12 +104,29 @@ const menuList = ref([
     path: '/categories', // 菜单项路径
   },
   {
+    id: 'announcements', // 菜单项ID
+    name: '公告管理', // 菜单项名称
+    icon: markRaw(Bell), // 菜单项图标
+    path: '/announcements', // 菜单项路径
+    requiresAdmin: true, // 需要管理员权限
+  },
+  {
     id: 'settings', // 菜单项ID
     name: '设置', // 菜单项名称
     icon: markRaw(Setting), // 菜单项图标
     path: '/settings', // 菜单项路径
   },
 ])
+
+// 过滤菜单，只显示有权限的菜单项
+const filteredMenuList = computed(() => {
+  return menuList.value.filter(item => {
+    if (item.requiresAdmin) {
+      return userStore.userInfo?.isAdmin === true || userStore.userInfo?.isAdmin === 1
+    }
+    return true
+  })
+})
 
 // 处理菜单点击
 const handleMenuClick = (path) => {
@@ -124,7 +187,7 @@ const handleLogout = () => {
             @select="handleMenuClick"
           >
             <el-menu-item
-              v-for="item in menuList"
+              v-for="item in filteredMenuList"
               :key="item.id"
               :index="item.path"
             >
@@ -138,6 +201,7 @@ const handleLogout = () => {
               <div class="avatar">
                 <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="avatar-img">
                 <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
+                <span v-if="userStore.userInfo?.isAdmin" class="avatar-admin-badge">管</span>
               </div>
               <div v-if="!isCollapse" class="user-details">
                 <div class="username">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}</div>
@@ -211,7 +275,7 @@ const handleLogout = () => {
           @select="handleMenuClick"
         >
           <el-menu-item
-            v-for="item in menuList"
+            v-for="item in filteredMenuList"
             :key="item.id"
             :index="item.path"
           >
@@ -225,6 +289,7 @@ const handleLogout = () => {
             <div class="avatar">
               <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="avatar-img">
               <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
+              <span v-if="userStore.userInfo?.isAdmin" class="avatar-admin-badge">管</span>
             </div>
             <div class="user-details">
               <div class="username">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}</div>
@@ -244,6 +309,34 @@ const handleLogout = () => {
         </div>
       </div>
     </el-drawer>
+
+    <el-dialog
+      v-model="showPopup"
+      :title="popupAnnouncements[currentPopupIndex]?.title || '系统公告'"
+      width="500px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      class="announcement-popup"
+    >
+      <div class="popup-content">
+        <div class="popup-icon">
+          <el-icon><Bell /></el-icon>
+        </div>
+        <div class="popup-text">
+          {{ popupAnnouncements[currentPopupIndex]?.content }}
+        </div>
+        <div class="popup-progress" v-if="popupAnnouncements.length > 1">
+          {{ currentPopupIndex + 1 }} / {{ popupAnnouncements.length }}
+        </div>
+      </div>
+      <template #footer>
+        <div class="popup-footer">
+          <el-button type="primary" @click="handleClosePopup" size="large">
+            {{ currentPopupIndex < popupAnnouncements.length - 1 ? '下一条' : '我知道了' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </el-container>
 </template>
 
@@ -411,7 +504,7 @@ const handleLogout = () => {
 .avatar {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
   display: flex;
   align-items: center;
@@ -421,13 +514,35 @@ const handleLogout = () => {
   color: white;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+
+  .avatar-admin-badge {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    width: 26px;
+    height: 26px;
+    background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+    border: 2px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    z-index: 1;
+  }
 }
 
 .avatar-img {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
+  overflow: hidden;
 }
 
 .user-details {
@@ -441,6 +556,9 @@ const handleLogout = () => {
   font-size: 15px;
   font-weight: 600;
   color: #1d2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .email {
@@ -526,5 +644,71 @@ const handleLogout = () => {
   .content-wrapper {
     padding: 16px;
   }
+}
+
+.announcement-popup {
+  :deep(.el-dialog__header) {
+    text-align: center;
+    padding: 24px 24px 0;
+  }
+
+  :deep(.el-dialog__title) {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2129;
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 24px;
+  }
+
+  :deep(.el-dialog__footer) {
+    padding: 0 24px 24px;
+  }
+}
+
+.popup-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.popup-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+
+  .el-icon {
+    font-size: 32px;
+  }
+}
+
+.popup-text {
+  font-size: 15px;
+  color: #4e5969;
+  line-height: 1.8;
+  text-align: center;
+  word-break: break-word;
+}
+
+.popup-progress {
+  font-size: 13px;
+  color: #86909c;
+  background: #f7f8fa;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.popup-footer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 </style>

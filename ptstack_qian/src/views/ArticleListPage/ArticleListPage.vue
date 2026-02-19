@@ -325,15 +325,15 @@ onMounted(() => {
           </el-table-column>
           <el-table-column prop="author_name" label="作者" width="180" v-if="activeTab !== 'my'">
             <template #default="{ row }">
-              <div class="author-cell" :class="{ 'is-mine': row.author_id === userStore.userInfo?.id }">
-                <div class="author-avatar-small" @click.stop="goToUserProfile(row.author_id)">
+              <div class="author-cell" :class="{ 'is-mine': row.author_id === userStore.userInfo?.id }" @click.stop="goToUserProfile(row.author_id)">
+                <div class="author-avatar-small">
                   <img v-if="row.author_avatar" :src="getFullUrl(row.author_avatar)" alt="avatar" class="author-avatar-img-small">
-                  <span v-else>{{ row.author_name?.charAt(0)?.toUpperCase() || 'U' }}</span>
+                  <span v-else>{{ (row.author_nickname || row.author_name)?.charAt(0)?.toUpperCase() || 'U' }}</span>
+                  <span v-if="row.author_is_admin === 1" class="avatar-admin-badge">管</span>
                 </div>
-                <span
-                  class="author-name clickable"
-                  @click.stop="goToUserProfile(row.author_id)"
-                >{{ row.author_name }}</span>
+                <el-tooltip :content="row.author_nickname || row.author_name" placement="top" :show-after="300">
+                  <span class="author-name clickable">{{ row.author_nickname || row.author_name }}</span>
+                </el-tooltip>
               </div>
             </template>
           </el-table-column>
@@ -428,6 +428,10 @@ onMounted(() => {
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
+
+  :deep(.el-table__cell) {
+    overflow: visible;
+  }
 }
 
 .page-header {
@@ -651,6 +655,18 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 4px 0;
+  border-radius: 6px;
+  margin: -4px 0;
+
+  &:hover {
+    background: rgba(22, 93, 255, 0.05);
+    .author-name {
+      color: #165dff;
+    }
+  }
 
   &.is-mine {
     .author-name {
@@ -660,13 +676,11 @@ onMounted(() => {
   }
 
   .author-name.clickable {
-    cursor: pointer;
     transition: color 0.2s;
-
-    &:hover {
-      color: #165dff;
-      text-decoration: underline;
-    }
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -682,20 +696,36 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  overflow: visible;
+  position: relative;
+  margin-right: 8px;
 
-  &:hover {
-    transform: scale(1.1);
-    box-shadow: 0 2px 8px rgba(22, 93, 255, 0.3);
+  .avatar-admin-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+    border: 2px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    z-index: 1;
   }
 }
 
 .author-avatar-img-small {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
+  overflow: hidden;
 }
 
 .action-cell {

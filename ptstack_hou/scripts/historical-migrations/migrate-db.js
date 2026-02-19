@@ -1,3 +1,13 @@
+/**
+ * ========================================
+ * 历史归档脚本 - 已弃用
+ * ========================================
+ * 
+ * 此脚本已过时，功能已被 setup-database.js 完全替代
+ * 请使用 scripts/setup-database.js 进行数据库初始化
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql2 from 'mysql2/promise';
 import 'dotenv/config';
 

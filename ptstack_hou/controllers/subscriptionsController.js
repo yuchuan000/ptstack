@@ -1,4 +1,5 @@
 import { execute } from '../config/db.js';
+import { checkAndGrantAchievements } from '../utils/achievementHelper.js';
 
 export const toggleSubscription = async (req, res) => {
   try {
@@ -44,6 +45,18 @@ export const toggleSubscription = async (req, res) => {
         'UPDATE users SET following_count = following_count + 1 WHERE id = ?',
         [followerId]
       );
+
+      const followingCountResult = await execute(
+        'SELECT COUNT(*) as count FROM subscriptions WHERE follower_id = ?',
+        [followerId]
+      );
+      await checkAndGrantAchievements(followerId, 'follow', followingCountResult[0].count);
+
+      const followerCountResult = await execute(
+        'SELECT COUNT(*) as count FROM subscriptions WHERE following_id = ?',
+        [followingId]
+      );
+      await checkAndGrantAchievements(followingId, 'follower', followerCountResult[0].count);
       
       res.json({ message: '订阅成功', isSubscribed: true });
     }
@@ -77,12 +90,6 @@ export const getUserFollowers = async (req, res) => {
     const offset = (page - 1) * pageSize;
     const currentUserId = req.user?.id;
     
-    const [user] = await execute('SELECT show_followers FROM users WHERE id = ?', [userId]);
-    
-    if (!user.show_followers && parseInt(userId) !== currentUserId) {
-      return res.status(403).json({ message: '该用户未公开订阅者列表' });
-    }
-    
     let whereClause = 'WHERE s.following_id = ?';
     let queryParams = [userId];
     let countWhereClause = 'WHERE following_id = ?';
@@ -97,7 +104,7 @@ export const getUserFollowers = async (req, res) => {
     }
     
     const followers = await execute(`
-      SELECT u.id, u.username, u.nickname, u.avatar, u.bio, u.website, u.created_at,
+      SELECT u.id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.is_admin,
              (SELECT COUNT(*) FROM articles WHERE author_id = u.id) as article_count
       FROM subscriptions s
       JOIN users u ON s.follower_id = u.id
@@ -142,12 +149,6 @@ export const getUserFollowing = async (req, res) => {
     const offset = (page - 1) * pageSize;
     const currentUserId = req.user?.id;
     
-    const [user] = await execute('SELECT show_following FROM users WHERE id = ?', [userId]);
-    
-    if (!user.show_following && parseInt(userId) !== currentUserId) {
-      return res.status(403).json({ message: '该用户未公开订阅列表' });
-    }
-    
     let whereClause = 'WHERE s.follower_id = ?';
     let queryParams = [userId];
     let countWhereClause = 'WHERE follower_id = ?';
@@ -162,7 +163,7 @@ export const getUserFollowing = async (req, res) => {
     }
     
     const following = await execute(`
-      SELECT u.id, u.username, u.nickname, u.avatar, u.bio, u.website, u.created_at,
+      SELECT u.id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.is_admin,
              (SELECT COUNT(*) FROM articles WHERE author_id = u.id) as article_count
       FROM subscriptions s
       JOIN users u ON s.following_id = u.id

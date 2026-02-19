@@ -1,5 +1,10 @@
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const EMAIL_VERIFICATION_CODE_EXPIRES_IN = parseInt(process.env.EMAIL_VERIFICATION_CODE_EXPIRES_IN) || 15;
 
 // 创建邮件传输器
 const createTransporter = () => {
@@ -63,7 +68,7 @@ export const sendVerificationEmail = async (to, username, code) => {
             </p>
             
             <p style="font-size: 13px; color: #86909c; margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e6eb;">
-              此验证码有效期为 24 小时。如果您没有注册 PTStack，请忽略此邮件。
+              此验证码有效期为 ${EMAIL_VERIFICATION_CODE_EXPIRES_IN} 分钟。如果您没有注册 PTStack，请忽略此邮件。
             </p>
           </div>
           
@@ -138,8 +143,53 @@ export const sendPasswordResetEmail = async (to, username, token) => {
   }
 };
 
+export const sendAnnouncementEmail = async (to, username, title, content) => {
+  try {
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"PTStack" <${process.env.EMAIL_USER}>`,
+      to: to,
+      subject: `【PTStack公告】${title}`,
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #ff7d00; margin: 0;">系统公告</h1>
+          </div>
+          
+          <div style="background: #f8f9fa; padding: 30px; border-radius: 8px;">
+            <p style="font-size: 16px; color: #1d2129; margin: 0 0 20px 0;">
+              亲爱的 <strong>${username}</strong>：
+            </p>
+            <h2 style="font-size: 18px; color: #1d2129; margin: 0 0 20px 0; border-left: 4px solid #ff7d00; padding-left: 12px;">
+              ${title}
+            </h2>
+            <div style="font-size: 14px; color: #4e5969; line-height: 1.8; white-space: pre-wrap;">
+              ${content}
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e6eb;">
+            <p style="font-size: 12px; color: #86909c; margin: 0;">
+              © 2026 PTStack. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`公告邮件已发送到: ${to}`);
+    return true;
+  } catch (error) {
+    console.error('发送公告邮件失败:', error.message);
+    throw error;
+  }
+};
+
 export default {
   generateVerificationToken,
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendAnnouncementEmail,
 };

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router' // 导入Vue Router的创建方法
 import { useUserStore } from '@/stores/user' // 导入用户状态管理
+import { ElMessage } from 'element-plus'
 
 // 创建路由实例
 const router = createRouter({
@@ -48,6 +49,11 @@ const router = createRouter({
       meta: { requiresAuth: false } // 路由元信息，不需要认证
     },
     {
+      path: '/notifications', // 消息通知页面路径
+      component: () => import('@/views/NotificationsPage/NotificationsPage.vue'), // 懒加载消息通知页面组件
+      meta: { requiresAuth: true } // 路由元信息，需要认证
+    },
+    {
       path: '/', // 根路径
       component: () => import('@/views/PannelPage/PannelPage.vue'), // 懒加载主面板页面组件
       meta: { requiresAuth: true }, // 路由元信息，需要认证
@@ -82,6 +88,11 @@ const router = createRouter({
           path: 'settings', // 设置页面路径
           component: () => import('@/views/SettingsPage/SettingsPage.vue'), // 懒加载设置页面组件
           meta: { requiresAuth: true } // 路由元信息，需要认证
+        },
+        {
+          path: 'announcements', // 公告管理页面路径
+          component: () => import('@/views/AnnouncementManagePage/AnnouncementManagePage.vue'), // 懒加载公告管理页面组件
+          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
         }
       ]
     }
@@ -96,6 +107,12 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth) {
     // 如果有Access Token或Refresh Token
     if (userStore.accessToken || userStore.refreshToken) {
+      // 检查是否需要管理员权限
+      if (to.meta.requiresAdmin && !(userStore.userInfo?.isAdmin === true || userStore.userInfo?.isAdmin === 1)) {
+        ElMessage.warning('您没有权限访问此页面')
+        next('/')
+        return
+      }
       // 检查是否已完善资料，但资料完善页本身不需要检查
       if (to.path !== '/complete-profile' && userStore.userInfo && !userStore.userInfo.profileCompleted) {
         next('/complete-profile') // 跳转到资料完善页
