@@ -44,14 +44,10 @@ ptstack/
 CREATE DATABASE ptstack_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-2. Configure environment variables (create `.env` file in `ptstack_hou/` directory):
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_PORT=3306
-JWT_SECRET=your_jwt_secret
-```
+2. Configure environment variables:
+   - Copy `ptstack_hou/.env.example` to `ptstack_hou/.env`
+   - Fill in actual configuration information in the `.env` file
+
 
 ### Start the Project
 

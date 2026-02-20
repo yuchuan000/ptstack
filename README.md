@@ -44,14 +44,10 @@ ptstack/
 CREATE DATABASE ptstack_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-2. 配置环境变量（在 `ptstack_hou/` 目录下创建 `.env` 文件）：
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=你的密码
-DB_PORT=3306
-JWT_SECRET=你的JWT密钥
-```
+2. 配置环境变量：
+   - 复制 `ptstack_hou/.env.example` 为 `ptstack_hou/.env`
+   - 填写 `.env` 文件中的实际配置信息
+
 
 ### 启动项目
 
