@@ -1,3 +1,26 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - articles 表：添加评论数字段
+ * - comment_likes 表：创建评论点赞表
+ * - comments 表：添加评论点赞数字段
+ * - subscriptions 表：创建订阅表
+ * - users 表：添加粉丝和关注数字段
+ * 
+ * 功能说明：
+ * - 添加 articles.comment_count 字段：文章评论数
+ * - 创建 comment_likes 表：评论点赞记录
+ * - 添加 comments.like_count 字段：评论点赞数
+ * - 创建 subscriptions 表：用户关注记录
+ * - 添加 users.follower_count 和 following_count 字段：粉丝数和关注数
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
@@ -17,7 +40,6 @@ async function migrate() {
   try {
     console.log('开始迁移数据库...');
     
-    // 1. 添加文章表的comment_count字段
     console.log('添加 articles.comment_count 字段...');
     await connection.execute(`
       ALTER TABLE articles 
@@ -29,7 +51,6 @@ async function migrate() {
       console.log('  articles.comment_count 字段已存在');
     });
     
-    // 2. 创建评论点赞表
     console.log('创建 comment_likes 表...');
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS comment_likes (
@@ -43,7 +64,6 @@ async function migrate() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    // 3. 添加评论表的like_count字段
     console.log('添加 comments.like_count 字段...');
     await connection.execute(`
       ALTER TABLE comments 
@@ -55,7 +75,6 @@ async function migrate() {
       console.log('  comments.like_count 字段已存在');
     });
     
-    // 4. 创建订阅表
     console.log('创建 subscriptions 表...');
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS subscriptions (
@@ -69,7 +88,6 @@ async function migrate() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     
-    // 5. 添加用户表的关注相关字段
     console.log('添加 users.follower_count 字段...');
     await connection.execute(`
       ALTER TABLE users 

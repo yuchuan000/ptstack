@@ -224,7 +224,7 @@ onMounted(() => {
   <div class="article-list-page">
     <PageHeader title="文章中心" subtitle="探索和分享技术知识">
       <template #actions>
-        <el-button type="primary" size="large" @click="goToCreate">
+        <el-button class="create-btn" size="large" @click="goToCreate">
           <el-icon><Plus /></el-icon>
           写文章
         </el-button>
@@ -460,12 +460,14 @@ onMounted(() => {
 }
 
 .create-btn {
-  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  background: #165dff;
   border: none;
-  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
+  border-radius: 8px;
+  color: white;
 
   &:hover {
-    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
+    background: #4080ff;
+    color: white;
   }
 }
 
@@ -507,8 +509,8 @@ onMounted(() => {
   }
 
   &.active {
-    background: #165dff;
-    color: #ffffff;
+    background: #eaf2ff;
+    color: #165dff;
   }
 }
 

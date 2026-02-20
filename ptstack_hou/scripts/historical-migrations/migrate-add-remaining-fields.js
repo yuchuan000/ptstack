@@ -1,3 +1,22 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - comments 表：添加回复评论ID字段
+ * - articles 表：添加分享数字段
+ * - users 表：添加个人简介字段
+ * 
+ * 功能说明：
+ * - 添加 comments.reply_to_comment_id 字段：回复的评论ID
+ * - 添加 articles.share_count 字段：分享次数
+ * - 添加 users.bio 字段：个人简介
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
@@ -17,7 +36,6 @@ async function migrate() {
   try {
     console.log('开始迁移剩余字段...');
     
-    // 1. 添加 comments.reply_to_comment_id 字段
     console.log('添加 comments.reply_to_comment_id 字段...');
     const [columns] = await connection.execute('SHOW COLUMNS FROM comments LIKE "reply_to_comment_id"');
     if (columns.length === 0) {
@@ -32,7 +50,6 @@ async function migrate() {
       console.log('  comments.reply_to_comment_id 字段已存在');
     }
     
-    // 2. 添加 articles.share_count 字段
     console.log('添加 articles.share_count 字段...');
     const [shareColumns] = await connection.execute('SHOW COLUMNS FROM articles LIKE "share_count"');
     if (shareColumns.length === 0) {
@@ -45,7 +62,6 @@ async function migrate() {
       console.log('  articles.share_count 字段已存在');
     }
     
-    // 3. 添加 users.bio 字段
     console.log('添加 users.bio 字段...');
     const [bioColumns] = await connection.execute('SHOW COLUMNS FROM users LIKE "bio"');
     if (bioColumns.length === 0) {

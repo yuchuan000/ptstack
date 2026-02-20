@@ -1,3 +1,20 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - email_verifications 表：更新临时验证表结构
+ * 
+ * 功能说明：
+ * - 删除旧的 email_verifications 表
+ * - 创建新的 email_verifications 表
+ * - 简化表结构，移除预注册用户信息字段
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
@@ -20,11 +37,9 @@ async function migrateDatabase() {
     connection = await mysql.createConnection(config);
     console.log('已连接到数据库');
     
-    // 删除旧的临时验证表
     await connection.execute('DROP TABLE IF EXISTS email_verifications');
     console.log('旧的临时验证表已删除');
     
-    // 创建新的临时验证表
     await connection.execute(`
       CREATE TABLE email_verifications (
         id INT AUTO_INCREMENT PRIMARY KEY,

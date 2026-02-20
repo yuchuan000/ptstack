@@ -1,5 +1,6 @@
 import { execute } from '../config/db.js'
 import { sendAnnouncementEmail } from '../services/emailService.js'
+import { generateAnnouncementId } from '../utils/idGenerator.js'
 
 export const getAnnouncements = async (req, res) => {
   try {
@@ -7,7 +8,7 @@ export const getAnnouncements = async (req, res) => {
     
     const whereClause = `WHERE a.is_active = 1
       AND a.created_by != ?
-      AND JSON_CONTAINS(a.delivery_methods, '"notification"')
+      AND (JSON_CONTAINS(a.delivery_methods, '"notification"') OR JSON_CONTAINS(a.delivery_methods, '"message"'))
       AND (
         a.target_type = 'all' OR
         (a.target_type = 'specific' AND JSON_CONTAINS(a.target_user_ids, ?))
@@ -31,8 +32,17 @@ export const getAnnouncements = async (req, res) => {
       ORDER BY a.priority DESC, a.created_at DESC
     `, [userId, userId, userId.toString()])
     
+    const processedAnnouncements = announcements.map(announcement => {
+      const processed = {
+        ...announcement,
+        id: announcement.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.status(200).json({
-      announcements
+      announcements: processedAnnouncements
     })
   } catch (error) {
     console.error('获取公告失败:', error.message)
@@ -43,7 +53,7 @@ export const getAnnouncements = async (req, res) => {
 export const getMarqueeAnnouncements = async (req, res) => {
   try {
     const announcements = await execute(`
-      SELECT id, title, content, priority
+      SELECT id, public_id, title, content, priority
       FROM announcements 
       WHERE is_active = 1 
         AND is_marquee = 1
@@ -52,8 +62,17 @@ export const getMarqueeAnnouncements = async (req, res) => {
       ORDER BY priority DESC, created_at DESC
     `)
     
+    const processedAnnouncements = announcements.map(announcement => {
+      const processed = {
+        ...announcement,
+        id: announcement.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.status(200).json({
-      announcements
+      announcements: processedAnnouncements
     })
   } catch (error) {
     console.error('获取跑马灯公告失败:', error.message)
@@ -74,10 +93,13 @@ export const createAnnouncement = async (req, res) => {
       return res.status(403).json({ message: '只有管理员可以创建公告' })
     }
     
+    const publicId = generateAnnouncementId()
+    
     const result = await execute(
-      `INSERT INTO announcements (title, content, priority, is_marquee, target_type, target_user_ids, delivery_methods, created_by, start_time, end_time) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO announcements (public_id, title, content, priority, is_marquee, target_type, target_user_ids, delivery_methods, created_by, start_time, end_time) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        publicId,
         title, 
         content, 
         priority, 
@@ -144,7 +166,7 @@ export const createAnnouncement = async (req, res) => {
     
     res.status(201).json({
       message: '公告创建成功',
-      announcementId
+      announcementId: publicId
     })
   } catch (error) {
     console.error('创建公告失败:', error.message)
@@ -212,7 +234,7 @@ export const updateAnnouncement = async (req, res) => {
     params.push(id)
     
     await execute(
-      `UPDATE announcements SET ${updates.join(', ')} WHERE id = ?`,
+      `UPDATE announcements SET ${updates.join(', ')} WHERE public_id = ?`,
       params
     )
     
@@ -231,7 +253,7 @@ export const deleteAnnouncement = async (req, res) => {
       return res.status(403).json({ message: '只有管理员可以删除公告' })
     }
     
-    await execute('DELETE FROM announcements WHERE id = ?', [id])
+    await execute('DELETE FROM announcements WHERE public_id = ?', [id])
     
     res.status(200).json({ message: '公告删除成功' })
   } catch (error) {
@@ -245,9 +267,16 @@ export const markAnnouncementRead = async (req, res) => {
     const { id } = req.params
     const userId = req.user.id
     
+    const announcements = await execute('SELECT id FROM announcements WHERE public_id = ?', [id])
+    if (announcements.length === 0) {
+      return res.status(404).json({ message: '公告不存在' })
+    }
+    
+    const internalId = announcements[0].id
+    
     await execute(
       'INSERT IGNORE INTO announcement_reads (announcement_id, user_id) VALUES (?, ?)',
-      [id, userId]
+      [internalId, userId]
     )
     
     res.status(200).json({ message: '标记已读成功' })
@@ -276,8 +305,17 @@ export const getUnreadPopupAnnouncements = async (req, res) => {
       LIMIT 5
     `, [userId, userId, userId.toString()])
     
+    const processedAnnouncements = announcements.map(announcement => {
+      const processed = {
+        ...announcement,
+        id: announcement.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.status(200).json({
-      announcements
+      announcements: processedAnnouncements
     })
   } catch (error) {
     console.error('获取未读弹窗公告失败:', error.message)
@@ -298,11 +336,56 @@ export const getAllAnnouncementsAdmin = async (req, res) => {
       ORDER BY a.created_at DESC
     `)
     
+    const processedAnnouncements = announcements.map(announcement => {
+      const processed = {
+        ...announcement,
+        id: announcement.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.status(200).json({
-      announcements
+      announcements: processedAnnouncements
     })
   } catch (error) {
     console.error('获取所有公告失败:', error.message)
+    res.status(500).json({ message: '服务器内部错误' })
+  }
+}
+
+export const getAnnouncementById = async (req, res) => {
+  try {
+    const { id } = req.params
+    const userId = req.user.id
+    
+    const announcement = await execute(`
+      SELECT a.*, 
+             u.nickname as creator_nickname,
+             u.username as creator_username,
+             u.avatar as creator_avatar,
+             CASE WHEN ar.id IS NOT NULL THEN 1 ELSE 0 END as is_read
+      FROM announcements a
+      LEFT JOIN users u ON a.created_by = u.id
+      LEFT JOIN announcement_reads ar ON a.id = ar.announcement_id AND ar.user_id = ?
+      WHERE a.public_id = ?
+    `, [userId, id])
+    
+    if (announcement.length === 0) {
+      return res.status(404).json({ message: '公告不存在' })
+    }
+    
+    const processedAnnouncement = {
+      ...announcement[0],
+      id: announcement[0].public_id
+    };
+    delete processedAnnouncement.public_id;
+    
+    res.status(200).json({
+      announcement: processedAnnouncement
+    })
+  } catch (error) {
+    console.error('获取公告详情失败:', error.message)
     res.status(500).json({ message: '服务器内部错误' })
   }
 }

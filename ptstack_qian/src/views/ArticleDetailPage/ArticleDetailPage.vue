@@ -27,6 +27,7 @@ import {
 import { getFullUrl } from '@/utils/url'
 import QRCode from 'qrcode'
 import html2canvas from 'html2canvas'
+import { MdPreview } from 'md-editor-v3'
 
 const router = useRouter()
 const route = useRoute()
@@ -560,7 +561,7 @@ onUnmounted(() => {
           <div class="article-body">
             <p v-if="article.summary" class="article-summary">{{ article.summary }}</p>
             <div class="article-text">
-              <pre class="content-display">{{ article.content }}</pre>
+              <MdPreview :modelValue="article.content" />
             </div>
           </div>
         </div>
@@ -1121,16 +1122,6 @@ onUnmounted(() => {
     font-size: 16px;
     color: #1d2129;
     line-height: 1.9;
-
-    .content-display {
-      background: #f7f8fa;
-      padding: 20px;
-      border-radius: 12px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: 'Fira Code', 'Consolas', monospace;
-      margin: 0;
-    }
   }
 }
 

@@ -1,3 +1,26 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - announcements 表：公告系统扩展字段
+ * - announcement_reads 表：公告阅读记录
+ * 
+ * 功能说明：
+ * - 添加 priority 字段：公告优先级
+ * - 添加 is_marquee 字段：是否显示在首页跑马灯
+ * - 添加 target_type 字段：目标用户类型
+ * - 添加 target_user_ids 字段：目标用户ID列表
+ * - 添加 delivery_methods 字段：发送方式
+ * - 添加 created_by 字段：创建者ID
+ * - 添加 start_time/end_time 字段：显示时间范围
+ * - 创建 announcement_reads 表：记录用户阅读公告的时间
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
@@ -8,7 +31,7 @@ const config = {
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   port: process.env.DB_PORT || 3306,
-  database: 'ptstack_db',
+  database: process.env.DB_NAME || 'ptstack_db',
   multipleStatements: true
 };
 

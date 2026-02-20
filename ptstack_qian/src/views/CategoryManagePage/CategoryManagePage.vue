@@ -1,17 +1,13 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCategories, createCategory, updateCategory, deleteCategory, applyCategory, getCategoryApplications, reviewCategoryApplication } from '@/api/articles'
-import { Plus, Edit, Delete, DocumentAdd } from '@element-plus/icons-vue'
+import { getCategories, createCategory, updateCategory, deleteCategory, getCategoryApplications, reviewCategoryApplication } from '@/api/articles'
+import { Plus, Edit, Delete } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader/PageHeader.vue'
-import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
 import { getFullUrl } from '@/utils/url'
 
-const userStore = useUserStore()
 const router = useRouter()
-
-const isAdmin = computed(() => userStore.userInfo?.isAdmin || false)
 
 const goToUserProfile = (userId) => {
   router.push(`/profile/${userId}`)
@@ -123,35 +119,6 @@ const handleDelete = (category) => {
   }).catch(() => {})
 }
 
-const openApplyDialog = () => {
-  isEdit.value = false
-  currentCategory.value = null
-  formData.value = {
-    name: '',
-    description: ''
-  }
-  dialogVisible.value = true
-}
-
-const handleApply = async () => {
-  if (!formData.value.name.trim()) {
-    ElMessage.warning('请输入分类名称')
-    return
-  }
-
-  try {
-    await applyCategory(formData.value)
-    ElMessage.success('分类申请提交成功，请等待审核')
-    dialogVisible.value = false
-    if (isAdmin.value) {
-      fetchApplications()
-    }
-  } catch (error) {
-    console.error('申请失败:', error)
-    ElMessage.error(error.response?.data?.message || '申请失败，请稍后重试')
-  }
-}
-
 const openReviewDialog = (application) => {
   currentApplication.value = application
   reviewData.value = {
@@ -204,16 +171,8 @@ const getStatusType = (status) => {
 
 onMounted(() => {
   fetchCategories()
-  if (isAdmin.value) {
-    fetchApplications()
-  }
+  fetchApplications()
 })
-
-watch(() => userStore.userInfo, () => {
-  if (isAdmin.value) {
-    fetchApplications()
-  }
-}, { immediate: true })
 </script>
 
 <template>
@@ -221,22 +180,12 @@ watch(() => userStore.userInfo, () => {
     <PageHeader title="分类管理" subtitle="管理文章分类和描述">
       <template #actions>
         <el-button
-          v-if="isAdmin"
           type="primary"
           size="large"
           @click="openCreateDialog"
         >
           <el-icon><Plus /></el-icon>
           新建分类
-        </el-button>
-        <el-button
-          v-else
-          type="primary"
-          size="large"
-          @click="openApplyDialog"
-        >
-          <el-icon><DocumentAdd /></el-icon>
-          申请创建分类
         </el-button>
       </template>
     </PageHeader>
@@ -255,7 +204,7 @@ watch(() => userStore.userInfo, () => {
                   <p class="category-desc" v-if="category.description">{{ category.description }}</p>
                   <p class="category-desc empty" v-else>暂无描述</p>
                 </div>
-                <div class="category-actions" v-if="isAdmin">
+                <div class="category-actions">
                   <el-button circle size="small" @click="openEditDialog(category)">
                     <el-icon><Edit /></el-icon>
                   </el-button>
@@ -270,7 +219,7 @@ watch(() => userStore.userInfo, () => {
           </div>
         </el-tab-pane>
 
-        <el-tab-pane v-if="isAdmin" label="分类申请" name="applications">
+        <el-tab-pane label="分类申请" name="applications">
           <div class="applications-container" v-loading="applicationsLoading">
             <el-table :data="applications" style="width: 100%">
               <el-table-column prop="name" label="分类名称" width="150" />
@@ -297,12 +246,12 @@ watch(() => userStore.userInfo, () => {
                   {{ row.created_at }}
                 </template>
               </el-table-column>
-              <el-table-column v-if="isAdmin" label="审核意见" min-width="150">
+              <el-table-column label="审核意见" min-width="150">
                 <template #default="{ row }">
                   {{ row.review_comment || '-' }}
                 </template>
               </el-table-column>
-              <el-table-column v-if="isAdmin" label="操作" width="150" fixed="right">
+              <el-table-column label="操作" width="150" fixed="right">
                 <template #default="{ row }">
                   <el-button
                     v-if="row.status === 0"
@@ -324,7 +273,7 @@ watch(() => userStore.userInfo, () => {
 
     <el-dialog
       v-model="dialogVisible"
-      :title="isAdmin ? (isEdit ? '编辑分类' : '新建分类') : '申请创建分类'"
+      :title="isEdit ? '编辑分类' : '新建分类'"
       width="500px"
       :close-on-click-modal="false"
     >
@@ -348,8 +297,8 @@ watch(() => userStore.userInfo, () => {
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="isAdmin ? handleSubmit() : handleApply()">
-          {{ isAdmin ? (isEdit ? '更新' : '创建') : '提交申请' }}
+        <el-button type="primary" @click="handleSubmit()">
+          {{ isEdit ? '更新' : '创建' }}
         </el-button>
       </template>
     </el-dialog>

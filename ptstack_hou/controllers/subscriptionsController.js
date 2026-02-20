@@ -6,24 +6,32 @@ export const toggleSubscription = async (req, res) => {
     const { followingId } = req.params;
     const followerId = req.user.id;
     
-    if (parseInt(followingId) === followerId) {
+    // 转换followingId为内部id
+    const [followingUser] = await execute('SELECT id FROM users WHERE public_id = ?', [followingId]);
+    if (!followingUser) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    const internalFollowingId = followingUser.id;
+    
+    if (internalFollowingId === followerId) {
       return res.status(400).json({ message: '不能订阅自己' });
     }
     
     const [existing] = await execute(
       'SELECT * FROM subscriptions WHERE follower_id = ? AND following_id = ?',
-      [followerId, followingId]
+      [followerId, internalFollowingId]
     );
     
     if (existing) {
       await execute(
         'DELETE FROM subscriptions WHERE follower_id = ? AND following_id = ?',
-        [followerId, followingId]
+        [followerId, internalFollowingId]
       );
       
       await execute(
         'UPDATE users SET follower_count = follower_count - 1 WHERE id = ?',
-        [followingId]
+        [internalFollowingId]
       );
       await execute(
         'UPDATE users SET following_count = following_count - 1 WHERE id = ?',
@@ -34,12 +42,12 @@ export const toggleSubscription = async (req, res) => {
     } else {
       await execute(
         'INSERT INTO subscriptions (follower_id, following_id) VALUES (?, ?)',
-        [followerId, followingId]
+        [followerId, internalFollowingId]
       );
       
       await execute(
         'UPDATE users SET follower_count = follower_count + 1 WHERE id = ?',
-        [followingId]
+        [internalFollowingId]
       );
       await execute(
         'UPDATE users SET following_count = following_count + 1 WHERE id = ?',
@@ -54,9 +62,9 @@ export const toggleSubscription = async (req, res) => {
 
       const followerCountResult = await execute(
         'SELECT COUNT(*) as count FROM subscriptions WHERE following_id = ?',
-        [followingId]
+        [internalFollowingId]
       );
-      await checkAndGrantAchievements(followingId, 'follower', followerCountResult[0].count);
+      await checkAndGrantAchievements(internalFollowingId, 'follower', followerCountResult[0].count);
       
       res.json({ message: '订阅成功', isSubscribed: true });
     }
@@ -71,9 +79,17 @@ export const checkSubscription = async (req, res) => {
     const { followingId } = req.params;
     const followerId = req.user.id;
     
+    // 转换followingId为内部id
+    const [followingUser] = await execute('SELECT id FROM users WHERE public_id = ?', [followingId]);
+    if (!followingUser) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    const internalFollowingId = followingUser.id;
+    
     const [existing] = await execute(
       'SELECT * FROM subscriptions WHERE follower_id = ? AND following_id = ?',
-      [followerId, followingId]
+      [followerId, internalFollowingId]
     );
     
     res.json({ isSubscribed: !!existing });
@@ -90,10 +106,18 @@ export const getUserFollowers = async (req, res) => {
     const offset = (page - 1) * pageSize;
     const currentUserId = req.user?.id;
     
+    // 转换userId为内部id
+    const [user] = await execute('SELECT id FROM users WHERE public_id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    const internalUserId = user.id;
+    
     let whereClause = 'WHERE s.following_id = ?';
-    let queryParams = [userId];
+    let queryParams = [internalUserId];
     let countWhereClause = 'WHERE following_id = ?';
-    let countParams = [userId];
+    let countParams = [internalUserId];
     
     if (search) {
       whereClause += ' AND u.username LIKE ?';
@@ -104,7 +128,7 @@ export const getUserFollowers = async (req, res) => {
     }
     
     const followers = await execute(`
-      SELECT u.id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.is_admin,
+      SELECT u.public_id as id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.is_admin,
              (SELECT COUNT(*) FROM articles WHERE author_id = u.id) as article_count
       FROM subscriptions s
       JOIN users u ON s.follower_id = u.id
@@ -121,11 +145,14 @@ export const getUserFollowers = async (req, res) => {
     const usersWithSubscriptionStatus = await Promise.all(followers.map(async (follower) => {
       let isSubscribed = false;
       if (currentUserId) {
-        const [sub] = await execute(
-          'SELECT id FROM subscriptions WHERE follower_id = ? AND following_id = ?',
-          [currentUserId, follower.id]
-        );
-        isSubscribed = !!sub;
+        const [followerUser] = await execute('SELECT id FROM users WHERE public_id = ?', [follower.id]);
+        if (followerUser) {
+          const [sub] = await execute(
+            'SELECT id FROM subscriptions WHERE follower_id = ? AND following_id = ?',
+            [currentUserId, followerUser.id]
+          );
+          isSubscribed = !!sub;
+        }
       }
       return { ...follower, isSubscribed };
     }));
@@ -149,10 +176,18 @@ export const getUserFollowing = async (req, res) => {
     const offset = (page - 1) * pageSize;
     const currentUserId = req.user?.id;
     
+    // 转换userId为内部id
+    const [user] = await execute('SELECT id FROM users WHERE public_id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    const internalUserId = user.id;
+    
     let whereClause = 'WHERE s.follower_id = ?';
-    let queryParams = [userId];
+    let queryParams = [internalUserId];
     let countWhereClause = 'WHERE follower_id = ?';
-    let countParams = [userId];
+    let countParams = [internalUserId];
     
     if (search) {
       whereClause += ' AND u.username LIKE ?';
@@ -163,7 +198,7 @@ export const getUserFollowing = async (req, res) => {
     }
     
     const following = await execute(`
-      SELECT u.id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.is_admin,
+      SELECT u.public_id as id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.is_admin,
              (SELECT COUNT(*) FROM articles WHERE author_id = u.id) as article_count
       FROM subscriptions s
       JOIN users u ON s.following_id = u.id
@@ -180,11 +215,14 @@ export const getUserFollowing = async (req, res) => {
     const usersWithSubscriptionStatus = await Promise.all(following.map(async (followingUser) => {
       let isSubscribed = false;
       if (currentUserId) {
-        const [sub] = await execute(
-          'SELECT id FROM subscriptions WHERE follower_id = ? AND following_id = ?',
-          [currentUserId, followingUser.id]
-        );
-        isSubscribed = !!sub;
+        const [followingUserInternal] = await execute('SELECT id FROM users WHERE public_id = ?', [followingUser.id]);
+        if (followingUserInternal) {
+          const [sub] = await execute(
+            'SELECT id FROM subscriptions WHERE follower_id = ? AND following_id = ?',
+            [currentUserId, followingUserInternal.id]
+          );
+          isSubscribed = !!sub;
+        }
       }
       return { ...followingUser, isSubscribed };
     }));

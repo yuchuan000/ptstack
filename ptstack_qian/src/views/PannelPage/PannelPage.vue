@@ -3,9 +3,10 @@ import { ref, computed, onMounted, onUnmounted, markRaw, nextTick, watch } from 
 import { useRouter, useRoute } from 'vue-router' // 导入Vue Router
 import { useUserStore } from '@/stores/user' // 导入用户状态管理
 import { ElMessageBox, ElMessage, ElDialog } from 'element-plus' // 导入Element Plus的消息提示组件
-import { House, Setting, Menu, CaretLeft, CaretRight, Tickets, Plus, Collection, Switch, Bell } from '@element-plus/icons-vue' // 导入Element Plus图标
+import { House, Setting, Menu, CaretLeft, CaretRight, Tickets, Collection, Switch, Bell, User, Trophy } from '@element-plus/icons-vue' // 导入Element Plus图标
 import { getFullUrl } from '@/utils/url' // 导入URL处理工具函数
 import { getUnreadPopupAnnouncements, markAnnouncementRead } from '@/api/announcements'
+import { MdPreview } from 'md-editor-v3'
 
 const router = useRouter() // 获取路由实例
 const route = useRoute() // 获取当前路由信息
@@ -92,22 +93,37 @@ const menuList = ref([
     path: '/articles', // 菜单项路径
   },
   {
-    id: 'create-article', // 菜单项ID
-    name: '写文章', // 菜单项名称
-    icon: markRaw(Plus), // 菜单项图标
-    path: '/article/create', // 菜单项路径
+    id: 'achievements', // 菜单项ID
+    name: '我的成就', // 菜单项名称
+    icon: markRaw(Trophy), // 菜单项图标
+    path: '/achievements', // 菜单项路径
   },
   {
     id: 'categories', // 菜单项ID
     name: '分类管理', // 菜单项名称
     icon: markRaw(Collection), // 菜单项图标
     path: '/categories', // 菜单项路径
+    requiresAdmin: true, // 需要管理员权限
   },
   {
     id: 'announcements', // 菜单项ID
     name: '公告管理', // 菜单项名称
     icon: markRaw(Bell), // 菜单项图标
     path: '/announcements', // 菜单项路径
+    requiresAdmin: true, // 需要管理员权限
+  },
+  {
+    id: 'achievements-admin', // 菜单项ID
+    name: '成就管理', // 菜单项名称
+    icon: markRaw(Trophy), // 菜单项图标
+    path: '/achievements-manage', // 菜单项路径
+    requiresAdmin: true, // 需要管理员权限
+  },
+  {
+    id: 'users', // 菜单项ID
+    name: '用户管理', // 菜单项名称
+    icon: markRaw(User), // 菜单项图标
+    path: '/users', // 菜单项路径
     requiresAdmin: true, // 需要管理员权限
   },
   {
@@ -147,6 +163,13 @@ const handleLogout = () => {
     ElMessage.success('退出登录成功') // 显示成功提示
     router.push('/login') // 跳转到登录页
   }).catch(() => {}) // 取消时不做任何操作
+}
+
+// 跳转到个人详情页
+const goToProfile = () => {
+  if (userStore.userInfo?.id) {
+    router.push(`/profile/${userStore.userInfo.id}`)
+  }
 }
 </script>
 
@@ -197,7 +220,7 @@ const handleLogout = () => {
           </el-menu>
 
           <div class="user-section">
-            <div class="user-info">
+            <div class="user-info" @click="goToProfile">
               <div class="avatar">
                 <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="avatar-img">
                 <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
@@ -285,7 +308,7 @@ const handleLogout = () => {
         </el-menu>
 
         <div class="user-section">
-          <div class="user-info">
+          <div class="user-info" @click="goToProfile">
             <div class="avatar">
               <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="avatar-img">
               <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
@@ -323,7 +346,7 @@ const handleLogout = () => {
           <el-icon><Bell /></el-icon>
         </div>
         <div class="popup-text">
-          {{ popupAnnouncements[currentPopupIndex]?.content }}
+          <MdPreview :modelValue="popupAnnouncements[currentPopupIndex]?.content || ''" />
         </div>
         <div class="popup-progress" v-if="popupAnnouncements.length > 1">
           {{ currentPopupIndex + 1 }} / {{ popupAnnouncements.length }}
@@ -499,6 +522,14 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #f7f8fa;
+  }
 }
 
 .avatar {
@@ -694,8 +725,9 @@ const handleLogout = () => {
   font-size: 15px;
   color: #4e5969;
   line-height: 1.8;
-  text-align: center;
+  text-align: left;
   word-break: break-word;
+  width: 100%;
 }
 
 .popup-progress {

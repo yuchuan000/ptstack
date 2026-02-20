@@ -2,6 +2,7 @@ import express from 'express'
 import { 
   getAnnouncements, 
   getMarqueeAnnouncements,
+  getAnnouncementById,
   createAnnouncement, 
   updateAnnouncement,
   deleteAnnouncement,
@@ -17,6 +18,7 @@ router.get('/', authMiddleware, getAnnouncements)
 router.get('/marquee', getMarqueeAnnouncements)
 router.get('/unread-popup', authMiddleware, getUnreadPopupAnnouncements)
 router.get('/admin/all', authMiddleware, getAllAnnouncementsAdmin)
+router.get('/:id', authMiddleware, getAnnouncementById)
 router.post('/', authMiddleware, createAnnouncement)
 router.put('/:id', authMiddleware, updateAnnouncement)
 router.delete('/:id', authMiddleware, deleteAnnouncement)

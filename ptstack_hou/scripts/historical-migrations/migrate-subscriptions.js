@@ -1,3 +1,23 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - subscriptions 表：创建用户订阅/关注表
+ * - users 表：添加用户资料和统计字段
+ * 
+ * 功能说明：
+ * - 创建 subscriptions 表：记录用户关注关系
+ * - 添加 users.bio 字段：个人简介
+ * - 添加 users.website 字段：个人网站
+ * - 添加 users.show_* 字段：隐私设置
+ * - 添加 users.follower_count 和 following_count 字段：粉丝和关注数
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql2 from 'mysql2/promise';
 import 'dotenv/config';
 

@@ -1,3 +1,20 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - comments 表：添加评论点赞数字段
+ * - comment_likes 表：创建评论点赞记录表
+ * 
+ * 功能说明：
+ * - 添加 comments.like_count 字段：评论点赞数
+ * - 创建 comment_likes 表：记录用户对评论的点赞
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql2 from 'mysql2/promise';
 import 'dotenv/config';
 

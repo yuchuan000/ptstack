@@ -243,6 +243,10 @@ const goToProfile = (tab = 'articles') => {
     query: { tab }
   })
 }
+
+const goToAnnouncementDetail = (id) => {
+  router.push(`/announcement/${id}`)
+}
 </script>
 
 <template>
@@ -252,7 +256,11 @@ const goToProfile = (tab = 'articles') => {
         <el-icon><Bell /></el-icon>
       </div>
       <div class="marquee-wrapper">
-        <div class="marquee-text" :key="currentMarqueeIndex">
+        <div
+          class="marquee-text"
+          :key="currentMarqueeIndex"
+          @click="goToAnnouncementDetail(marqueeAnnouncements[currentMarqueeIndex]?.id)"
+        >
           {{ marqueeAnnouncements[currentMarqueeIndex]?.content }}
         </div>
       </div>
@@ -609,6 +617,12 @@ const goToProfile = (tab = 'articles') => {
   color: #86909c;
   display: inline-block;
   transition: opacity 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    color: #165dff;
+    text-decoration: underline;
+  }
 }
 
 .marquee-dots {

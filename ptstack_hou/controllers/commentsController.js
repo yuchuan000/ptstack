@@ -32,7 +32,7 @@ export const getComments = async (req, res) => {
     const currentUserId = req.user?.id;
     
     // 检查文章是否存在且已发布
-    const articles = await execute('SELECT id, status, author_id FROM articles WHERE id = ?', [articleId]);
+    const articles = await execute('SELECT id, status, author_id FROM articles WHERE public_id = ?', [articleId]);
     if (articles.length === 0) {
       return res.status(404).json({ message: '文章不存在' });
     }
@@ -40,6 +40,7 @@ export const getComments = async (req, res) => {
       return res.status(403).json({ message: '无权访问此文章的评论' });
     }
     
+    const internalArticleId = articles[0].id;
     const offset = (page - 1) * pageSize;
     
     const validSortBy = ['created_at', 'like_count'];
@@ -52,13 +53,13 @@ export const getComments = async (req, res) => {
       : `c.created_at ${finalOrder}`;
     
     const topComments = await execute(`
-      SELECT c.*, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar, u.is_admin as user_is_admin
+      SELECT c.*, u.public_id as user_id, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar, u.is_admin as user_is_admin
       FROM comments c
       LEFT JOIN users u ON c.user_id = u.id
       WHERE c.article_id = ? AND (c.parent_id IS NULL OR c.parent_id = 0)
       ORDER BY ${orderClause}
       LIMIT ? OFFSET ?
-    `, [articleId, parseInt(pageSize), offset]);
+    `, [internalArticleId, parseInt(pageSize), offset]);
     
     const commentIds = topComments.map(c => c.id);
     
@@ -66,7 +67,7 @@ export const getComments = async (req, res) => {
     if (commentIds.length > 0) {
       const placeholders = commentIds.map(() => '?').join(',');
       replies = await execute(`
-        SELECT c.*, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar, u.is_admin as user_is_admin, ru.username as reply_to_user_name, ru.nickname as reply_to_user_nickname
+        SELECT c.*, u.public_id as user_id, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar, u.is_admin as user_is_admin, ru.public_id as reply_to_user_id, ru.username as reply_to_user_name, ru.nickname as reply_to_user_nickname
         FROM comments c
         LEFT JOIN users u ON c.user_id = u.id
         LEFT JOIN users ru ON c.reply_to_user_id = ru.id
@@ -79,7 +80,7 @@ export const getComments = async (req, res) => {
       SELECT COUNT(*) as total
       FROM comments
       WHERE article_id = ?
-    `, [articleId]);
+    `, [internalArticleId]);
     
     const comments = topComments.map(comment => ({
       ...comment,
@@ -110,7 +111,7 @@ export const createComment = async (req, res) => {
     }
     
     // 检查文章是否存在且已发布
-    const articles = await execute('SELECT id, status, author_id FROM articles WHERE id = ?', [articleId]);
+    const articles = await execute('SELECT id, status, author_id FROM articles WHERE public_id = ?', [articleId]);
     if (articles.length === 0) {
       return res.status(404).json({ message: '文章不存在' });
     }
@@ -118,18 +119,28 @@ export const createComment = async (req, res) => {
       return res.status(403).json({ message: '草稿文章不能评论' });
     }
     
-    const currentUser = await execute('SELECT id, nickname, username FROM users WHERE id = ?', [userId]);
+    const internalArticleId = articles[0].id;
+    const currentUser = await execute('SELECT id, public_id, nickname, username FROM users WHERE id = ?', [userId]);
     const authorId = articles[0].author_id;
     const trimmedContent = content.trim();
     
+    // 转换replyToUserId为内部id
+    let internalReplyToUserId = null;
+    if (replyToUserId) {
+      const [replyToUser] = await execute('SELECT id FROM users WHERE public_id = ?', [replyToUserId]);
+      if (replyToUser) {
+        internalReplyToUserId = replyToUser.id;
+      }
+    }
+    
     const result = await execute(
       'INSERT INTO comments (article_id, user_id, content, parent_id, reply_to_user_id, reply_to_comment_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [articleId, userId, trimmedContent, parentId || null, replyToUserId || null, replyToCommentId || null]
+      [internalArticleId, userId, trimmedContent, parentId || null, internalReplyToUserId || null, replyToCommentId || null]
     );
     
     await execute(
       'UPDATE articles SET comment_count = comment_count + 1 WHERE id = ?',
-      [articleId]
+      [internalArticleId]
     );
     
     // 提取 @ 用户
@@ -181,18 +192,18 @@ export const createComment = async (req, res) => {
           authorId,
           'comment',
           `${currentUser[0].nickname || currentUser[0].username} 评论了你的文章`,
-          articleId
+          internalArticleId
         ]
       );
     }
     
     // 给被回复的用户发送通知（如果有）
-    if (replyToUserId && replyToUserId !== userId && replyToUserId !== authorId) {
+    if (internalReplyToUserId && internalReplyToUserId !== userId && internalReplyToUserId !== authorId) {
       await execute(
         `INSERT INTO notifications (user_id, type, content, related_id, is_read) 
          VALUES (?, ?, ?, ?, 0)`,
         [
-          replyToUserId,
+          internalReplyToUserId,
           'comment',
           `${currentUser[0].nickname || currentUser[0].username} 回复了你的评论`,
           result.insertId

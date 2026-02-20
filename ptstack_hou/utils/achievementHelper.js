@@ -3,7 +3,7 @@ import { execute } from '../config/db.js'
 export const checkAndGrantAchievements = async (userId, type, currentValue) => {
   try {
     const achievements = await execute(
-      'SELECT * FROM achievements WHERE type = ? AND condition_value <= ?',
+      'SELECT * FROM achievements WHERE type = ? AND condition_value <= ? AND is_unconditional = 0',
       [type, currentValue]
     )
 

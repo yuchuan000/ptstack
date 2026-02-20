@@ -1,5 +1,7 @@
 import { execute } from '../config/db.js';
 import { checkAndGrantAchievements } from '../utils/achievementHelper.js';
+import { generateArticleId } from '../utils/idGenerator.js';
+import { sendCategoryApplicationEmail, sendCategoryReviewEmail } from '../services/emailService.js';
 
 const ensureShareCountField = async () => {
   try {
@@ -20,7 +22,6 @@ const ensureShareCountField = async () => {
 };
 
 export const getArticles = async (req, res) => {
-  // 获取文章列表（全部文章）
   try {
     await ensureShareCountField();
     
@@ -57,7 +58,7 @@ export const getArticles = async (req, res) => {
     const finalOrder = validOrder.includes(order) ? order : 'desc';
     
     const articles = await execute(`
-      SELECT a.*, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id
@@ -72,8 +73,17 @@ export const getArticles = async (req, res) => {
       ${whereClause}
     `, params);
     
+    const processedArticles = articles.map(article => {
+      const processed = {
+        ...article,
+        id: article.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.json({
-      articles,
+      articles: processedArticles,
       total: countResult[0].total,
       page: parseInt(page),
       pageSize: parseInt(pageSize)
@@ -85,18 +95,17 @@ export const getArticles = async (req, res) => {
 };
 
 export const getArticleById = async (req, res) => {
-  // 获取文章详情，同时增加阅读量
   try {
     await ensureShareCountField();
     const { id } = req.params;
     const currentUserId = req.user?.id;
     
     const articles = await execute(`
-      SELECT a.*, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.bio as author_bio, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.bio as author_bio, u.is_admin as author_is_admin, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id
-      WHERE a.id = ?
+      WHERE a.public_id = ?
     `, [id]);
     
     if (articles.length === 0) {
@@ -105,14 +114,12 @@ export const getArticleById = async (req, res) => {
     
     const article = articles[0];
     
-    // 如果是草稿，只有作者可以访问
     if (article.status === 0 && (!currentUserId || currentUserId !== article.author_id)) {
       return res.status(403).json({ message: '无权访问此文章' });
     }
     
-    // 只有已发布的文章才增加阅读量
     if (article.status === 1) {
-      await execute('UPDATE articles SET view_count = view_count + 1 WHERE id = ?', [id]);
+      await execute('UPDATE articles SET view_count = view_count + 1 WHERE public_id = ?', [id]);
     }
     
     const tags = await execute(`
@@ -120,10 +127,16 @@ export const getArticleById = async (req, res) => {
       FROM tags t
       INNER JOIN article_tags at ON t.id = at.tag_id
       WHERE at.article_id = ?
-    `, [id]);
+    `, [article.id]);
+    
+    const resultArticle = {
+      ...article,
+      id: article.public_id
+    };
+    delete resultArticle.public_id;
     
     res.json({
-      ...articles[0],
+      ...resultArticle,
       tags: tags.map(t => t.name)
     });
   } catch (error) {
@@ -133,7 +146,6 @@ export const getArticleById = async (req, res) => {
 };
 
 export const createArticle = async (req, res) => {
-  // 创建文章（可以是已发布或草稿）
   try {
     const { title, content, summary, cover, category_id, status = 1, tags = [] } = req.body;
     const authorId = req.user.id;
@@ -142,9 +154,11 @@ export const createArticle = async (req, res) => {
       return res.status(400).json({ message: '标题和内容不能为空' });
     }
     
+    const publicId = generateArticleId();
+    
     const result = await execute(
-      'INSERT INTO articles (title, content, summary, cover, author_id, category_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [title, content, summary, cover, authorId, category_id, status]
+      'INSERT INTO articles (public_id, title, content, summary, cover, author_id, category_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [publicId, title, content, summary, cover, authorId, category_id, status]
     );
     
     const articleId = result.insertId;
@@ -173,7 +187,7 @@ export const createArticle = async (req, res) => {
     
     res.status(201).json({ 
       message: status === 1 ? '文章发布成功' : '草稿保存成功',
-      articleId 
+      articleId: publicId 
     });
   } catch (error) {
     console.error('创建文章失败:', error);
@@ -182,25 +196,26 @@ export const createArticle = async (req, res) => {
 };
 
 export const updateArticle = async (req, res) => {
-  // 更新文章（仅限作者）
   try {
     const { id } = req.params;
     const { title, content, summary, cover, category_id, status, tags } = req.body;
     const authorId = req.user.id;
     
-    const existingArticles = await execute('SELECT * FROM articles WHERE id = ? AND author_id = ?', [id, authorId]);
+    const existingArticles = await execute('SELECT * FROM articles WHERE public_id = ? AND author_id = ?', [id, authorId]);
     
     if (existingArticles.length === 0) {
       return res.status(404).json({ message: '文章不存在或无权限修改' });
     }
     
+    const article = existingArticles[0];
+    
     await execute(
-      'UPDATE articles SET title = ?, content = ?, summary = ?, cover = ?, category_id = ?, status = ? WHERE id = ?',
+      'UPDATE articles SET title = ?, content = ?, summary = ?, cover = ?, category_id = ?, status = ? WHERE public_id = ?',
       [title, content, summary, cover, category_id, status, id]
     );
     
     if (tags) {
-      await execute('DELETE FROM article_tags WHERE article_id = ?', [id]);
+      await execute('DELETE FROM article_tags WHERE article_id = ?', [article.id]);
       
       for (const tagName of tags) {
         let tagResult = await execute('SELECT id FROM tags WHERE name = ?', [tagName]);
@@ -213,7 +228,7 @@ export const updateArticle = async (req, res) => {
           tagId = tagResult[0].id;
         }
         
-        await execute('INSERT IGNORE INTO article_tags (article_id, tag_id) VALUES (?, ?)', [id, tagId]);
+        await execute('INSERT IGNORE INTO article_tags (article_id, tag_id) VALUES (?, ?)', [article.id, tagId]);
       }
     }
     
@@ -225,18 +240,19 @@ export const updateArticle = async (req, res) => {
 };
 
 export const deleteArticle = async (req, res) => {
-  // 删除文章（仅限作者）
   try {
     const { id } = req.params;
     const authorId = req.user.id;
     
-    const existingArticles = await execute('SELECT * FROM articles WHERE id = ? AND author_id = ?', [id, authorId]);
+    const existingArticles = await execute('SELECT * FROM articles WHERE public_id = ? AND author_id = ?', [id, authorId]);
     
     if (existingArticles.length === 0) {
       return res.status(404).json({ message: '文章不存在或无权限删除' });
     }
     
-    await execute('DELETE FROM articles WHERE id = ?', [id]);
+    const article = existingArticles[0];
+    
+    await execute('DELETE FROM articles WHERE public_id = ?', [id]);
     
     res.json({ message: '文章删除成功' });
   } catch (error) {
@@ -246,7 +262,6 @@ export const deleteArticle = async (req, res) => {
 };
 
 export const getMyArticles = async (req, res) => {
-  // 获取当前用户的文章列表
   try {
     const { 
       page = 1, 
@@ -302,8 +317,17 @@ export const getMyArticles = async (req, res) => {
       ${whereClause}
     `, params);
     
+    const processedArticles = articles.map(article => {
+      const processed = {
+        ...article,
+        id: article.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.json({
-      articles,
+      articles: processedArticles,
       total: countResult[0].total,
       page: parseInt(page),
       pageSize: parseInt(pageSize)
@@ -398,6 +422,40 @@ export const applyCategory = async (req, res) => {
       [userId, name, description]
     );
     
+    const applicant = await execute('SELECT id, nickname, username FROM users WHERE id = ?', [userId]);
+    const applicantName = applicant[0]?.nickname || applicant[0]?.username || '用户';
+    
+    const admins = await execute('SELECT id, email, nickname, username FROM users WHERE is_admin = 1 AND email IS NOT NULL AND email != ""');
+    
+    for (const admin of admins) {
+      try {
+        await execute(
+          `INSERT INTO notifications (user_id, type, content, related_id, is_read) 
+           VALUES (?, ?, ?, ?, 0)`,
+          [
+            admin.id,
+            'category_application',
+            `${applicantName} 申请创建新分类：${name}`,
+            result.insertId
+          ]
+        );
+      } catch (notificationError) {
+        console.error('给管理员发送通知失败:', notificationError.message);
+      }
+      
+      try {
+        await sendCategoryApplicationEmail(
+          admin.email,
+          admin.nickname || admin.username,
+          name,
+          description,
+          applicantName
+        );
+      } catch (emailError) {
+        console.error('给管理员发送邮件失败:', emailError.message);
+      }
+    }
+    
     res.status(201).json({ 
       message: '分类申请提交成功，请等待审核', 
       applicationId: result.insertId 
@@ -481,12 +539,78 @@ export const reviewCategoryApplication = async (req, res) => {
         [adminId, review_comment || '审核通过', id]
       );
       
+      const applicant = await execute('SELECT id, email, nickname, username FROM users WHERE id = ?', [application.user_id]);
+      if (applicant.length > 0) {
+        const user = applicant[0];
+        try {
+          await execute(
+            `INSERT INTO notifications (user_id, type, content, related_id, is_read) 
+             VALUES (?, ?, ?, ?, 0)`,
+            [
+              user.id,
+              'category_review',
+              `您申请的分类「${application.name}」已审核通过`,
+              categoryResult.insertId
+            ]
+          );
+        } catch (notificationError) {
+          console.error('给申请者发送通知失败:', notificationError.message);
+        }
+        
+        if (user.email) {
+          try {
+            await sendCategoryReviewEmail(
+              user.email,
+              user.nickname || user.username,
+              application.name,
+              'approve',
+              review_comment
+            );
+          } catch (emailError) {
+            console.error('给申请者发送邮件失败:', emailError.message);
+          }
+        }
+      }
+      
       res.json({ message: '审核通过，分类已创建', categoryId: categoryResult.insertId });
     } else {
       await execute(
         'UPDATE category_applications SET status = 2, reviewed_by = ?, reviewed_at = NOW(), review_comment = ? WHERE id = ?',
         [adminId, review_comment || '审核不通过', id]
       );
+      
+      const applicant = await execute('SELECT id, email, nickname, username FROM users WHERE id = ?', [application.user_id]);
+      if (applicant.length > 0) {
+        const user = applicant[0];
+        try {
+          await execute(
+            `INSERT INTO notifications (user_id, type, content, related_id, is_read) 
+             VALUES (?, ?, ?, ?, 0)`,
+            [
+              user.id,
+              'category_review',
+              `您申请的分类「${application.name}」审核未通过`,
+              application.id
+            ]
+          );
+        } catch (notificationError) {
+          console.error('给申请者发送通知失败:', notificationError.message);
+        }
+        
+        if (user.email) {
+          try {
+            await sendCategoryReviewEmail(
+              user.email,
+              user.nickname || user.username,
+              application.name,
+              'reject',
+              review_comment
+            );
+          } catch (emailError) {
+            console.error('给申请者发送邮件失败:', emailError.message);
+          }
+        }
+      }
       
       res.json({ message: '审核拒绝' });
     }
@@ -563,23 +687,28 @@ export const deleteCategory = async (req, res) => {
 };
 
 export const shareArticle = async (req, res) => {
-  // 分享文章，增加分享次数
   try {
     await ensureShareCountField();
     const { id } = req.params;
     
-    const articles = await execute('SELECT * FROM articles WHERE id = ?', [id]);
+    const articles = await execute('SELECT * FROM articles WHERE public_id = ?', [id]);
     if (articles.length === 0) {
       return res.status(404).json({ message: '文章不存在' });
     }
     
-    await execute('UPDATE articles SET share_count = share_count + 1 WHERE id = ?', [id]);
+    await execute('UPDATE articles SET share_count = share_count + 1 WHERE public_id = ?', [id]);
     
-    const updatedArticles = await execute('SELECT * FROM articles WHERE id = ?', [id]);
+    const updatedArticles = await execute('SELECT * FROM articles WHERE public_id = ?', [id]);
+    
+    const resultArticle = {
+      ...updatedArticles[0],
+      id: updatedArticles[0].public_id
+    };
+    delete resultArticle.public_id;
     
     res.json({ 
       message: '分享成功', 
-      share_count: updatedArticles[0].share_count 
+      share_count: resultArticle.share_count 
     });
   } catch (error) {
     console.error('分享文章失败:', error);
@@ -588,22 +717,27 @@ export const shareArticle = async (req, res) => {
 };
 
 export const getUserHotArticles = async (req, res) => {
-  // 获取用户的热门文章
   try {
     await ensureShareCountField();
     const { userId } = req.params;
     const { excludeId } = req.query;
     
+    const users = await execute('SELECT id FROM users WHERE public_id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    const authorId = users[0].id;
+    
     let whereClause = 'WHERE a.author_id = ? AND a.status = 1';
-    const params = [userId];
+    const params = [authorId];
     
     if (excludeId) {
-      whereClause += ' AND a.id != ?';
+      whereClause += ' AND a.public_id != ?';
       params.push(excludeId);
     }
     
     const articles = await execute(`
-      SELECT a.*, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id
@@ -618,8 +752,17 @@ export const getUserHotArticles = async (req, res) => {
       ${whereClause}
     `, params);
     
+    const processedArticles = articles.map(article => {
+      const processed = {
+        ...article,
+        id: article.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.json({
-      articles,
+      articles: processedArticles,
       total: countResult[0].total
     });
   } catch (error) {
@@ -629,22 +772,27 @@ export const getUserHotArticles = async (req, res) => {
 };
 
 export const getUserLatestArticles = async (req, res) => {
-  // 获取用户的最新文章
   try {
     await ensureShareCountField();
     const { userId } = req.params;
     const { excludeId } = req.query;
     
+    const users = await execute('SELECT id FROM users WHERE public_id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    const authorId = users[0].id;
+    
     let whereClause = 'WHERE a.author_id = ? AND a.status = 1';
-    const params = [userId];
+    const params = [authorId];
     
     if (excludeId) {
-      whereClause += ' AND a.id != ?';
+      whereClause += ' AND a.public_id != ?';
       params.push(excludeId);
     }
     
     const articles = await execute(`
-      SELECT a.*, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id
@@ -659,8 +807,17 @@ export const getUserLatestArticles = async (req, res) => {
       ${whereClause}
     `, params);
     
+    const processedArticles = articles.map(article => {
+      const processed = {
+        ...article,
+        id: article.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.json({
-      articles,
+      articles: processedArticles,
       total: countResult[0].total
     });
   } catch (error) {

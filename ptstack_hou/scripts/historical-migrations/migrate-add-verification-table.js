@@ -1,3 +1,19 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - email_verifications 表：创建临时邮箱验证表
+ * 
+ * 功能说明：
+ * - 创建 email_verifications 表：存储预注册信息和邮箱验证信息
+ * - 包含预注册用户的用户名、昵称、密码和邮箱验证信息
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
@@ -20,7 +36,6 @@ async function migrateDatabase() {
     connection = await mysql.createConnection(config);
     console.log('已连接到数据库');
     
-    // 创建临时邮箱验证表
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS email_verifications (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -37,9 +52,6 @@ async function migrateDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     console.log('临时邮箱验证表创建成功');
-    
-    // 从users表移除旧的验证相关字段（可选，保留也没关系）
-    // 为了向后兼容，我们不移除字段，只是不再使用
     
     console.log('数据库迁移完成！');
     

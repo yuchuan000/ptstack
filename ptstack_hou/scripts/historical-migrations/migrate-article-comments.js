@@ -1,3 +1,19 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - articles 表：添加评论数字段并同步数据
+ * 
+ * 功能说明：
+ * - 添加 articles.comment_count 字段：文章评论数
+ * - 从 comments 表统计并同步评论数到 articles 表
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql2 from 'mysql2/promise';
 import 'dotenv/config';
 

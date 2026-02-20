@@ -10,6 +10,7 @@ import subscriptionsRouter from '../routes/subscriptions.js'
 import uploadRouter from '../routes/upload.js'
 import notificationsRouter from '../routes/notifications.js'
 import announcementsRouter from '../routes/announcements.js'
+import achievementsRouter from '../routes/achievements.js'
 
 const router = express.Router()
 
@@ -24,5 +25,6 @@ router.use('/subscriptions', subscriptionsRouter)
 router.use('/upload', uploadRouter)
 router.use('/notifications', notificationsRouter)
 router.use('/announcements', announcementsRouter)
+router.use('/achievements', achievementsRouter)
 
 export default router

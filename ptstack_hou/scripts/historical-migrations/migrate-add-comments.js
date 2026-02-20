@@ -1,3 +1,28 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - users 表：添加字段注释
+ * - email_verifications 表：添加字段注释
+ * - categories 表：添加字段注释
+ * - tags 表：添加字段注释
+ * - articles 表：添加字段注释
+ * - article_tags 表：添加字段注释
+ * - comments 表：添加字段注释
+ * - likes 表：添加字段注释
+ * - comment_likes 表：添加字段注释
+ * - subscriptions 表：添加字段注释
+ * 
+ * 功能说明：
+ * - 为所有数据表的字段添加中文注释
+ * - 提高数据库的可读性和可维护性
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 

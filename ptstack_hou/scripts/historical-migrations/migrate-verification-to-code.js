@@ -1,10 +1,26 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - email_verifications 表：从令牌验证迁移到验证码验证
+ * 
+ * 功能说明：
+ * - 备份旧的 email_verifications 表
+ * - 删除旧的 email_verifications 表
+ * - 创建新的 email_verifications 表，使用验证码而不是令牌
+ * - 添加 verification_code 和 verification_code_expires_at 字段
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
-// 加载环境变量配置
 dotenv.config();
 
-// 数据库配置
 const config = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -13,24 +29,19 @@ const config = {
   database: 'ptstack_db'
 };
 
-// 数据库迁移主函数
 async function migrateVerificationTable() {
   let connection;
   
   try {
     console.log('开始迁移邮箱验证表...');
     
-    // 连接到数据库
     connection = await mysql.createConnection(config);
     console.log('已连接到数据库');
     
-    // 备份旧表数据（如果有）
     try {
-      // 先检查表是否存在
       const [rows] = await connection.query(`SHOW TABLES LIKE 'email_verifications'`);
       if (rows.length > 0) {
         console.log('发现旧表，正在备份...');
-        // 创建备份表
         await connection.query(`CREATE TABLE IF NOT EXISTS email_verifications_backup AS SELECT * FROM email_verifications`);
         console.log('旧表已备份到 email_verifications_backup');
       }
@@ -38,7 +49,6 @@ async function migrateVerificationTable() {
       console.log('备份旧表时出错:', backupError.message);
     }
     
-    // 删除旧表
     try {
       await connection.query(`DROP TABLE IF EXISTS email_verifications`);
       console.log('旧表已删除');
@@ -46,7 +56,6 @@ async function migrateVerificationTable() {
       console.log('删除旧表时出错:', dropError.message);
     }
     
-    // 创建新表
     await connection.query(`
       CREATE TABLE email_verifications (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -74,7 +83,6 @@ async function migrateVerificationTable() {
   }
 }
 
-// 执行迁移（如果直接运行此脚本）
 migrateVerificationTable().catch(console.error);
 
 export default migrateVerificationTable;

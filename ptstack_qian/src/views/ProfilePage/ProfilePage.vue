@@ -530,19 +530,51 @@ onMounted(async () => {
   <div class="profile-page">
     <el-skeleton :loading="loading" animated>
       <template #template>
+        <div class="skeleton-back">
+          <el-skeleton-item variant="text" style="width: 60px;" />
+        </div>
         <div class="skeleton-header">
           <el-skeleton-item variant="circle" style="width: 80px; height: 80px;" />
           <div class="skeleton-info">
-            <el-skeleton-item variant="h3" style="width: 200px; margin-bottom: 8px;" />
-            <el-skeleton-item variant="text" style="width: 300px; margin-bottom: 8px;" />
-            <el-skeleton-item variant="text" style="width: 150px;" />
+            <el-skeleton-item variant="h3" style="width: 160px; margin-bottom: 8px;" />
+            <el-skeleton-item variant="text" style="width: 200px; margin-bottom: 8px;" />
+            <el-skeleton-item variant="text" style="width: 120px;" />
+          </div>
+          <div class="skeleton-button">
+            <el-skeleton-item variant="button" style="width: 120px; height: 40px;" />
           </div>
         </div>
         <div class="skeleton-stats">
-          <el-skeleton-item variant="text" style="width: 80px;" />
-          <el-skeleton-item variant="text" style="width: 80px;" />
-          <el-skeleton-item variant="text" style="width: 80px;" />
-          <el-skeleton-item variant="text" style="width: 80px;" />
+          <div class="skeleton-stat">
+            <el-skeleton-item variant="h3" style="width: 40px; margin-bottom: 4px;" />
+            <el-skeleton-item variant="text" style="width: 40px;" />
+          </div>
+          <div class="skeleton-stat-divider"></div>
+          <div class="skeleton-stat">
+            <el-skeleton-item variant="h3" style="width: 40px; margin-bottom: 4px;" />
+            <el-skeleton-item variant="text" style="width: 40px;" />
+          </div>
+          <div class="skeleton-stat-divider"></div>
+          <div class="skeleton-stat">
+            <el-skeleton-item variant="h3" style="width: 40px; margin-bottom: 4px;" />
+            <el-skeleton-item variant="text" style="width: 40px;" />
+          </div>
+          <div class="skeleton-stat-divider"></div>
+          <div class="skeleton-stat">
+            <el-skeleton-item variant="h3" style="width: 40px; margin-bottom: 4px;" />
+            <el-skeleton-item variant="text" style="width: 40px;" />
+          </div>
+        </div>
+        <div class="skeleton-tabs">
+          <el-skeleton-item variant="text" style="width: 40px; margin-right: 32px;" />
+          <el-skeleton-item variant="text" style="width: 40px; margin-right: 32px;" />
+          <el-skeleton-item variant="text" style="width: 56px; margin-right: 32px;" />
+          <el-skeleton-item variant="text" style="width: 40px;" />
+        </div>
+        <div class="skeleton-content">
+          <el-skeleton-item variant="text" style="width: 100%; margin-bottom: 16px;" />
+          <el-skeleton-item variant="text" style="width: 100%; margin-bottom: 16px;" />
+          <el-skeleton-item variant="text" style="width: 80%;" />
         </div>
       </template>
 
@@ -1002,19 +1034,59 @@ onMounted(async () => {
   background: white;
   margin-bottom: 16px;
   border-radius: 8px;
+  align-items: flex-start;
 }
 
 .skeleton-info {
   flex: 1;
 }
 
+.skeleton-button {
+  flex-shrink: 0;
+}
+
+.skeleton-back {
+  background: white;
+  border-radius: 8px;
+  padding: 16px 32px;
+  margin-bottom: 16px;
+}
+
 .skeleton-stats {
   display: flex;
-  gap: 40px;
+  align-items: center;
   padding: 20px 32px;
   background: white;
   margin-bottom: 16px;
   border-radius: 8px;
+}
+
+.skeleton-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 32px;
+}
+
+.skeleton-stat-divider {
+  width: 1px;
+  height: 40px;
+  background: #e5e6eb;
+}
+
+.skeleton-tabs {
+  display: flex;
+  align-items: center;
+  padding: 16px 32px;
+  background: white;
+  margin-bottom: 16px;
+  border-radius: 8px;
+}
+
+.skeleton-content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px 32px;
 }
 
 .header-section {

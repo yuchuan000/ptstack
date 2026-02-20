@@ -54,6 +54,32 @@ const router = createRouter({
       meta: { requiresAuth: true } // 路由元信息，需要认证
     },
     {
+      path: '/article/create', // 创建文章路径
+      component: () => import('@/views/ArticleEditPage/ArticleEditPage.vue'), // 懒加载文章编辑组件
+      meta: { requiresAuth: true } // 路由元信息，需要认证
+    },
+    {
+      path: '/article/edit/:id', // 编辑文章路径，带动态参数id
+      component: () => import('@/views/ArticleEditPage/ArticleEditPage.vue'), // 懒加载文章编辑组件
+      meta: { requiresAuth: true } // 路由元信息，需要认证
+    },
+
+    {
+      path: '/announcement/:id', // 公告详情页面路径，带动态参数id
+      component: () => import('@/views/AnnouncementDetailPage/AnnouncementDetailPage.vue'), // 懒加载公告详情页面组件
+      meta: { requiresAuth: true } // 路由元信息，需要认证
+    },
+    {
+      path: '/announcement/create', // 创建公告路径
+      component: () => import('@/views/AnnouncementEditPage/AnnouncementEditPage.vue'), // 懒加载公告编辑组件
+      meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
+    },
+    {
+      path: '/announcement/edit/:id', // 编辑公告路径，带动态参数id
+      component: () => import('@/views/AnnouncementEditPage/AnnouncementEditPage.vue'), // 懒加载公告编辑组件
+      meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
+    },
+    {
       path: '/', // 根路径
       component: () => import('@/views/PannelPage/PannelPage.vue'), // 懒加载主面板页面组件
       meta: { requiresAuth: true }, // 路由元信息，需要认证
@@ -70,19 +96,9 @@ const router = createRouter({
           meta: { requiresAuth: true } // 路由元信息，需要认证
         },
         {
-          path: 'article/create', // 创建文章路径
-          component: () => import('@/views/ArticleEditPage/ArticleEditPage.vue'), // 懒加载文章编辑组件
-          meta: { requiresAuth: true } // 路由元信息，需要认证
-        },
-        {
-          path: 'article/edit/:id', // 编辑文章路径，带动态参数id
-          component: () => import('@/views/ArticleEditPage/ArticleEditPage.vue'), // 懒加载文章编辑组件
-          meta: { requiresAuth: true } // 路由元信息，需要认证
-        },
-        {
           path: 'categories', // 分类管理路径
           component: () => import('@/views/CategoryManagePage/CategoryManagePage.vue'), // 懒加载分类管理组件
-          meta: { requiresAuth: true } // 路由元信息，需要认证
+          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
         },
         {
           path: 'settings', // 设置页面路径
@@ -92,6 +108,31 @@ const router = createRouter({
         {
           path: 'announcements', // 公告管理页面路径
           component: () => import('@/views/AnnouncementManagePage/AnnouncementManagePage.vue'), // 懒加载公告管理页面组件
+          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
+        },
+        {
+          path: 'achievements-manage', // 成就管理页面路径
+          component: () => import('@/views/AchievementManagePage/AchievementManagePage.vue'), // 懒加载成就管理页面组件
+          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
+        },
+        {
+          path: 'achievements-manage/edit/:id', // 成就编辑页面路径
+          component: () => import('@/views/AchievementManagePage/AchievementManagePage.vue'), // 懒加载成就管理页面组件（复用）
+          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
+        },
+        {
+          path: 'achievements-manage/:id', // 成就详情管理页面路径
+          component: () => import('@/views/AchievementDetailManagePage/AchievementDetailManagePage.vue'), // 懒加载成就详情管理页面组件
+          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
+        },
+        {
+          path: 'achievements', // 我的成就页面路径
+          component: () => import('@/views/AchievementsPage/AchievementsPage.vue'), // 懒加载我的成就页面组件
+          meta: { requiresAuth: true } // 路由元信息，需要认证
+        },
+        {
+          path: 'users', // 用户管理页面路径
+          component: () => import('@/views/UserManagePage/UserManagePage.vue'), // 懒加载用户管理页面组件
           meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
         }
       ]

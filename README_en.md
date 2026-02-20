@@ -71,6 +71,22 @@ pnpm dev
 ```
 Frontend application will start at http://localhost:5173
 
+## 📋 Version History
+
+### v0.3 - Achievement System Refactoring
+- 🔧 Achievement system data model refactoring
+- ✨ Added event achievement (is_event), limited achievement (is_limited), unconditional achievement (is_unconditional) concepts
+- 🎯 Support custom tag (custom_tag) display
+- 🐛 Fixed event achievement filter logic error
+- 📝 Added different icons for event and limited tags
+- 🗄️ Organized database scripts, archived historical migration scripts
+
+### v0.2 - Announcement System
+- 📢 Announcement management system
+- 🏃 Homepage marquee announcements
+- 📊 Announcement read records
+- 🔔 Notification center
+
 ## ✨ Features
 
 - ✅ User registration and login
@@ -80,6 +96,12 @@ Frontend application will start at http://localhost:5173
 - ✅ Modern home page design
 - ✅ Responsive panel layout
 - ✅ Enterprise-level UI design style
+- ✅ Announcement management system
+- ✅ Achievement system
+- ✅ Article management
+- ✅ Comment system
+- ✅ User follow
+- ✅ Like feature
 
 ## 📚 API Documentation
 

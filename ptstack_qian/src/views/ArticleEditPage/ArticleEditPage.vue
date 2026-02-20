@@ -1,9 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getArticleById, createArticle, updateArticle, getCategories, getTags } from '@/api/articles'
-import { Check, Setting, Plus, Document } from '@element-plus/icons-vue'
+import { getArticleById, createArticle, updateArticle, getCategories, getTags, applyCategory } from '@/api/articles'
+import { Check, Setting, Plus, Document, DocumentAdd, ArrowLeft } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader/PageHeader.vue'
+import { ElMessage } from 'element-plus'
+import { MdEditor, NormalToolbar } from 'md-editor-v3'
 
 const router = useRouter()
 const route = useRoute()
@@ -12,6 +14,12 @@ const isEdit = ref(!!route.params.id)
 const loading = ref(false)
 const saving = ref(false)
 const savingDraft = ref(false)
+const editorRef = ref(null)
+const toolbars = ['bold', 'underline', 'italic', '-', 'title', 'strikeThrough', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task', '-', 'codeRow', 'code', 'link', 'image', 'table', 'mermaid', 'katex', '-', 0, '-', 'revoke', 'next', '=', 'pageFullscreen', 'fullscreen', 'preview', 'htmlPreview', 'catalog']
+
+const insertIndent = () => {
+  formData.value.content += '&emsp;'
+}
 
 const formData = ref({
   title: '',
@@ -26,6 +34,13 @@ const formData = ref({
 const categories = ref([])
 const allTags = ref([])
 const newTagInput = ref('')
+
+const applyDialogVisible = ref(false)
+const applyFormData = ref({
+  name: '',
+  description: ''
+})
+const applying = ref(false)
 
 const fetchArticle = async () => {
   if (!isEdit.value) return
@@ -79,6 +94,34 @@ const removeTag = (tag) => {
   const index = formData.value.tags.indexOf(tag)
   if (index > -1) {
     formData.value.tags.splice(index, 1)
+  }
+}
+
+const openApplyDialog = () => {
+  applyFormData.value = {
+    name: '',
+    description: ''
+  }
+  applyDialogVisible.value = true
+}
+
+const handleApply = async () => {
+  if (!applyFormData.value.name.trim()) {
+    ElMessage.warning('请输入分类名称')
+    return
+  }
+
+  try {
+    applying.value = true
+    await applyCategory(applyFormData.value)
+    ElMessage.success('分类申请提交成功，请等待审核')
+    applyDialogVisible.value = false
+    fetchCategories()
+  } catch (error) {
+    console.error('申请失败:', error)
+    ElMessage.error(error.response?.data?.message || '申请失败，请稍后重试')
+  } finally {
+    applying.value = false
   }
 }
 
@@ -136,22 +179,12 @@ onMounted(() => {
 
 <template>
   <div class="article-edit-page" v-loading="loading">
-    <PageHeader :title="isEdit ? '编辑文章' : '写文章'" subtitle="记录和分享你的技术思考">
-      <template #actions>
-        <el-button @click="goBack" size="large">
-          取消
-        </el-button>
-        <el-button size="large" @click="handleSubmit(true)" :loading="savingDraft">
-          <el-icon><Document /></el-icon>
-          保存草稿
-        </el-button>
-        <el-button type="primary" size="large" @click="handleSubmit(false)" :loading="saving" class="submit-btn">
-          <el-icon><Check /></el-icon>
-          {{ isEdit ? '更新文章' : '发布文章' }}
-        </el-button>
-      </template>
-    </PageHeader>
-
+    <div class="back-section">
+      <el-button text @click="goBack" class="back-btn">
+        <el-icon><ArrowLeft /></el-icon>
+        返回
+      </el-button>
+    </div>
     <div class="edit-container">
       <div class="main-content">
         <div class="form-card">
@@ -167,13 +200,20 @@ onMounted(() => {
 
           <div class="form-section">
             <label class="form-label">文章内容</label>
-            <el-input
+            <MdEditor
+              ref="editorRef"
               v-model="formData.content"
-              type="textarea"
-              :rows="15"
               placeholder="开始编写你的技术文章..."
-              class="content-textarea"
-            />
+              :editorId="'article-editor'"
+              :toolbars="toolbars"
+              style="height: 600px"
+            >
+              <template #defToolbars>
+                <NormalToolbar title="插入缩进" @onClick="insertIndent">
+                  ↦
+                </NormalToolbar>
+              </template>
+            </MdEditor>
           </div>
 
           <div class="form-section">
@@ -197,7 +237,18 @@ onMounted(() => {
           </div>
 
           <div class="form-section">
-            <label class="form-label">文章分类</label>
+            <div class="category-label-row">
+              <label class="form-label">文章分类</label>
+              <el-button
+                text
+                size="small"
+                @click="openApplyDialog"
+                class="apply-category-btn"
+              >
+                <el-icon><DocumentAdd /></el-icon>
+                申请新分类
+              </el-button>
+            </div>
             <el-select
               v-model="formData.category_id"
               placeholder="选择分类"
@@ -269,23 +320,91 @@ onMounted(() => {
               <img :src="formData.cover" alt="封面预览" />
             </div>
           </div>
+
+          <div class="action-buttons">
+            <el-button @click="goBack" size="large" class="action-btn">
+              取消
+            </el-button>
+            <el-button size="large" @click="handleSubmit(true)" :loading="savingDraft" class="action-btn">
+              <el-icon><Document /></el-icon>
+              保存草稿
+            </el-button>
+            <el-button type="primary" size="large" @click="handleSubmit(false)" :loading="saving" class="submit-btn">
+              <el-icon><Check /></el-icon>
+              {{ isEdit ? '更新文章' : '发布文章' }}
+            </el-button>
+          </div>
         </div>
       </div>
     </div>
+
+    <el-dialog
+      v-model="applyDialogVisible"
+      title="申请创建分类"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="applyFormData" label-width="80px">
+        <el-form-item label="分类名称">
+          <el-input
+            v-model="applyFormData.name"
+            placeholder="请输入分类名称"
+            size="large"
+          />
+        </el-form-item>
+        <el-form-item label="分类描述">
+          <el-input
+            v-model="applyFormData.description"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入分类描述（可选）"
+            size="large"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="applyDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleApply" :loading="applying">
+          提交申请
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped lang="scss">
 .article-edit-page {
+  min-height: 100%;
+  background: #f7f8fa;
   padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+}
+
+.back-section {
+  margin-bottom: 16px;
+  background: white;
+  border-radius: 8px;
+  padding: 16px 32px;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #4e5969;
+  font-size: 14px;
+  padding: 0;
+
+  &:hover {
+    color: #165dff;
+  }
 }
 
 .edit-container {
   display: grid;
   grid-template-columns: 1fr 360px;
-  gap: 24px;
+  gap: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .main-content {
@@ -294,9 +413,8 @@ onMounted(() => {
 
 .form-card {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .form-section {
@@ -315,19 +433,27 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
+
+
+.category-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
 .title-input {
   :deep(.el-input__wrapper) {
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 12px 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     font-size: 18px;
   }
 }
 
-.content-textarea,
 .summary-textarea {
   :deep(.el-textarea__inner) {
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     font-size: 15px;
@@ -343,11 +469,8 @@ onMounted(() => {
 
 .side-card {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  position: sticky;
-  top: 24px;
 }
 
 .card-title {
@@ -367,7 +490,7 @@ onMounted(() => {
   width: 100%;
 
   :deep(.el-input__wrapper) {
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 10px 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
@@ -387,13 +510,13 @@ onMounted(() => {
 
 .tag-input {
   :deep(.el-input__wrapper) {
-    border-radius: 12px 0 0 12px;
+    border-radius: 8px 0 0 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     padding: 10px 16px;
   }
 
   :deep(.el-input-group__append) {
-    border-radius: 0 12px 12px 0;
+    border-radius: 0 8px 8px 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     border: none;
   }
@@ -427,7 +550,7 @@ onMounted(() => {
 
 .cover-preview {
   margin-top: 12px;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
@@ -438,7 +561,21 @@ onMounted(() => {
   }
 }
 
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e6eb;
+}
+
+.action-btn {
+  width: 100%;
+}
+
 .submit-btn {
+  width: 100%;
   background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
   border: none;
   box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
@@ -450,7 +587,11 @@ onMounted(() => {
   }
 
   .sidebar {
-    order: -1;
+    order: 2;
+  }
+
+  .main-content {
+    order: 1;
   }
 
   .side-card {
@@ -459,6 +600,10 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .article-edit-page {
+    padding: 16px;
+  }
+
   .form-card {
     padding: 20px;
   }

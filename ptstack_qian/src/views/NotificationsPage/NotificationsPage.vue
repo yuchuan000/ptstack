@@ -13,7 +13,10 @@ import {
   ChatLineRound,
   Document,
   Trophy,
-  HomeFilled
+  HomeFilled,
+  FolderAdd,
+  Check,
+  Close
 } from '@element-plus/icons-vue'
 import { getNotifications, markAsRead, deleteNotification } from '@/api/notifications'
 import { getAnnouncements, markAnnouncementRead } from '@/api/announcements'
@@ -30,6 +33,21 @@ const pageSize = ref(20)
 const total = ref(0)
 const hasMore = ref(true)
 
+const getAllItems = () => {
+  if (currentType.value !== 'all') return []
+  const announcementItems = announcements.value.map(a => ({
+    ...a,
+    _type: 'announcement'
+  }))
+  const notificationItems = notifications.value.map(n => ({
+    ...n,
+    _type: 'notification'
+  }))
+  return [...announcementItems, ...notificationItems].sort((a, b) =>
+    new Date(b.created_at) - new Date(a.created_at)
+  )
+}
+
 const tabs = [
   { key: 'all', label: '全部', icon: BellFilled },
   { key: 'announcement', label: '公告', icon: Document },
@@ -37,7 +55,9 @@ const tabs = [
   { key: 'comment', label: '评论', icon: ChatDotRound },
   { key: 'like', label: '点赞', icon: Star },
   { key: 'follow', label: '关注', icon: UserFilled },
-  { key: 'achievement', label: '成就', icon: Trophy }
+  { key: 'achievement', label: '成就', icon: Trophy },
+  { key: 'category_application', label: '分类申请', icon: FolderAdd },
+  { key: 'category_review', label: '分类审核', icon: Check }
 ]
 
 const fetchNotifications = async () => {
@@ -88,6 +108,7 @@ const handleAnnouncementClick = async (announcement) => {
       console.error('标记公告已读失败:', error)
     }
   }
+  router.push(`/announcement/${announcement.id}`)
 }
 
 const getUnreadAnnouncementCount = () => {
@@ -97,9 +118,10 @@ const getUnreadAnnouncementCount = () => {
 const handleTabChange = (type) => {
   currentType.value = type
   page.value = 1
-  if (type === 'announcement') {
+  if (type === 'announcement' || type === 'all') {
     fetchAnnouncements()
-  } else {
+  }
+  if (type !== 'announcement') {
     fetchNotifications()
   }
 }
@@ -165,6 +187,10 @@ const getNotificationIcon = (type) => {
       return ChatLineRound
     case 'achievement':
       return Trophy
+    case 'category_application':
+      return FolderAdd
+    case 'category_review':
+      return Check
     default:
       return BellFilled
   }
@@ -182,6 +208,10 @@ const getNotificationIconBg = (type) => {
       return 'background: #e3f2fd; color: #165dff;'
     case 'achievement':
       return 'background: #fff7e6; color: #faad14;'
+    case 'category_application':
+      return 'background: #e6f4ff; color: #1677ff;'
+    case 'category_review':
+      return 'background: #f0fff4; color: #00b42a;'
     default:
       return 'background: #f7f8fa; color: #86909c;'
   }
@@ -259,7 +289,67 @@ onMounted(() => {
 
     <div class="content-card">
       <div v-loading="loading" class="content-inner">
-        <div v-if="currentType === 'announcement'">
+        <div v-if="currentType === 'all'">
+          <div
+            v-for="item in getAllItems()"
+            :key="item._type + '-' + item.id"
+            :class="[
+              item._type === 'announcement' ? 'announcement-item' : 'notification-item',
+              { unread: !item.is_read }
+            ]"
+            @click="item._type === 'announcement' ? handleAnnouncementClick(item) : handleNotificationClick(item)"
+          >
+            <template v-if="item._type === 'announcement'">
+              <div class="announcement-icon">
+                <el-icon><Document /></el-icon>
+              </div>
+              <div class="announcement-content">
+                <div class="announcement-title">{{ item.title }}</div>
+                <div class="announcement-text">{{ item.content.replace(/[#*`~_]/g, '').substring(0, 100) }}{{ item.content.length > 100 ? '...' : '' }}</div>
+                <div class="announcement-time">
+                  <el-icon><Clock /></el-icon>
+                  {{ formatTime(item.created_at) }}
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="notification-icon" :style="getNotificationIconBg(item.type)">
+                <el-icon><component :is="getNotificationIcon(item.type)" /></el-icon>
+              </div>
+              <div class="notification-content">
+                <div class="notification-text">{{ item.content }}</div>
+                <div class="notification-time">
+                  <el-icon><Clock /></el-icon>
+                  {{ formatTime(item.created_at) }}
+                </div>
+              </div>
+              <el-button
+                text
+                class="delete-btn"
+                @click.stop="handleDelete(item)"
+              >
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </template>
+          </div>
+
+          <div v-if="getAllItems().length === 0" class="empty-state">
+            <div class="empty-illustration">
+              <svg viewBox="0 0 200 160" class="breathing-svg">
+                <g fill="none" stroke="#165dff" stroke-width="2">
+                  <circle cx="100" cy="70" r="40" fill="#f7f8fa"/>
+                  <path d="M80 60 L95 75 L120 55" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="100" cy="130" r="6" fill="#165dff" opacity="0.3"/>
+                  <circle cx="100" cy="130" r="10" fill="#165dff" opacity="0.15"/>
+                </g>
+              </svg>
+            </div>
+            <div class="empty-text">暂无消息</div>
+            <div class="empty-desc">暂无新的消息通知</div>
+          </div>
+        </div>
+
+        <div v-else-if="currentType === 'announcement'">
           <div
             v-for="announcement in announcements"
             :key="announcement.id"
@@ -273,7 +363,7 @@ onMounted(() => {
 
             <div class="announcement-content">
               <div class="announcement-title">{{ announcement.title }}</div>
-              <div class="announcement-text">{{ announcement.content }}</div>
+              <div class="announcement-text">{{ announcement.content.replace(/[#*`~_]/g, '').substring(0, 100) }}{{ announcement.content.length > 100 ? '...' : '' }}</div>
               <div class="announcement-time">
                 <el-icon><Clock /></el-icon>
                 {{ formatTime(announcement.created_at) }}

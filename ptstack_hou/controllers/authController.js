@@ -12,6 +12,7 @@ import crypto from 'crypto'
 import dotenv from 'dotenv'
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../config/jwt.js'
 import { generateVerificationCode, sendVerificationEmail } from '../services/emailService.js'
+import { generateUserId } from '../utils/idGenerator.js'
 
 dotenv.config()
 
@@ -356,10 +357,11 @@ export const register = async (req, res, next) => {
     // 使用bcrypt加密密码
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
     
-    // 创建用户（nickname和avatar留空，profile_completed设为0）
+    const publicId = generateUserId()
+    
     const result = await execute(
-      'INSERT INTO users (username, password, email, profile_completed) VALUES (?, ?, ?, 0)',
-      [username, hashedPassword, email]
+      'INSERT INTO users (public_id, username, password, email, profile_completed) VALUES (?, ?, ?, ?, 0)',
+      [publicId, username, hashedPassword, email]
     )
     
     // 删除临时验证记录
@@ -371,7 +373,7 @@ export const register = async (req, res, next) => {
     res.status(201).json({ 
       message: '注册成功！', 
       user: { 
-        id: result.insertId, 
+        id: publicId, 
         username,
         email,
         profileCompleted: false
@@ -431,7 +433,7 @@ export const login = async (req, res, next) => {
     
     // 查找用户（支持用户名或邮箱登录）
     const users = await execute(
-      'SELECT id, username, nickname, password, email, avatar, profile_completed, is_admin FROM users WHERE username = ? OR email = ?',
+      'SELECT id, public_id, username, nickname, password, email, avatar, profile_completed, is_admin FROM users WHERE username = ? OR email = ?',
       [username, username]
     )
     
@@ -463,7 +465,7 @@ export const login = async (req, res, next) => {
     const response = {
       message: '登录成功',
       user: {
-        id: user.id,
+        id: user.public_id,
         username: user.username,
         nickname: user.nickname,
         email: user.email,
@@ -529,7 +531,8 @@ export const refreshToken = async (req, res, next) => {
     const newAccessToken = generateAccessToken({
       id: decoded.id,
       username: decoded.username,
-      email: decoded.email
+      email: decoded.email,
+      is_admin: decoded.is_admin
     })
     
     res.status(200).json({

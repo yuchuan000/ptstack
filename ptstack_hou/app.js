@@ -1,18 +1,21 @@
+import dotenv from 'dotenv'
 import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import logger from 'morgan'
-import 'dotenv/config'
 import createError from 'http-errors'
 import errorHandler from './middlewares/error-handler.js'
 import routes from './config/routes.js'
 import swaggerUi from 'swagger-ui-express'
 import swaggerSpec from './config/swagger.js'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+dotenv.config({ path: path.join(__dirname, '.env') })
+
 const app = express()
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'))

@@ -7,6 +7,7 @@ import router from './router'
 // 样式
 import '@/style/main.scss'
 import 'element-plus/dist/index.css'
+import 'md-editor-v3/lib/style.css'
 
 const app = createApp(App)
 

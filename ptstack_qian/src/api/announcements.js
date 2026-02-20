@@ -7,6 +7,13 @@ export function getAnnouncements() {
   })
 }
 
+export function getAnnouncementById(id) {
+  return request({
+    url: `/announcements/${id}`,
+    method: 'get'
+  })
+}
+
 export function getMarqueeAnnouncements() {
   return request({
     url: '/announcements/marquee',

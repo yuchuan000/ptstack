@@ -48,12 +48,20 @@ export const checkCommentLikes = async (req, res) => {
       return res.json({ likedComments: [] });
     }
     
+    // 转换articleId为内部id
+    const articles = await execute('SELECT id FROM articles WHERE public_id = ?', [articleId]);
+    if (articles.length === 0) {
+      return res.status(404).json({ message: '文章不存在' });
+    }
+    
+    const internalArticleId = articles[0].id;
+    
     const likes = await execute(
       `SELECT cl.comment_id 
        FROM comment_likes cl
        INNER JOIN comments c ON cl.comment_id = c.id
        WHERE c.article_id = ? AND cl.user_id = ?`,
-      [articleId, userId]
+      [internalArticleId, userId]
     );
     
     res.json({ 

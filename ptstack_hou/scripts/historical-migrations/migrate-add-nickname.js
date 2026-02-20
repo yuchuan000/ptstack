@@ -1,10 +1,24 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - users 表：添加用户昵称字段
+ * 
+ * 功能说明：
+ * - 添加 nickname 字段：用户昵称
+ * - 将现有用户的 username 复制到 nickname
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
-// 加载环境变量配置（从.env文件读取）
 dotenv.config();
 
-// 数据库基础配置
 const config = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -13,18 +27,15 @@ const config = {
   database: 'ptstack_db',
 };
 
-// 数据库迁移主函数
 async function migrateDatabase() {
   let connection;
   
   try {
     console.log('开始数据库迁移...');
     
-    // 连接到数据库
     connection = await mysql.createConnection(config);
     console.log('已连接到数据库');
     
-    // 检查nickname字段是否已存在
     const [columns] = await connection.execute(
       "SHOW COLUMNS FROM users LIKE 'nickname'"
     );
@@ -32,7 +43,6 @@ async function migrateDatabase() {
     if (columns.length > 0) {
       console.log('nickname字段已存在，跳过添加');
     } else {
-      // 添加nickname字段
       await connection.execute(`
         ALTER TABLE users 
         ADD COLUMN nickname VARCHAR(50) COMMENT '昵称，用于显示，可以是中文' 
@@ -40,7 +50,6 @@ async function migrateDatabase() {
       `);
       console.log('nickname字段添加成功');
       
-      // 将现有用户的username复制到nickname
       await connection.execute(`
         UPDATE users SET nickname = username WHERE nickname IS NULL
       `);
@@ -60,7 +69,6 @@ async function migrateDatabase() {
   }
 }
 
-// 执行迁移（如果直接运行此脚本）
 migrateDatabase().catch(console.error);
 
 export default migrateDatabase;

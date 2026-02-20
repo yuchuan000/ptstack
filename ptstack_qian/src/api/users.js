@@ -122,3 +122,64 @@ export function getUnreadCount() {
     method: 'get'
   })
 }
+
+/**
+ * 管理员获取所有用户列表
+ * @param {object} params - 查询参数
+ * @param {number} params.page - 页码
+ * @param {number} params.pageSize - 每页数量
+ * @param {string} params.search - 搜索关键词
+ * @returns {Promise<{users: Array, total: number, page: number, pageSize: number}>}
+ */
+export function getAllUsersAdmin(params) {
+  return request({
+    url: '/users/admin/all',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 管理员获取用户详情
+ * @param {number|string} id - 用户ID
+ * @returns {Promise<{user: object}>}
+ */
+export function getUserAdmin(id) {
+  return request({
+    url: `/users/admin/${id}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 管理员更新用户信息
+ * @param {number|string} id - 用户ID
+ * @param {object} data - 用户数据
+ * @param {string} data.username - 用户名
+ * @param {string} data.nickname - 昵称
+ * @param {string} data.password - 密码
+ * @param {string} data.email - 邮箱
+ * @param {string} data.avatar - 头像
+ * @param {string} data.bio - 个人简介
+ * @param {boolean} data.is_admin - 是否为管理员
+ * @returns {Promise<{message: string, user: object}>}
+ */
+export function updateUserAdmin(id, data) {
+  return request({
+    url: `/users/admin/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 管理员删除用户
+ * @param {number|string} id - 用户ID
+ * @returns {Promise<{message: string}>}
+ */
+export function deleteUserAdmin(id) {
+  return request({
+    url: `/users/admin/${id}`,
+    method: 'delete'
+  })
+}

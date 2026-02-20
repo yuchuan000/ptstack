@@ -1,4 +1,6 @@
 import { execute } from '../config/db.js';
+import bcrypt from 'bcrypt';
+import { generateUserId } from '../utils/idGenerator.js';
 
 export const getUsers = (req, res, next) => {
   res.send('respond with a resource')
@@ -9,7 +11,7 @@ export const getProfile = async (req, res) => {
     const userId = req.user.id
 
     const users = await execute(
-      'SELECT id, username, nickname, email, avatar, profile_completed, bio, created_at, follower_count, following_count, is_admin FROM users WHERE id = ?',
+      'SELECT id, public_id, username, nickname, email, avatar, profile_completed, bio, created_at, follower_count, following_count, is_admin FROM users WHERE id = ?',
       [userId]
     )
 
@@ -17,19 +19,16 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ message: '用户不存在' })
     }
 
-    // 获取用户的文章数量
     const [articleCount] = await execute(
       'SELECT COUNT(*) as count FROM articles WHERE author_id = ? AND status = 1',
       [userId]
     )
 
-    // 获取用户的总阅读量
     const [totalViews] = await execute(
       'SELECT COALESCE(SUM(view_count), 0) as total FROM articles WHERE author_id = ? AND status = 1',
       [userId]
     )
 
-    // 获取用户的评论数量
     const [commentCount] = await execute(
       'SELECT COUNT(*) as count FROM comments WHERE user_id = ?',
       [userId]
@@ -38,7 +37,7 @@ export const getProfile = async (req, res) => {
     res.status(200).json({
       message: '获取用户信息成功',
       user: {
-        id: users[0].id,
+        id: users[0].public_id,
         username: users[0].username,
         nickname: users[0].nickname,
         email: users[0].email,
@@ -66,10 +65,10 @@ export const getUserPublicProfile = async (req, res) => {
     const currentUserId = req.user?.id;
     
     const [user] = await execute(`
-      SELECT id, username, nickname, email, avatar, bio, follower_count, following_count,
+      SELECT id, public_id, username, nickname, email, avatar, bio, follower_count, following_count,
              created_at, is_admin
       FROM users
-      WHERE id = ?
+      WHERE public_id = ?
     `, [userId]);
     
     if (!user) {
@@ -80,31 +79,28 @@ export const getUserPublicProfile = async (req, res) => {
     if (currentUserId) {
       const [sub] = await execute(
         'SELECT id FROM subscriptions WHERE follower_id = ? AND following_id = ?',
-        [currentUserId, userId]
+        [currentUserId, user.id]
       );
       isSubscribed = !!sub;
     }
     
-    // 获取用户的文章数量
     const [articleCount] = await execute(
       'SELECT COUNT(*) as count FROM articles WHERE author_id = ? AND status = 1',
-      [userId]
+      [user.id]
     )
 
-    // 获取用户的总阅读量
     const [totalViews] = await execute(
       'SELECT COALESCE(SUM(view_count), 0) as total FROM articles WHERE author_id = ? AND status = 1',
-      [userId]
+      [user.id]
     )
 
-    // 获取用户的评论数量
     const [commentCount] = await execute(
       'SELECT COUNT(*) as count FROM comments WHERE user_id = ?',
-      [userId]
+      [user.id]
     )
     
     const publicUser = {
-      id: user.id,
+      id: user.public_id,
       username: user.username,
       nickname: user.nickname,
       avatar: user.avatar,
@@ -113,7 +109,7 @@ export const getUserPublicProfile = async (req, res) => {
       following_count: user.following_count,
       created_at: user.created_at,
       isSubscribed,
-      isOwn: currentUserId === parseInt(userId),
+      isOwn: currentUserId === user.id,
       article_count: articleCount.count,
       total_views: totalViews.total,
       comment_count: commentCount.count,
@@ -132,7 +128,6 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.id;
     const { nickname, avatar, bio } = req.body;
     
-    // 构建更新语句
     const updateFields = [];
     const updateValues = [];
     
@@ -154,7 +149,6 @@ export const updateProfile = async (req, res) => {
       updateValues.push(bio || null);
     }
     
-    // 如果有昵称，设置为资料已完成
     if (nickname) {
       updateFields.push('profile_completed = 1');
     }
@@ -171,14 +165,14 @@ export const updateProfile = async (req, res) => {
     );
     
     const users = await execute(
-      'SELECT id, username, nickname, email, avatar, profile_completed, bio FROM users WHERE id = ?',
+      'SELECT id, public_id, username, nickname, email, avatar, profile_completed, bio FROM users WHERE id = ?',
       [userId]
     );
     
     res.json({ 
       message: '更新成功', 
       user: {
-        id: users[0].id,
+        id: users[0].public_id,
         username: users[0].username,
         nickname: users[0].nickname,
         email: users[0].email,
@@ -206,8 +200,14 @@ export const getUserArticles = async (req, res) => {
     const sortField = validSortFields.includes(sort) ? sort : 'created_at';
     const order = validOrder.includes(sortOrder) ? sortOrder : 'desc';
     
+    const users = await execute('SELECT id FROM users WHERE public_id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    const authorId = users[0].id;
+    
     let whereClause = 'WHERE a.author_id = ? AND a.status = 1';
-    let queryParams = [userId];
+    let queryParams = [authorId];
     
     if (search) {
       whereClause += ' AND (a.title LIKE ? OR a.content LIKE ? OR a.summary LIKE ?)';
@@ -216,7 +216,7 @@ export const getUserArticles = async (req, res) => {
     }
     
     let countWhereClause = 'WHERE author_id = ? AND status = 1';
-    let countParams = [userId];
+    let countParams = [authorId];
     
     if (search) {
       countWhereClause += ' AND (title LIKE ? OR content LIKE ? OR summary LIKE ?)';
@@ -238,8 +238,17 @@ export const getUserArticles = async (req, res) => {
       countParams
     );
     
+    const processedArticles = articles.map(article => {
+      const processed = {
+        ...article,
+        id: article.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
+    
     res.json({
-      articles,
+      articles: processedArticles,
       total: countResult.total,
       page: parseInt(page),
       pageSize: parseInt(pageSize)
@@ -261,8 +270,14 @@ export const getUserComments = async (req, res) => {
     const sortField = validSortFields.includes(sort) ? sort : 'created_at';
     const order = validOrder.includes(sortOrder) ? sortOrder : 'desc';
     
+    const users = await execute('SELECT id FROM users WHERE public_id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    const commentUserId = users[0].id;
+    
     let whereClause = 'WHERE c.user_id = ?';
-    let queryParams = [userId];
+    let queryParams = [commentUserId];
     
     if (search) {
       whereClause += ' AND c.content LIKE ?';
@@ -271,7 +286,7 @@ export const getUserComments = async (req, res) => {
     }
     
     let countWhereClause = 'WHERE user_id = ?';
-    let countParams = [userId];
+    let countParams = [commentUserId];
     
     if (search) {
       countWhereClause += ' AND content LIKE ?';
@@ -280,7 +295,7 @@ export const getUserComments = async (req, res) => {
     }
     
     const comments = await execute(`
-      SELECT c.*, a.title as article_title, a.id as article_id
+      SELECT c.*, a.title as article_title, a.public_id as article_id
       FROM comments c
       JOIN articles a ON c.article_id = a.id
       ${whereClause}
@@ -311,7 +326,7 @@ export const getRecommendedUsers = async (req, res) => {
     const { limit = 5 } = req.query;
 
     let query = `
-      SELECT u.id, u.username, u.nickname, u.avatar, u.bio, 
+      SELECT u.id, u.public_id, u.username, u.nickname, u.avatar, u.bio, 
              u.follower_count, u.following_count, u.is_admin
       FROM users u
     `;
@@ -334,8 +349,17 @@ export const getRecommendedUsers = async (req, res) => {
     params.push(parseInt(limit));
 
     const users = await execute(query, params);
+    
+    const processedUsers = users.map(user => {
+      const processed = {
+        ...user,
+        id: user.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
 
-    res.json({ users });
+    res.json({ users: processedUsers });
   } catch (error) {
     console.error('获取推荐用户失败:', error);
     res.status(500).json({ message: '服务器内部错误' });
@@ -353,7 +377,7 @@ export const getFeed = async (req, res) => {
     }
 
     const articles = await execute(`
-      SELECT a.*, u.username, u.nickname, u.avatar, u.is_admin
+      SELECT a.*, u.public_id as author_id, u.username, u.nickname, u.avatar, u.is_admin
       FROM articles a
       JOIN users u ON a.author_id = u.id
       WHERE a.author_id IN (
@@ -371,9 +395,18 @@ export const getFeed = async (req, res) => {
       )
       AND status = 1
     `, [userId]);
+    
+    const processedArticles = articles.map(article => {
+      const processed = {
+        ...article,
+        id: article.public_id
+      };
+      delete processed.public_id;
+      return processed;
+    });
 
     res.json({
-      articles,
+      articles: processedArticles,
       total: countResult.total,
       page: parseInt(page),
       pageSize: parseInt(pageSize)
@@ -429,6 +462,224 @@ export const getUnreadCount = async (req, res) => {
     });
   } catch (error) {
     console.error('获取未读消息数失败:', error);
+    res.status(500).json({ message: '服务器内部错误' });
+  }
+};
+
+export const getAllUsersAdmin = async (req, res) => {
+  try {
+    if (req.user.is_admin !== 1) {
+      return res.status(403).json({ message: '只有管理员可以查看所有用户' });
+    }
+
+    const { page = 1, pageSize = 20, search = '' } = req.query;
+    const offset = (page - 1) * pageSize;
+
+    let whereClause = '';
+    let params = [];
+
+    if (search) {
+      whereClause = 'WHERE username LIKE ? OR nickname LIKE ? OR email LIKE ?';
+      const searchPattern = `%${search}%`;
+      params = [searchPattern, searchPattern, searchPattern];
+    }
+
+    const users = await execute(`
+      SELECT id, public_id, username, nickname, email, avatar, bio, 
+             profile_completed, follower_count, following_count, is_admin, created_at
+      FROM users
+      ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    `, [...params, parseInt(pageSize), offset]);
+
+    const [countResult] = await execute(
+      `SELECT COUNT(*) as total FROM users ${whereClause}`,
+      params
+    );
+
+    const processedUsers = users.map(user => ({
+      ...user,
+      id: user.public_id,
+      isAdmin: user.is_admin === 1
+    }));
+
+    res.status(200).json({
+      users: processedUsers,
+      total: countResult.total,
+      page: parseInt(page),
+      pageSize: parseInt(pageSize)
+    });
+  } catch (error) {
+    console.error('获取所有用户失败:', error.message);
+    res.status(500).json({ message: '服务器内部错误' });
+  }
+};
+
+export const getUserAdmin = async (req, res) => {
+  try {
+    if (req.user.is_admin !== 1) {
+      return res.status(403).json({ message: '只有管理员可以查看用户详情' });
+    }
+
+    const { id } = req.params;
+
+    const users = await execute(`
+      SELECT id, public_id, username, nickname, email, avatar, bio,
+             profile_completed, follower_count, following_count, is_admin, created_at, updated_at
+      FROM users
+      WHERE public_id = ?
+    `, [id]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+
+    const user = users[0];
+
+    res.status(200).json({
+      user: {
+        ...user,
+        id: user.public_id,
+        isAdmin: user.is_admin === 1
+      }
+    });
+  } catch (error) {
+    console.error('获取用户详情失败:', error.message);
+    res.status(500).json({ message: '服务器内部错误' });
+  }
+};
+
+export const updateUserAdmin = async (req, res) => {
+  try {
+    if (req.user.is_admin !== 1) {
+      return res.status(403).json({ message: '只有管理员可以更新用户信息' });
+    }
+
+    const { id } = req.params;
+    const { username, nickname, password, email, avatar, bio, is_admin } = req.body;
+
+    const [existingUser] = await execute('SELECT id FROM users WHERE public_id = ?', [id]);
+    if (!existingUser) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+
+    const internalId = existingUser.id;
+
+    const updates = [];
+    const params = [];
+
+    if (username !== undefined) {
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+        return res.status(400).json({ message: '用户名只能包含英文、数字和下划线，长度3-20个字符' });
+      }
+      const [existing] = await execute('SELECT id FROM users WHERE username = ? AND id != ?', [username, internalId]);
+      if (existing.length > 0) {
+        return res.status(400).json({ message: '用户名已存在' });
+      }
+      updates.push('username = ?');
+      params.push(username);
+    }
+
+    if (nickname !== undefined) {
+      if (nickname && nickname.length > 50) {
+        return res.status(400).json({ message: '昵称长度不能超过50个字符' });
+      }
+      updates.push('nickname = ?');
+      params.push(nickname || null);
+    }
+
+    if (password !== undefined) {
+      if (password && password.length < 6) {
+        return res.status(400).json({ message: '密码长度不能少于6个字符' });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updates.push('password = ?');
+      params.push(hashedPassword);
+    }
+
+    if (email !== undefined) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: '请输入有效的邮箱地址' });
+      }
+      const [existing] = await execute('SELECT id FROM users WHERE email = ? AND id != ?', [email, internalId]);
+      if (existing.length > 0) {
+        return res.status(400).json({ message: '邮箱已存在' });
+      }
+      updates.push('email = ?');
+      params.push(email);
+    }
+
+    if (avatar !== undefined) {
+      updates.push('avatar = ?');
+      params.push(avatar || null);
+    }
+
+    if (bio !== undefined) {
+      updates.push('bio = ?');
+      params.push(bio || null);
+    }
+
+    if (is_admin !== undefined) {
+      updates.push('is_admin = ?');
+      params.push(is_admin ? 1 : 0);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ message: '没有提供更新字段' });
+    }
+
+    params.push(internalId);
+
+    await execute(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+
+    const [updatedUser] = await execute(`
+      SELECT id, public_id, username, nickname, email, avatar, bio,
+             profile_completed, follower_count, following_count, is_admin, created_at, updated_at
+      FROM users
+      WHERE id = ?
+    `, [internalId]);
+
+    res.status(200).json({
+      message: '用户信息更新成功',
+      user: {
+        ...updatedUser,
+        id: updatedUser.public_id,
+        isAdmin: updatedUser.is_admin === 1
+      }
+    });
+  } catch (error) {
+    console.error('更新用户信息失败:', error.message);
+    res.status(500).json({ message: '服务器内部错误' });
+  }
+};
+
+export const deleteUserAdmin = async (req, res) => {
+  try {
+    if (req.user.is_admin !== 1) {
+      return res.status(403).json({ message: '只有管理员可以删除用户' });
+    }
+
+    const { id } = req.params;
+
+    const [existingUser] = await execute('SELECT id FROM users WHERE public_id = ?', [id]);
+    if (!existingUser) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+
+    if (existingUser.id === req.user.id) {
+      return res.status(400).json({ message: '不能删除自己的账号' });
+    }
+
+    await execute('DELETE FROM users WHERE public_id = ?', [id]);
+
+    res.status(200).json({ message: '用户删除成功' });
+  } catch (error) {
+    console.error('删除用户失败:', error.message);
     res.status(500).json({ message: '服务器内部错误' });
   }
 };

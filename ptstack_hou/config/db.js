@@ -1,4 +1,11 @@
 import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // 创建数据库连接池
 const pool = mysql.createPool({
@@ -6,7 +13,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   port: process.env.DB_PORT || 3306,
-  database: 'ptstack_db', // 指定数据库名称
+  database: process.env.DB_NAME || 'ptstack', // 指定数据库名称
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

@@ -1,3 +1,21 @@
+/**
+ * ========================================
+ * 历史迁移脚本 - 已弃用
+ * ========================================
+ * 
+ * 数据表及功能说明：
+ * - users 表：添加邮箱验证相关字段
+ * 
+ * 功能说明：
+ * - 添加 email_verified 字段：邮箱是否已验证
+ * - 添加 verification_token 字段：邮箱验证令牌
+ * - 添加 verification_token_expires_at 字段：验证令牌过期时间
+ * - 将现有用户设置为已验证
+ * 
+ * 此脚本已弃用，功能已被 setup-database.js 完全替代
+ * 此文件仅作为历史记录保留
+ */
+
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
