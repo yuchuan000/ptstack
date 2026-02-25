@@ -52,15 +52,18 @@ export const getAnnouncements = async (req, res) => {
 
 export const getMarqueeAnnouncements = async (req, res) => {
   try {
+    console.log('开始获取首页顶部通告...');
+    
     const announcements = await execute(`
-      SELECT id, public_id, title, content, priority
+      SELECT id, public_id, title, content, summary, priority, is_active, is_marquee, start_time, end_time
       FROM announcements 
       WHERE is_active = 1 
         AND is_marquee = 1
-        AND (start_time IS NULL OR start_time <= NOW())
-        AND (end_time IS NULL OR end_time >= NOW())
       ORDER BY priority DESC, created_at DESC
     `)
+    
+    console.log('查询到的公告数量:', announcements.length);
+    console.log('查询到的公告:', announcements);
     
     const processedAnnouncements = announcements.map(announcement => {
       const processed = {
@@ -71,18 +74,21 @@ export const getMarqueeAnnouncements = async (req, res) => {
       return processed;
     });
     
+    console.log('处理后的公告:', processedAnnouncements);
+    
     res.status(200).json({
       announcements: processedAnnouncements
     })
   } catch (error) {
-    console.error('获取跑马灯公告失败:', error.message)
+    console.error('获取首页顶部通告失败:', error.message)
+    console.error('错误详情:', error)
     res.status(500).json({ message: '服务器内部错误' })
   }
 }
 
 export const createAnnouncement = async (req, res) => {
   try {
-    const { title, content, priority = 0, is_marquee = 0, target_type = 'all', target_user_ids = [], delivery_methods = [], start_time, end_time } = req.body
+    const { title, content, summary, priority = 0, is_marquee = 0, target_type = 'all', target_user_ids = [], delivery_methods = [], start_time, end_time } = req.body
     const createdBy = req.user.id
     
     if (!title || !content) {
@@ -96,12 +102,13 @@ export const createAnnouncement = async (req, res) => {
     const publicId = generateAnnouncementId()
     
     const result = await execute(
-      `INSERT INTO announcements (public_id, title, content, priority, is_marquee, target_type, target_user_ids, delivery_methods, created_by, start_time, end_time) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO announcements (public_id, title, content, summary, priority, is_marquee, target_type, target_user_ids, delivery_methods, created_by, start_time, end_time) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         publicId,
         title, 
         content, 
+        summary || '',
         priority, 
         is_marquee, 
         target_type, 
@@ -177,7 +184,7 @@ export const createAnnouncement = async (req, res) => {
 export const updateAnnouncement = async (req, res) => {
   try {
     const { id } = req.params
-    const { title, content, priority, is_marquee, is_active, target_type, target_user_ids, delivery_methods, start_time, end_time } = req.body
+    const { title, content, summary, priority, is_marquee, is_active, target_type, target_user_ids, delivery_methods, start_time, end_time } = req.body
     
     if (req.user.is_admin !== 1) {
       return res.status(403).json({ message: '只有管理员可以更新公告' })
@@ -193,6 +200,10 @@ export const updateAnnouncement = async (req, res) => {
     if (content !== undefined) {
       updates.push('content = ?')
       params.push(content)
+    }
+    if (summary !== undefined) {
+      updates.push('summary = ?')
+      params.push(summary)
     }
     if (priority !== undefined) {
       updates.push('priority = ?')

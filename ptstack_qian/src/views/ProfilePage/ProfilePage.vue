@@ -1,4 +1,6 @@
 <script setup>
+// 用户个人主页组件
+// 功能：展示用户文章、评论、订阅者和订阅列表
 // 导入Vue的ref、computed、onMounted和watch函数
 import { ref, computed, onMounted, watch } from 'vue'
 // 导入Vue Router的useRouter和useRoute函数
@@ -10,7 +12,6 @@ import { ElMessage } from 'element-plus'
 // 导入Element Plus图标组件
 import {
   Calendar,
-  Link,
   ChatDotRound,
   Document,
   Star,
@@ -1124,17 +1125,17 @@ onMounted(async () => {
 
 .avatar-admin-badge {
   position: absolute;
-  bottom: -8px;
-  right: -8px;
-  width: 32px;
-  height: 32px;
+  bottom: -11px;
+  right: -11px;
+  width: 47px;
+  height: 47px;
   background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
   border: 2px solid white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 22px;
   font-weight: 700;
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
@@ -1556,17 +1557,17 @@ onMounted(async () => {
 
 .user-avatar .avatar-admin-badge {
   position: absolute;
-  bottom: -6px;
-  right: -6px;
-  width: 24px;
-  height: 24px;
+  bottom: -9px;
+  right: -9px;
+  width: 38px;
+  height: 38px;
   background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
   border: 2px solid white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 17px;
   font-weight: 700;
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);

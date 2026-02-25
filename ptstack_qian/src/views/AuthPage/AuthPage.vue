@@ -1,4 +1,6 @@
 <script setup>
+// 登录注册页面组件
+// 功能：提供用户登录和注册功能，支持邮箱验证
 // 导入Vue的ref响应式函数，用于创建响应式数据
 import { ref, reactive, onUnmounted, watch, onMounted } from 'vue'
 // 导入Vue Router的useRouter和useRoute函数

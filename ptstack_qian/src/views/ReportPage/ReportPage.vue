@@ -1,4 +1,6 @@
 <script setup>
+// 文章举报页面组件
+// 功能：用于举报违规文章
 // 导入Vue的ref和onMounted函数
 import { ref, onMounted } from 'vue'
 // 导入Vue Router的useRouter和useRoute函数

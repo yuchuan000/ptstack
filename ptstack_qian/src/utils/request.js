@@ -2,31 +2,19 @@ import axios from 'axios' // 导入axios库
 import { ElMessage } from 'element-plus' // 导入Element Plus的消息提示组件
 import router from '@/router' // 导入路由实例
 import { useUserStore } from '@/stores/user' // 导入用户状态管理
-import { jwtDecode } from 'jwt-decode' // 导入JWT解码库
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: 'http://localhost:3000', // 后端API基础地址
+  baseURL: API_BASE_URL, // 后端API基础地址
   timeout: 60000, // 请求超时时间，单位毫秒（增加到60秒）
   headers: {
     'Content-Type': 'application/json' // 默认请求头，设置内容类型为JSON
   }
 })
 
-// 判断Token是否过期的函数
-const isTokenExpired = (token) => {
-  if (!token) return true // 没有token直接返回已过期
-  try {
-    const decoded = jwtDecode(token) // 解码token
-    const currentTime = Date.now() / 1000 // 获取当前时间戳（秒）
-    if (decoded.exp && decoded.exp < currentTime) {
-      return true // token已过期
-    }
-    return false // token未过期
-  } catch (e) {
-    return true // 解码失败，视为已过期
-  }
-}
+
 
 // Token刷新相关状态
 let isRefreshing = false // 标记是否正在刷新token，防止多个请求同时刷新
@@ -92,7 +80,7 @@ request.interceptors.response.use(
         // 如果有Refresh Token
         if (userStore.refreshToken) {
           // 请求刷新token
-          const response = await axios.post('http://localhost:3000/auth/refresh', {
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refreshToken: userStore.refreshToken
           })
 
@@ -108,7 +96,7 @@ request.interceptors.response.use(
           // 重新发起原始请求
           const retryResponse = await axios({
             method: originalRequest.method,
-            url: 'http://localhost:3000' + originalRequest.url,
+            url: API_BASE_URL + originalRequest.url,
             headers: headers,
             data: originalRequest.data
           })

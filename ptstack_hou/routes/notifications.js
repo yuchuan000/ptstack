@@ -6,7 +6,7 @@ import {
   markAllAsRead,
   deleteNotification
 } from '../controllers/notificationsController.js'
-import { authMiddleware } from '../middleware/auth.js'
+import { authMiddleware } from '../middlewares/auth.js'
 
 const router = express.Router()
 

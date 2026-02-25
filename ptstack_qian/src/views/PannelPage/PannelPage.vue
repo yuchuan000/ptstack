@@ -1,9 +1,11 @@
 <script setup>
+// 应用布局框架页面组件
+// 功能：包含侧边栏导航和弹窗公告功能
 import { ref, computed, onMounted, onUnmounted, markRaw, nextTick, watch } from 'vue' // 导入Vue响应式API和生命周期钩子
 import { useRouter, useRoute } from 'vue-router' // 导入Vue Router
 import { useUserStore } from '@/stores/user' // 导入用户状态管理
 import { ElMessageBox, ElMessage, ElDialog } from 'element-plus' // 导入Element Plus的消息提示组件
-import { House, Setting, Menu, CaretLeft, CaretRight, Tickets, Collection, Switch, Bell, User, Trophy } from '@element-plus/icons-vue' // 导入Element Plus图标
+import { House, Setting, Menu, CaretLeft, CaretRight, Tickets, Collection, Switch, Bell, User } from '@element-plus/icons-vue' // 导入Element Plus图标
 import { getFullUrl } from '@/utils/url' // 导入URL处理工具函数
 import { getUnreadPopupAnnouncements, markAnnouncementRead } from '@/api/announcements'
 import { MdPreview } from 'md-editor-v3'
@@ -93,12 +95,6 @@ const menuList = ref([
     path: '/articles', // 菜单项路径
   },
   {
-    id: 'achievements', // 菜单项ID
-    name: '我的成就', // 菜单项名称
-    icon: markRaw(Trophy), // 菜单项图标
-    path: '/achievements', // 菜单项路径
-  },
-  {
     id: 'categories', // 菜单项ID
     name: '分类管理', // 菜单项名称
     icon: markRaw(Collection), // 菜单项图标
@@ -110,13 +106,6 @@ const menuList = ref([
     name: '公告管理', // 菜单项名称
     icon: markRaw(Bell), // 菜单项图标
     path: '/announcements', // 菜单项路径
-    requiresAdmin: true, // 需要管理员权限
-  },
-  {
-    id: 'achievements-admin', // 菜单项ID
-    name: '成就管理', // 菜单项名称
-    icon: markRaw(Trophy), // 菜单项图标
-    path: '/achievements-manage', // 菜单项路径
     requiresAdmin: true, // 需要管理员权限
   },
   {

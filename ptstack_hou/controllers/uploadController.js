@@ -68,3 +68,21 @@ export const uploadAvatar = async (req, res) => {
     res.status(500).json({ message: '上传失败，请稍后重试' });
   }
 };
+
+// 删除头像文件
+export const deleteAvatarFile = (avatarUrl) => {
+  try {
+    if (!avatarUrl) return;
+    
+    // 从URL中提取文件名
+    const filename = path.basename(avatarUrl);
+    const filePath = path.join(uploadsDir, filename);
+    
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`删除旧头像文件: ${filename}`);
+    }
+  } catch (error) {
+    console.error('删除头像文件失败:', error.message);
+  }
+};

@@ -1,13 +1,16 @@
 <script setup>
+// 公告编辑页面组件
+// 功能：创建和编辑系统公告，支持AI生成摘要
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, Plus, Check, Setting } from '@element-plus/icons-vue'
+import { ArrowLeft, Check, Setting, MagicStick } from '@element-plus/icons-vue'
 import {
   getAnnouncementById,
   createAnnouncement,
   updateAnnouncement
 } from '@/api/announcements'
+import { generateSummary } from '@/api/ai'
 import { MdEditor, NormalToolbar } from 'md-editor-v3'
 
 const router = useRouter()
@@ -15,6 +18,7 @@ const route = useRoute()
 
 const loading = ref(false)
 const saving = ref(false)
+const generatingSummary = ref(false)
 const isEdit = ref(!!route.params.id)
 const targetUserIdsInput = ref('')
 const editorRef = ref(null)
@@ -24,9 +28,30 @@ const insertIndent = () => {
   form.value.content += '&emsp;'
 }
 
+const handleGenerateSummary = async () => {
+  if (!form.value.title && !form.value.content) {
+    ElMessage.warning('请先填写标题或内容')
+    return
+  }
+  try {
+    generatingSummary.value = true
+    const res = await generateSummary({
+      title: form.value.title,
+      content: form.value.content
+    })
+    form.value.summary = res.summary
+    ElMessage.success('概述生成成功')
+  } catch {
+    ElMessage.error('生成概述失败')
+  } finally {
+    generatingSummary.value = false
+  }
+}
+
 const form = ref({
   title: '',
   content: '',
+  summary: '',
   priority: 0,
   is_marquee: false,
   target_type: 'all',
@@ -35,11 +60,6 @@ const form = ref({
   start_time: null,
   end_time: null
 })
-
-const rules = {
-  title: [{ required: true, message: '请输入公告标题', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入公告内容', trigger: 'blur' }]
-}
 
 const fetchAnnouncement = async () => {
   if (!isEdit.value) return
@@ -52,6 +72,7 @@ const fetchAnnouncement = async () => {
     form.value = {
       title: announcement.title,
       content: announcement.content,
+      summary: announcement.summary || '',
       priority: announcement.priority || 0,
       is_marquee: announcement.is_marquee || false,
       target_type: announcement.target_type || 'all',
@@ -169,6 +190,23 @@ onMounted(() => {
               </template>
             </MdEditor>
           </div>
+
+          <div class="form-section">
+            <div class="form-label-row">
+              <label class="form-label">公告概述</label>
+              <el-button type="primary" size="small" :loading="generatingSummary" @click="handleGenerateSummary">
+                <el-icon><MagicStick /></el-icon> AI生成
+              </el-button>
+            </div>
+            <el-input
+              v-model="form.summary"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入公告概述，用于首页顶部和消息中心的省略展示"
+              size="large"
+              class="overview-input"
+            />
+          </div>
         </div>
       </div>
 
@@ -189,12 +227,12 @@ onMounted(() => {
               style="width: 100%"
               placeholder="数字越大优先级越高"
             />
-            <div class="form-tip">数字越大，跑马灯显示优先级越高</div>
+            <div class="form-tip">数字越大，首页顶部通告显示优先级越高</div>
           </div>
 
           <div class="form-section">
             <div class="switch-row">
-              <label class="form-label">首页跑马灯</label>
+              <label class="form-label">首页顶部通告</label>
               <el-switch v-model="form.is_marquee" />
             </div>
           </div>

@@ -1,4 +1,6 @@
 <script setup>
+// 用户服务协议页面组件
+// 功能：展示平台服务条款内容
 import PolicyPage from '@/components/PolicyPage/PolicyPage.vue'
 </script>
 

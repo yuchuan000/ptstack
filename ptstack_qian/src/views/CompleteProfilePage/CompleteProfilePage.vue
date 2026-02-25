@@ -162,7 +162,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
+// 用户完善个人资料页面组件
+// 功能：设置昵称、头像和个人简介
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, User, Message, Camera, RefreshLeft, ZoomIn, ZoomOut } from '@element-plus/icons-vue'
@@ -189,11 +191,6 @@ const startY = ref(0)
 const imageRef = ref(null)
 const windowWidth = ref(window.innerWidth)
 
-const dialogWidth = computed(() => {
-  if (windowWidth.value < 768) return '90%'
-  if (windowWidth.value < 992) return '500px'
-  return '600px'
-})
 
 const handleResize = () => {
   windowWidth.value = window.innerWidth
@@ -273,7 +270,6 @@ const initCropper = () => {
   const canvas = canvasRef.value
   if (!canvas) return
 
-  const ctx = canvas.getContext('2d')
   const img = new Image()
   img.onload = () => {
     imageRef.value = img

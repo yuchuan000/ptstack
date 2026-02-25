@@ -1,8 +1,10 @@
 <script setup>
+// 公告详情页面组件
+// 功能：展示公告详细内容，并标记为已读
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getAnnouncementById, markAnnouncementRead } from '@/api/announcements'
-import { ArrowLeft, Bell, Calendar, Clock } from '@element-plus/icons-vue'
+import { ArrowLeft, Bell, Calendar } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { MdPreview } from 'md-editor-v3'
 

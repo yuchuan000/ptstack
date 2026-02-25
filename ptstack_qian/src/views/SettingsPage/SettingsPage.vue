@@ -1,4 +1,6 @@
 <script setup>
+// 用户设置页面组件
+// 功能：提供个人资料编辑和隐私设置功能，包括头像上传、昵称修改、简介编辑等
 import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
@@ -69,13 +71,6 @@ const privacyForm = reactive({
 })
 
 const tempAvatarFile = ref(null)
-
-const rules = {
-  nickname: [
-    { required: true, message: '请输入昵称', trigger: 'blur' },
-    { min: 1, max: 50, message: '昵称长度在 1 到 50 个字符', trigger: 'blur' }
-  ]
-}
 
 const initForm = () => {
   profileForm.nickname = userStore.userInfo?.nickname || ''
@@ -169,7 +164,6 @@ const initCropper = () => {
   const canvas = canvasRef.value
   if (!canvas) return
 
-  const ctx = canvas.getContext('2d')
   const img = new Image()
   img.onload = () => {
     imageRef.value = img

@@ -23,7 +23,11 @@
     <div class="content-wrapper">
       <el-card class="users-card">
         <el-table :data="users" v-loading="loading" stripe>
-          <el-table-column prop="id" label="用户ID" width="200" show-overflow-tooltip />
+          <el-table-column label="用户ID" width="100">
+            <template #default="{ row }">
+              <el-tag size="small" type="info">{{ row.id }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="username" label="登录账号" width="140" show-overflow-tooltip />
           <el-table-column prop="nickname" label="昵称" width="140" show-overflow-tooltip />
           <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
@@ -117,6 +121,8 @@
 </template>
 
 <script setup>
+// 用户管理页面组件
+// 功能：管理员用于管理系统用户，编辑用户信息和分配权限
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
@@ -179,7 +185,7 @@ const loadUsers = async () => {
     })
     users.value = res.users || []
     total.value = res.total || 0
-  } catch (error) {
+  } catch {
     ElMessage.error('获取用户列表失败')
   } finally {
     loading.value = false
@@ -206,15 +212,15 @@ const handleEdit = (row) => {
 
 const handleSaveEdit = async () => {
   if (!editFormRef.value) return
-  
+
   try {
     await editFormRef.value.validate()
-    
+
     const updateData = { ...editForm }
     if (!updateData.password) {
       delete updateData.password
     }
-    
+
     await updateUserAdmin(editingUser.value.id, updateData)
     ElMessage.success('用户信息更新成功')
     editDialogVisible.value = false
@@ -233,7 +239,7 @@ const handleDelete = async (row) => {
       confirmButtonText: '确定',
       cancelButtonText: '取消'
     })
-    
+
     await deleteUserAdmin(row.id)
     ElMessage.success('用户删除成功')
     loadUsers()

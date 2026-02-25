@@ -1,6 +1,7 @@
 import { execute } from '../config/db.js';
 import bcrypt from 'bcrypt';
 import { generateUserId } from '../utils/idGenerator.js';
+import { deleteAvatarFile } from './uploadController.js';
 
 export const getUsers = (req, res, next) => {
   res.send('respond with a resource')
@@ -128,6 +129,18 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.id;
     const { nickname, avatar, bio } = req.body;
     
+    // 如果要更新头像，先获取旧头像URL
+    let oldAvatar = null;
+    if (avatar !== undefined) {
+      const [user] = await execute(
+        'SELECT avatar FROM users WHERE id = ?',
+        [userId]
+      );
+      if (user && user.avatar) {
+        oldAvatar = user.avatar;
+      }
+    }
+    
     const updateFields = [];
     const updateValues = [];
     
@@ -163,6 +176,11 @@ export const updateProfile = async (req, res) => {
       `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
       updateValues
     );
+    
+    // 删除旧头像文件
+    if (oldAvatar && oldAvatar !== avatar) {
+      deleteAvatarFile(oldAvatar);
+    }
     
     const users = await execute(
       'SELECT id, public_id, username, nickname, email, avatar, profile_completed, bio FROM users WHERE id = ?',

@@ -1,4 +1,6 @@
 <script setup>
+// 文章列表页面组件
+// 功能：展示全部文章和我的文章，支持分类筛选、搜索、排序和分页
 // 导入Vue的ref和onMounted函数
 import { ref, onMounted } from 'vue'
 // 导入Vue Router的useRouter函数
@@ -381,26 +383,28 @@ onMounted(() => {
                   <el-icon><Document /></el-icon>
                   查看
                 </el-button>
-                <el-button
-                  v-if="row.author_id === userStore.userInfo?.id"
-                  link
-                  type="primary"
-                  size="small"
-                  @click="goToEdit(row.id)"
-                >
-                  <el-icon><Edit /></el-icon>
-                  编辑
-                </el-button>
-                <el-button
-                  v-else
-                  link
-                  type="danger"
-                  size="small"
-                  @click="goToReport(row.id)"
-                >
-                  <el-icon><Warning /></el-icon>
-                  举报
-                </el-button>
+                <template v-if="activeTab === 'my' || row.author_id === userStore.userInfo?.id">
+                  <el-button
+                    link
+                    type="primary"
+                    size="small"
+                    @click="goToEdit(row.id)"
+                  >
+                    <el-icon><Edit /></el-icon>
+                    编辑
+                  </el-button>
+                </template>
+                <template v-else>
+                  <el-button
+                    link
+                    type="danger"
+                    size="small"
+                    @click="goToReport(row.id)"
+                  >
+                    <el-icon><Warning /></el-icon>
+                    举报
+                  </el-button>
+                </template>
               </div>
             </template>
           </el-table-column>
@@ -702,24 +706,30 @@ onMounted(() => {
   position: relative;
   margin-right: 8px;
 
+// 管理员标识
   .avatar-admin-badge {
     position: absolute;
-    bottom: -2px;
-    right: -2px;
-    width: 16px;
-    height: 16px;
+    bottom: -4px;
+    right: -4px;
+    width: 19px;
+    height: 19px;
     background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
     border: 2px solid white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 700;
     color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     z-index: 1;
   }
+}
+
+// 去除管理员标识父级遮挡
+:deep(.el-table .cell) {
+  overflow: visible;
 }
 
 .author-avatar-img-small {

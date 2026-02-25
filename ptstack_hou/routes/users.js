@@ -14,7 +14,7 @@ import {
   updateUserAdmin,
   deleteUserAdmin
 } from '../controllers/usersController.js'
-import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js'
+import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.js'
 
 const router = express.Router()
 

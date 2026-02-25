@@ -1,4 +1,6 @@
 <script setup>
+// 消息通知页面组件
+// 功能：展示系统公告和用户互动通知，支持标记已读和删除
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -12,11 +14,9 @@ import {
   ArrowLeft,
   ChatLineRound,
   Document,
-  Trophy,
   HomeFilled,
   FolderAdd,
-  Check,
-  Close
+  Check
 } from '@element-plus/icons-vue'
 import { getNotifications, markAsRead, deleteNotification } from '@/api/notifications'
 import { getAnnouncements, markAnnouncementRead } from '@/api/announcements'
@@ -55,7 +55,6 @@ const tabs = [
   { key: 'comment', label: '评论', icon: ChatDotRound },
   { key: 'like', label: '点赞', icon: Star },
   { key: 'follow', label: '关注', icon: UserFilled },
-  { key: 'achievement', label: '成就', icon: Trophy },
   { key: 'category_application', label: '分类申请', icon: FolderAdd },
   { key: 'category_review', label: '分类审核', icon: Check }
 ]
@@ -137,7 +136,9 @@ const handleNotificationClick = async (notification) => {
     }
   }
 
-  if (notification.related_id) {
+  if (notification.type === 'category_application' || notification.type === 'category_review') {
+    router.push({ path: '/categories', query: { tab: 'application' } })
+  } else if (notification.related_id) {
     if (notification.type === 'comment' || notification.type === 'like') {
       router.push(`/article/${notification.related_id}`)
     } else if (notification.type === 'follow') {
@@ -185,8 +186,6 @@ const getNotificationIcon = (type) => {
       return UserFilled
     case 'mention':
       return ChatLineRound
-    case 'achievement':
-      return Trophy
     case 'category_application':
       return FolderAdd
     case 'category_review':
@@ -206,8 +205,6 @@ const getNotificationIconBg = (type) => {
       return 'background: #f3e5f5; color: #722ed1;'
     case 'mention':
       return 'background: #e3f2fd; color: #165dff;'
-    case 'achievement':
-      return 'background: #fff7e6; color: #faad14;'
     case 'category_application':
       return 'background: #e6f4ff; color: #1677ff;'
     case 'category_review':
@@ -305,7 +302,7 @@ onMounted(() => {
               </div>
               <div class="announcement-content">
                 <div class="announcement-title">{{ item.title }}</div>
-                <div class="announcement-text">{{ item.content.replace(/[#*`~_]/g, '').substring(0, 100) }}{{ item.content.length > 100 ? '...' : '' }}</div>
+                <div class="announcement-text">{{ item.summary ? item.summary.replace(/[#*`~_]/g, '').substring(0, 100) + (item.summary.length > 100 ? '...' : '') : item.content.replace(/[#*`~_]/g, '').substring(0, 100) + (item.content.length > 100 ? '...' : '') }}</div>
                 <div class="announcement-time">
                   <el-icon><Clock /></el-icon>
                   {{ formatTime(item.created_at) }}
@@ -363,7 +360,7 @@ onMounted(() => {
 
             <div class="announcement-content">
               <div class="announcement-title">{{ announcement.title }}</div>
-              <div class="announcement-text">{{ announcement.content.replace(/[#*`~_]/g, '').substring(0, 100) }}{{ announcement.content.length > 100 ? '...' : '' }}</div>
+              <div class="announcement-text">{{ announcement.summary ? announcement.summary.replace(/[#*`~_]/g, '').substring(0, 100) + (announcement.summary.length > 100 ? '...' : '') : announcement.content.replace(/[#*`~_]/g, '').substring(0, 100) + (announcement.content.length > 100 ? '...' : '') }}</div>
               <div class="announcement-time">
                 <el-icon><Clock /></el-icon>
                 {{ formatTime(announcement.created_at) }}

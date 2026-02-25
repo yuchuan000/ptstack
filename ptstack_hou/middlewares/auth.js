@@ -1,6 +1,6 @@
 import { verifyToken } from '../config/jwt.js'
 
-export const authMiddleware = (req, res, next) => {
+export const auth = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
 
@@ -23,6 +23,9 @@ export const authMiddleware = (req, res, next) => {
     return res.status(401).json({ message: '认证失败' })
   }
 }
+
+export const authMiddleware = auth
+export const authenticateToken = auth
 
 export const optionalAuthMiddleware = (req, res, next) => {
   try {

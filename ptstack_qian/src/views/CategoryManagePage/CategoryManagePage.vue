@@ -1,8 +1,10 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+// 分类管理页面组件
+// 功能：创建、编辑、删除分类和审核分类申请
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCategories, createCategory, updateCategory, deleteCategory, getCategoryApplications, reviewCategoryApplication } from '@/api/articles'
-import { Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Tickets, FolderAdd } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader/PageHeader.vue'
 import { useRouter } from 'vue-router'
 import { getFullUrl } from '@/utils/url'
@@ -19,6 +21,7 @@ const applications = ref([])
 const applicationsLoading = ref(false)
 
 const activeTab = ref('categories')
+const applicationTab = ref('all')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const currentCategory = ref(null)
@@ -26,6 +29,27 @@ const formData = ref({
   name: '',
   description: ''
 })
+
+const filteredApplications = computed(() => {
+  if (applicationTab.value === 'all') {
+    return applications.value
+  } else if (applicationTab.value === 'pending') {
+    return applications.value.filter(app => app.status === 0)
+  } else if (applicationTab.value === 'approved') {
+    return applications.value.filter(app => app.status === 1)
+  } else if (applicationTab.value === 'rejected') {
+    return applications.value.filter(app => app.status === 2)
+  }
+  return applications.value
+})
+
+const handleApplicationTabChange = (tab) => {
+  applicationTab.value = tab
+}
+
+const handleTabChange = (tab) => {
+  activeTab.value = tab
+}
 
 const reviewDialogVisible = ref(false)
 const currentApplication = ref(null)
@@ -191,84 +215,134 @@ onMounted(() => {
     </PageHeader>
 
     <div class="content-card">
-      <el-tabs v-model="activeTab" class="category-tabs">
-        <el-tab-pane label="分类列表" name="categories">
-          <div class="categories-container" v-loading="loading">
-            <div class="category-grid">
-              <div class="category-card" v-for="category in categories" :key="category.id">
-                <div class="category-icon">
-                  <span>{{ category.name.charAt(0) }}</span>
-                </div>
-                <div class="category-info">
-                  <h3 class="category-name">{{ category.name }}</h3>
-                  <p class="category-desc" v-if="category.description">{{ category.description }}</p>
-                  <p class="category-desc empty" v-else>暂无描述</p>
-                </div>
-                <div class="category-actions">
-                  <el-button circle size="small" @click="openEditDialog(category)">
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                  <el-button circle size="small" type="danger" @click="handleDelete(category)">
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </div>
+      <div class="card-header">
+        <div class="tabs-section">
+          <div
+            class="tab-item"
+            :class="{ active: activeTab === 'categories' }"
+            @click="handleTabChange('categories')"
+          >
+            <el-icon><Tickets /></el-icon>
+            分类列表
+          </div>
+          <div
+            class="tab-item"
+            :class="{ active: activeTab === 'applications' }"
+            @click="handleTabChange('applications')"
+          >
+            <el-icon><FolderAdd /></el-icon>
+            分类申请
+          </div>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'categories'" class="categories-container" v-loading="loading">
+        <div class="category-grid">
+          <div class="category-card" v-for="category in categories" :key="category.id">
+            <div class="category-icon">
+              <span>{{ category.name.charAt(0) }}</span>
+            </div>
+            <div class="category-info">
+              <h3 class="category-name">{{ category.name }}</h3>
+              <p class="category-desc" v-if="category.description">{{ category.description }}</p>
+              <p class="category-desc empty" v-else>暂无描述</p>
+            </div>
+            <div class="category-actions">
+              <el-button circle size="small" @click="openEditDialog(category)">
+                <el-icon><Edit /></el-icon>
+              </el-button>
+              <el-button circle size="small" type="danger" @click="handleDelete(category)">
+                <el-icon><Delete /></el-icon>
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <el-empty v-if="categories.length === 0 && !loading" description="暂无分类" />
+      </div>
+
+      <div v-if="activeTab === 'applications'" class="applications-container" v-loading="applicationsLoading">
+        <div class="filter-section">
+          <div class="filter-left">
+            <div class="my-article-tabs">
+              <div
+                class="my-tab-item"
+                :class="{ active: applicationTab === 'all' }"
+                @click="handleApplicationTabChange('all')"
+              >
+                全部
+              </div>
+              <div
+                class="my-tab-item"
+                :class="{ active: applicationTab === 'pending' }"
+                @click="handleApplicationTabChange('pending')"
+              >
+                待审核
+              </div>
+              <div
+                class="my-tab-item"
+                :class="{ active: applicationTab === 'approved' }"
+                @click="handleApplicationTabChange('approved')"
+              >
+                通过
+              </div>
+              <div
+                class="my-tab-item"
+                :class="{ active: applicationTab === 'rejected' }"
+                @click="handleApplicationTabChange('rejected')"
+              >
+                未通过
               </div>
             </div>
-
-            <el-empty v-if="categories.length === 0 && !loading" description="暂无分类" />
           </div>
-        </el-tab-pane>
+        </div>
 
-        <el-tab-pane label="分类申请" name="applications">
-          <div class="applications-container" v-loading="applicationsLoading">
-            <el-table :data="applications" style="width: 100%">
-              <el-table-column prop="name" label="分类名称" width="150" />
-              <el-table-column prop="description" label="分类描述" min-width="200" />
-              <el-table-column label="申请人" width="150">
-                <template #default="{ row }">
-                  <div class="applicant-info" @click.stop="goToUserProfile(row.user_id)">
-                    <div class="applicant-avatar-wrapper">
-                      <el-avatar v-if="row.avatar" :size="32" :src="getFullUrl(row.avatar)" />
-                      <el-avatar v-else :size="32">{{ (row.nickname || row.username || '').charAt(0) }}</el-avatar>
-                      <span v-if="row.is_admin === 1" class="avatar-admin-badge">管</span>
-                    </div>
-                    <span>{{ row.nickname || row.username }}</span>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="状态" width="100">
-                <template #default="{ row }">
-                  <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="created_at" label="申请时间" width="180">
-                <template #default="{ row }">
-                  {{ row.created_at }}
-                </template>
-              </el-table-column>
-              <el-table-column label="审核意见" min-width="150">
-                <template #default="{ row }">
-                  {{ row.review_comment || '-' }}
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="150" fixed="right">
-                <template #default="{ row }">
-                  <el-button
-                    v-if="row.status === 0"
-                    type="primary"
-                    size="small"
-                    @click="openReviewDialog(row)"
-                  >
-                    审核
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
+        <el-table :data="filteredApplications" style="width: 100%">
+          <el-table-column prop="name" label="分类名称" width="150" />
+          <el-table-column prop="description" label="分类描述" min-width="200" />
+          <el-table-column label="申请人" width="150">
+            <template #default="{ row }">
+              <div class="applicant-info" @click.stop="goToUserProfile(row.user_id)">
+                <div class="applicant-avatar-wrapper">
+                  <el-avatar v-if="row.avatar" :size="32" :src="getFullUrl(row.avatar)" />
+                  <el-avatar v-else :size="32">{{ (row.nickname || row.username || '').charAt(0) }}</el-avatar>
+                  <span v-if="row.is_admin === 1" class="avatar-admin-badge">管</span>
+                </div>
+                <span>{{ row.nickname || row.username }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="created_at" label="申请时间" width="180">
+            <template #default="{ row }">
+              {{ row.created_at }}
+            </template>
+          </el-table-column>
+          <el-table-column label="审核意见" min-width="150">
+            <template #default="{ row }">
+              {{ row.review_comment || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.status === 0"
+                type="primary"
+                size="small"
+                @click="openReviewDialog(row)"
+              >
+                审核
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-            <el-empty v-if="applications.length === 0 && !applicationsLoading" description="暂无分类申请" />
-          </div>
-        </el-tab-pane>
-      </el-tabs>
+        <el-empty v-if="filteredApplications.length === 0 && !applicationsLoading" description="暂无分类申请" />
+      </div>
     </div>
 
     <el-dialog
@@ -361,19 +435,92 @@ onMounted(() => {
 .content-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 24px;
+  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.category-tabs {
-  :deep(.el-tabs__header) {
-    margin-bottom: 24px;
+.card-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e6eb;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tabs-section {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-item {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4e5969;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    background: rgba(22, 93, 255, 0.05);
+    color: #165dff;
+  }
+
+  &.active {
+    background: #eaf2ff;
+    color: #165dff;
+  }
+}
+
+.filter-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-left {
+  flex: 1;
+}
+
+.my-article-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #f7f8fa;
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.my-tab-item {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4e5969;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(22, 93, 255, 0.05);
+    color: #165dff;
+  }
+
+  &.active {
+    background: #ffffff;
+    color: #165dff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   }
 }
 
 .categories-container,
 .applications-container {
   min-height: 400px;
+  padding: 24px;
 }
 
 .category-grid {
@@ -480,8 +627,8 @@ onMounted(() => {
     position: absolute;
     bottom: -4px;
     right: -4px;
-    width: 18px;
-    height: 18px;
+    width: 19px;
+    height: 19px;
     background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
     border: 2px solid white;
     border-radius: 50%;

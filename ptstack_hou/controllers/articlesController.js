@@ -1,5 +1,4 @@
 import { execute } from '../config/db.js';
-import { checkAndGrantAchievements } from '../utils/achievementHelper.js';
 import { generateArticleId } from '../utils/idGenerator.js';
 import { sendCategoryApplicationEmail, sendCategoryReviewEmail } from '../services/emailService.js';
 
@@ -101,7 +100,7 @@ export const getArticleById = async (req, res) => {
     const currentUserId = req.user?.id;
     
     const articles = await execute(`
-      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.bio as author_bio, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, a.author_id as original_author_id, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.bio as author_bio, u.is_admin as author_is_admin, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id
@@ -114,7 +113,7 @@ export const getArticleById = async (req, res) => {
     
     const article = articles[0];
     
-    if (article.status === 0 && (!currentUserId || currentUserId !== article.author_id)) {
+    if (article.status === 0 && (!currentUserId || currentUserId !== article.original_author_id)) {
       return res.status(403).json({ message: '无权访问此文章' });
     }
     
@@ -177,14 +176,6 @@ export const createArticle = async (req, res) => {
       await execute('INSERT IGNORE INTO article_tags (article_id, tag_id) VALUES (?, ?)', [articleId, tagId]);
     }
 
-    if (status === 1) {
-      const countResult = await execute(
-        'SELECT COUNT(*) as count FROM articles WHERE author_id = ? AND status = 1',
-        [authorId]
-      );
-      await checkAndGrantAchievements(authorId, 'article', countResult[0].count);
-    }
-    
     res.status(201).json({ 
       message: status === 1 ? '文章发布成功' : '草稿保存成功',
       articleId: publicId 
@@ -475,7 +466,7 @@ export const getCategoryApplications = async (req, res) => {
     let applications;
     if (isAdmin) {
       applications = await execute(`
-        SELECT ca.*, u.username, u.nickname, u.avatar, u.is_admin 
+        SELECT ca.*, u.public_id, u.username, u.nickname, u.avatar, u.is_admin 
         FROM category_applications ca 
         LEFT JOIN users u ON ca.user_id = u.id 
         ORDER BY ca.status ASC, ca.created_at DESC

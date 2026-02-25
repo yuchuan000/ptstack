@@ -1,8 +1,10 @@
 <script setup>
+// 文章详情页面组件
+// 功能：展示文章内容、评论、点赞、分享等互动功能
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getArticleById, getComments, createComment, deleteComment, toggleLike, checkLike, toggleCommentLike, checkCommentLikes, shareArticle, getUserHotArticles, getUserLatestArticles } from '@/api/articles'
-import { toggleSubscription, checkSubscription } from '@/api/subscriptions'
+import { getArticleById, getComments, createComment, deleteComment, toggleLike, checkLike, toggleCommentLike, checkCommentLikes, shareArticle } from '@/api/articles'
+import { checkSubscription } from '@/api/subscriptions'
 import { useUserStore } from '@/stores/user'
 import { ElLoading } from 'element-plus'
 import {
@@ -15,7 +17,6 @@ import {
   Share,
   Document,
   Picture,
-  TrendCharts,
   Calendar,
   ChatDotRound,
   Delete,
@@ -28,6 +29,8 @@ import { getFullUrl } from '@/utils/url'
 import QRCode from 'qrcode'
 import html2canvas from 'html2canvas'
 import { MdPreview } from 'md-editor-v3'
+import MentionText from '@/components/MentionText/MentionText.vue'
+import MentionInput from '@/components/MentionInput/MentionInput.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -54,16 +57,14 @@ const order = ref('desc')
 const likedComments = ref([])
 const likingComment = ref({})
 const isSubscribed = ref(false)
-const subscribing = ref(false)
-const hotArticles = ref([])
-const hotArticlesTotal = ref(0)
-const latestArticles = ref([])
-const latestArticlesTotal = ref(0)
 const loadingMoreComments = ref(false)
 const loadMoreError = ref(false)
 const wechatShareDialogVisible = ref(false)
 const wechatQrcodeUrl = ref('')
 const posterRef = ref(null)
+const expandedReplies = ref({})
+const commentMentions = ref([])
+const replyMentions = ref([])
 
 const fetchArticle = async () => {
   try {
@@ -71,29 +72,11 @@ const fetchArticle = async () => {
     const res = await getArticleById(route.params.id)
     article.value = res
     await checkSubscriptionStatus()
-    await fetchUserArticles()
   } catch (error) {
     console.error('获取文章失败:', error)
     ElMessage.error('获取文章失败')
   } finally {
     loading.value = false
-  }
-}
-
-const fetchUserArticles = async () => {
-  if (!article.value) return
-
-  try {
-    const [hotRes, latestRes] = await Promise.all([
-      getUserHotArticles(article.value.author_id, { excludeId: article.value.id }),
-      getUserLatestArticles(article.value.author_id, { excludeId: article.value.id })
-    ])
-    hotArticles.value = hotRes.articles
-    hotArticlesTotal.value = hotRes.total
-    latestArticles.value = latestRes.articles
-    latestArticlesTotal.value = latestRes.total
-  } catch (error) {
-    console.error('获取用户文章失败:', error)
   }
 }
 
@@ -116,6 +99,7 @@ const fetchComments = async (isLoadMore = false) => {
       comments.value = res.comments
     }
     commentsPagination.value.total = res.total
+    commentsPagination.value.topLevelTotal = res.topLevelTotal || res.total
     loadMoreError.value = false
     await fetchCommentLikes()
   } catch (error) {
@@ -142,7 +126,8 @@ const handleRetryLoadMore = () => {
 
 const handleScroll = () => {
   if (loadingMoreComments.value || loadMoreError.value) return
-  if (comments.value.length >= commentsPagination.value.total) return
+  const topLevelTotal = commentsPagination.value.topLevelTotal || commentsPagination.value.total
+  if (comments.value.length >= topLevelTotal) return
 
   const scrollTop = window.pageYOffset || document.documentElement.scrollTop
   const scrollHeight = document.documentElement.scrollHeight
@@ -208,27 +193,6 @@ const handleToggleLike = async () => {
   }
 }
 
-const handleToggleSubscribe = async () => {
-  if (!userStore.userInfo) {
-    ElMessage.warning('请先登录')
-    return
-  }
-  try {
-    subscribing.value = true
-    const res = await toggleSubscription(article.value.author_id)
-    isSubscribed.value = res.isSubscribed
-    if (res.isSubscribed) {
-      ElMessage.success('订阅成功')
-    } else {
-      ElMessage.success('已取消订阅')
-    }
-  } catch (error) {
-    console.error('订阅失败:', error)
-    ElMessage.error('操作失败，请稍后重试')
-  } finally {
-    subscribing.value = false
-  }
-}
 
 const handleSubmitComment = async () => {
   if (!userStore.userInfo) {
@@ -241,9 +205,13 @@ const handleSubmitComment = async () => {
   }
   try {
     submittingComment.value = true
-    await createComment(route.params.id, { content: commentInput.value })
+    await createComment(route.params.id, {
+      content: commentInput.value,
+      mentions: commentMentions.value
+    })
     ElMessage.success('评论成功')
     commentInput.value = ''
+    commentMentions.value = []
     commentsPagination.value.page = 1
     await fetchComments()
   } catch (error) {
@@ -375,6 +343,24 @@ const getTopLevelCommentId = (comment) => {
   return topLevelId
 }
 
+const getVisibleReplies = (comment) => {
+  if (!comment.replies || comment.replies.length === 0) return []
+  const expandedCount = expandedReplies.value[comment.id] || 0
+  const showCount = 2 + expandedCount * 5
+  return comment.replies.slice(0, showCount)
+}
+
+const hasMoreReplies = (comment) => {
+  if (!comment.replies || comment.replies.length === 0) return false
+  const expandedCount = expandedReplies.value[comment.id] || 0
+  const showCount = 2 + expandedCount * 5
+  return comment.replies.length > showCount
+}
+
+const handleExpandReplies = (commentId) => {
+  expandedReplies.value[commentId] = (expandedReplies.value[commentId] || 0) + 1
+}
+
 const handleSubmitReply = async () => {
   if (!userStore.userInfo) {
     ElMessage.warning('请先登录')
@@ -393,11 +379,13 @@ const handleSubmitReply = async () => {
       content: replyInput.value,
       parentId: targetParentId,
       replyToUserId: replyingTo.value.user_id,
-      replyToCommentId: replyingTo.value.id
+      replyToCommentId: replyingTo.value.id,
+      mentions: replyMentions.value
     })
     ElMessage.success('回复成功')
     replyingTo.value = null
     replyInput.value = ''
+    replyMentions.value = []
     commentsPagination.value.page = 1
     await fetchComments()
   } catch (error) {
@@ -512,31 +500,30 @@ onUnmounted(() => {
 
 <template>
   <div class="article-detail-page" v-loading="loading">
-    <div class="detail-header" v-if="article">
-      <div class="header-inner">
-        <el-button @click="goBack" circle class="back-btn">
-          <el-icon><ArrowLeft /></el-icon>
-        </el-button>
-        <div class="header-actions">
-          <template v-if="userStore.userInfo?.id === article.author_id">
-            <el-button @click="goToEdit" type="primary" size="large" class="edit-btn">
-              <el-icon><Edit /></el-icon>
-              编辑文章
-            </el-button>
-          </template>
-          <template v-else>
-            <el-button @click="goToReport" type="danger" size="large" class="report-btn">
-              <el-icon><Warning /></el-icon>
-              举报
-            </el-button>
-          </template>
-        </div>
-      </div>
-    </div>
-
     <div class="article-container" v-if="article">
       <div class="article-main">
         <div class="article-content">
+          <div class="article-header-actions">
+            <el-button @click="goBack" class="outline-btn back-outline-btn">
+              <el-icon><ArrowLeft /></el-icon>
+              返回
+            </el-button>
+            <div class="header-right-actions">
+              <template v-if="userStore.userInfo?.id === article.author_id">
+                <el-button @click="goToEdit" class="outline-btn edit-outline-btn">
+                  <el-icon><Edit /></el-icon>
+                  编辑文章
+                </el-button>
+              </template>
+              <template v-else>
+                <el-button @click="goToReport" class="outline-btn report-outline-btn">
+                  <el-icon><Warning /></el-icon>
+                  举报
+                </el-button>
+              </template>
+            </div>
+          </div>
+
           <div class="article-meta-top">
             <el-tag v-if="article.category_name" size="large" type="info" class="category-tag">
               {{ article.category_name }}
@@ -603,6 +590,25 @@ onUnmounted(() => {
           </el-popover>
         </div>
 
+        <div class="author-info-section" @click="router.push(`/profile/${article.author_id}`)">
+          <div class="author-avatar-wrapper">
+            <el-avatar
+              :size="48"
+              class="author-avatar"
+              :src="article.author_avatar ? getFullUrl(article.author_avatar) : ''"
+            >
+              {{ (article.author_nickname || article.author_name)?.charAt(0)?.toUpperCase() || 'U' }}
+            </el-avatar>
+            <span v-if="article.author_is_admin === 1" class="avatar-admin-badge">管</span>
+          </div>
+          <div class="author-details">
+            <div class="author-name">{{ article.author_nickname || article.author_name || '匿名用户' }}</div>
+            <div class="author-meta">
+              <span class="publish-time">发布于 {{ new Date(article.created_at).toLocaleString('zh-CN') }}</span>
+            </div>
+          </div>
+        </div>
+
         <div class="comments-section">
           <div class="section-header">
             <h3 class="section-title">
@@ -628,9 +634,9 @@ onUnmounted(() => {
           </div>
 
           <div class="comment-input-section" v-if="userStore.userInfo && article?.status === 1">
-            <el-input
+            <MentionInput
               v-model="commentInput"
-              type="textarea"
+              @mentions="commentMentions = $event"
               :rows="3"
               placeholder="写下你的评论..."
               class="comment-textarea"
@@ -700,7 +706,7 @@ onUnmounted(() => {
                 </div>
               </div>
               <div class="comment-content">
-                {{ comment.content }}
+                <MentionText :content="comment.content" />
               </div>
 
               <div v-if="replyingTo?.id === comment.id" class="reply-input-section">
@@ -708,9 +714,9 @@ onUnmounted(() => {
                   <span>回复 {{ replyingTo.user_nickname || replyingTo.user_name || '匿名用户' }}：</span>
                   <el-button link @click="handleCancelReply">取消</el-button>
                 </div>
-                <el-input
+                <MentionInput
                   v-model="replyInput"
-                  type="textarea"
+                  @mentions="replyMentions = $event"
                   :rows="2"
                   placeholder="写下你的回复..."
                   class="reply-textarea"
@@ -728,7 +734,7 @@ onUnmounted(() => {
 
               <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
                 <div
-                  v-for="reply in comment.replies"
+                  v-for="reply in getVisibleReplies(comment)"
                   :key="reply.id"
                   class="reply-item"
                 >
@@ -789,7 +795,7 @@ onUnmounted(() => {
                         {{ findCommentById(reply.reply_to_comment_id).content.length > 50 ? findCommentById(reply.reply_to_comment_id).content.substring(0, 50) + '...' : findCommentById(reply.reply_to_comment_id).content }}
                       </div>
                     </div>
-                    {{ reply.content }}
+                    <MentionText :content="reply.content" />
                   </div>
 
                   <div v-if="replyingTo?.id === reply.id" class="reply-input-section">
@@ -797,9 +803,9 @@ onUnmounted(() => {
                       <span>回复 {{ replyingTo.user_nickname || replyingTo.user_name || '匿名用户' }}：</span>
                       <el-button link @click="handleCancelReply">取消</el-button>
                     </div>
-                    <el-input
+                    <MentionInput
                       v-model="replyInput"
-                      type="textarea"
+                      @mentions="replyMentions = $event"
                       :rows="2"
                       placeholder="写下你的回复..."
                       class="reply-textarea"
@@ -815,11 +821,16 @@ onUnmounted(() => {
                     </el-button>
                   </div>
                 </div>
+                <div v-if="hasMoreReplies(comment)" class="expand-replies-section">
+                  <el-button link type="primary" @click="handleExpandReplies(comment.id)">
+                    查看更多回复
+                  </el-button>
+                </div>
               </div>
             </div>
 
             <div
-              v-if="comments.length < commentsPagination.total"
+              v-if="comments.length < (commentsPagination.topLevelTotal || commentsPagination.total)"
               class="load-more-section"
             >
               <div v-if="loadingMoreComments" class="loading-more">
@@ -834,108 +845,6 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="article-sidebar">
-          <div class="author-card">
-            <div class="author-avatar-large" @click="router.push(`/profile/${article.author_id}`)">
-              <div class="avatar-wrapper">
-                <el-avatar :size="80" :src="article.author_avatar ? getFullUrl(article.author_avatar) : ''">
-                  {{ (article.author_nickname || article.author_name)?.charAt(0)?.toUpperCase() || 'U' }}
-                </el-avatar>
-                <span v-if="article.author_is_admin === 1" class="avatar-admin-badge">管</span>
-              </div>
-            </div>
-          <div class="author-name-large" @click="router.push(`/profile/${article.author_id}`)">{{ article.author_nickname || article.author_name || '匿名用户' }}</div>
-          <p class="author-bio">{{ article.author_bio || '探索技术的无限可能' }}</p>
-          <template v-if="userStore.userInfo && userStore.userInfo.id !== article.author_id">
-            <el-button
-              :type="isSubscribed ? 'info' : 'primary'"
-              size="large"
-              :loading="subscribing"
-              @click="handleToggleSubscribe"
-              class="subscribe-btn"
-            >
-              {{ isSubscribed ? '已订阅' : '订阅作者' }}
-            </el-button>
-          </template>
-        </div>
-
-        <div class="article-info-card">
-          <div class="card-title">
-            <el-icon><Document /></el-icon>
-            文章数据
-          </div>
-          <div class="info-stats">
-            <div class="stat-item">
-              <div class="stat-value">{{ article.view_count }}</div>
-              <div class="stat-label">阅读量</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ article.like_count }}</div>
-              <div class="stat-label">点赞数</div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="hotArticles.length > 0" class="sidebar-articles-card">
-          <div class="card-title">
-            <el-icon><TrendCharts /></el-icon>
-            热门文章
-          </div>
-          <div class="sidebar-articles-list">
-            <div
-              v-for="item in hotArticles"
-              :key="item.id"
-              class="sidebar-article-item"
-              @click="router.push(`/article/${item.id}`)"
-            >
-              <div class="sidebar-article-title">{{ item.title }}</div>
-              <div class="sidebar-article-meta">
-                <span><el-icon><View /></el-icon> {{ item.view_count }}</span>
-                <span><el-icon><Star /></el-icon> {{ item.like_count }}</span>
-              </div>
-            </div>
-          </div>
-          <el-button
-            v-if="hotArticlesTotal > 3"
-            link
-            type="primary"
-            @click="router.push(`/profile/${article.author_id}`)"
-            class="view-all-btn"
-          >
-            查看全部 →
-          </el-button>
-        </div>
-
-        <div v-if="latestArticles.length > 0" class="sidebar-articles-card">
-          <div class="card-title">
-            <el-icon><Calendar /></el-icon>
-            最新发布
-          </div>
-          <div class="sidebar-articles-list">
-            <div
-              v-for="item in latestArticles"
-              :key="item.id"
-              class="sidebar-article-item"
-              @click="router.push(`/article/${item.id}`)"
-            >
-              <div class="sidebar-article-title">{{ item.title }}</div>
-              <div class="sidebar-article-meta">
-                <span><el-icon><Calendar /></el-icon> {{ new Date(item.created_at).toLocaleDateString('zh-CN') }}</span>
-              </div>
-            </div>
-          </div>
-          <el-button
-            v-if="latestArticlesTotal > 3"
-            link
-            type="primary"
-            @click="router.push(`/profile/${article.author_id}`)"
-            class="view-all-btn"
-          >
-            查看全部 →
-          </el-button>
         </div>
       </div>
     </div>
@@ -996,45 +905,13 @@ onUnmounted(() => {
   min-height: 100vh;
   background: linear-gradient(180deg, #f7f8fa 0%, #ffffff 100%);
   padding-bottom: 60px;
-}
-
-.detail-header {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e6eb;
-  padding: 24px 0;
-  margin-bottom: 32px;
-
-  .header-inner {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .back-btn {
-    border: 1px solid #e5e6eb;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-  }
-
-  .edit-btn,
-  .report-btn {
-    border-radius: 10px;
-  }
+  padding-top: 32px;
 }
 
 .article-container {
-  max-width: 1400px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 0 24px;
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 32px;
 }
 
 .article-main {
@@ -1047,6 +924,61 @@ onUnmounted(() => {
   padding: 40px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   margin-bottom: 24px;
+  position: relative;
+}
+
+.article-header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  .outline-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .back-outline-btn {
+    border: 1px solid #e5e6eb;
+    color: #86909c;
+    background: transparent;
+
+    &:hover {
+      border-color: #86909c;
+      background: #f7f8fa;
+    }
+  }
+
+  .edit-outline-btn {
+    border: 1px solid #165dff;
+    color: #165dff;
+    background: transparent;
+
+    &:hover {
+      background: rgba(22, 93, 255, 0.05);
+    }
+  }
+
+  .report-outline-btn {
+    border: 1px solid #f53f3f;
+    color: #f53f3f;
+    background: transparent;
+
+    &:hover {
+      background: rgba(245, 63, 63, 0.05);
+    }
+  }
+
+  .header-right-actions {
+    display: flex;
+    gap: 12px;
+  }
 }
 
 .article-meta-top {
@@ -1251,6 +1183,84 @@ onUnmounted(() => {
   }
 }
 
+.author-info-section {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 40px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .author-avatar-wrapper {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+
+    .author-avatar {
+      background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: scale(1.05);
+      }
+
+      img {
+        border-radius: 50%;
+        object-fit: cover;
+      }
+    }
+
+    .avatar-admin-badge {
+      position: absolute;
+      bottom: -7px;
+      right: -7px;
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+      border: 2px solid white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: white;
+      line-height: 1;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      z-index: 1;
+    }
+  }
+
+  .author-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .author-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1d2129;
+    }
+
+    .author-meta {
+      .publish-time {
+        font-size: 13px;
+        color: #86909c;
+      }
+    }
+  }
+}
+
 .comments-section {
   background: #ffffff;
   border-radius: 20px;
@@ -1347,17 +1357,17 @@ onUnmounted(() => {
 
             .avatar-admin-badge {
               position: absolute;
-              bottom: -4px;
-              right: -4px;
-              width: 20px;
-              height: 20px;
+              bottom: -5px;
+              right: -5px;
+              width: 24px;
+              height: 24px;
               background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
               border: 2px solid white;
               border-radius: 50%;
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 10px;
+              font-size: 11px;
               font-weight: 700;
               color: white;
               box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
@@ -1498,8 +1508,8 @@ onUnmounted(() => {
                 position: absolute;
                 bottom: -4px;
                 right: -4px;
-                width: 18px;
-                height: 18px;
+                width: 19px;
+                height: 19px;
                 background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
                 border: 2px solid white;
                 border-radius: 50%;
@@ -1595,6 +1605,11 @@ onUnmounted(() => {
         }
       }
     }
+
+    .expand-replies-section {
+      padding: 8px 0 0 16px;
+      text-align: center;
+    }
   }
 
   .load-more-section {
@@ -1629,170 +1644,6 @@ onUnmounted(() => {
   }
 }
 
-.article-sidebar {
-  min-width: 0;
-  position: sticky;
-  top: 24px;
-  height: calc(100vh - 48px);
-  overflow-y: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.author-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 32px 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  margin-bottom: 24px;
-  text-align: center;
-
-  .author-avatar-large {
-    margin-bottom: 16px;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-    display: inline-block;
-
-    &:hover {
-      transform: scale(1.05);
-    }
-
-    .avatar-wrapper {
-      position: relative;
-      display: inline-block;
-
-      .el-avatar {
-        background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-        font-weight: 600;
-        font-size: 32px;
-
-        img {
-          border-radius: 50%;
-          object-fit: cover;
-        }
-      }
-
-      .avatar-admin-badge {
-        position: absolute;
-        bottom: -6px;
-        right: -6px;
-        width: 28px;
-        height: 28px;
-        background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
-        border: 2px solid white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        font-weight: 700;
-        color: white;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-        z-index: 1;
-      }
-    }
-  }
-
-  .author-name-large {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1d2129;
-    margin: 0 0 8px 0;
-    cursor: pointer;
-    transition: color 0.2s ease;
-
-    &:hover {
-      color: #165dff;
-    }
-  }
-
-
-
-  .author-bio {
-    color: #86909c;
-    font-size: 14px;
-    margin: 0 0 20px 0;
-  }
-
-  .subscribe-btn {
-    width: 100%;
-    border-radius: 10px;
-
-    &:not(.el-button--info) {
-      background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-      border: none;
-      box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
-    }
-
-    &.el-button--info {
-      background: #f2f3f5;
-      border: none;
-      color: #4e5969;
-      box-shadow: none;
-    }
-  }
-}
-
-.article-info-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  margin-bottom: 24px;
-
-  .card-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #1d2129;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #e5e6eb;
-  }
-
-  .info-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-
-    .stat-item {
-      text-align: center;
-      padding: 16px;
-      background: #f7f8fa;
-      border-radius: 12px;
-
-      .stat-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: #165dff;
-        margin-bottom: 4px;
-      }
-
-      .stat-label {
-        font-size: 13px;
-        color: #86909c;
-      }
-    }
-  }
-}
-
-@media (max-width: 992px) {
-  .article-container {
-    grid-template-columns: 1fr;
-  }
-
-  .article-sidebar {
-    order: -1;
-    position: static;
-  }
-}
-
 @media (max-width: 768px) {
   .article-detail-page {
     padding-bottom: 40px;
@@ -1822,76 +1673,6 @@ onUnmounted(() => {
 
   .comments-section {
     padding: 24px;
-  }
-
-  .author-card,
-  .article-info-card {
-    padding: 20px;
-  }
-}
-
-.sidebar-articles-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  margin-bottom: 24px;
-
-  .card-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1d2129;
-    margin: 0 0 16px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .sidebar-articles-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .sidebar-article-item {
-    padding: 12px;
-    background: #f7f8fa;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: #f0f3ff;
-    }
-
-    .sidebar-article-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1d2129;
-      margin-bottom: 8px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .sidebar-article-meta {
-      display: flex;
-      gap: 12px;
-      color: #86909c;
-      font-size: 12px;
-
-      span {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-    }
-  }
-
-  .view-all-btn {
-    width: 100%;
-    justify-content: center;
-    margin-top: 12px;
   }
 }
 </style>

@@ -5,7 +5,7 @@ import {
   getUserFollowers, 
   getUserFollowing 
 } from '../controllers/subscriptionsController.js';
-import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
+import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.js';
 
 const router = express.Router();
 

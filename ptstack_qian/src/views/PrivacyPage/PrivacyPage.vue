@@ -1,4 +1,6 @@
 <script setup>
+// 隐私政策页面组件
+// 功能：展示平台隐私政策内容
 import PolicyPage from '@/components/PolicyPage/PolicyPage.vue'
 </script>
 

@@ -1,4 +1,6 @@
 <script setup>
+// 首页组件
+// 功能：展示用户信息、统计数据、最新文章、热门文章、推荐用户和关注动态
 import { useUserStore } from '@/stores/user'
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -55,7 +57,7 @@ const fetchMarqueeAnnouncements = async () => {
     const res = await getMarqueeAnnouncements()
     marqueeAnnouncements.value = res.announcements || []
   } catch (error) {
-    console.error('获取跑马灯公告失败:', error)
+    console.error('获取首页顶部通告失败:', error)
   }
 }
 
@@ -247,6 +249,12 @@ const goToProfile = (tab = 'articles') => {
 const goToAnnouncementDetail = (id) => {
   router.push(`/announcement/${id}`)
 }
+
+const truncateText = (text, maxLength = 100) => {
+  if (!text) return ''
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
+}
 </script>
 
 <template>
@@ -261,7 +269,7 @@ const goToAnnouncementDetail = (id) => {
           :key="currentMarqueeIndex"
           @click="goToAnnouncementDetail(marqueeAnnouncements[currentMarqueeIndex]?.id)"
         >
-          {{ marqueeAnnouncements[currentMarqueeIndex]?.content }}
+          {{ marqueeAnnouncements[currentMarqueeIndex]?.summary || marqueeAnnouncements[currentMarqueeIndex]?.content }}
         </div>
       </div>
       <div class="marquee-dots" v-if="marqueeAnnouncements.length > 1">
@@ -393,7 +401,7 @@ const goToAnnouncementDetail = (id) => {
               >
                 <div class="article-content">
                   <div class="article-title">{{ article.title }}</div>
-                  <div v-if="article.summary" class="article-summary">{{ article.summary }}</div>
+                  <div v-if="article.summary" class="article-summary">{{ truncateText(article.summary, 80) }}</div>
                   <div class="article-meta">
                     <span class="meta-item">
                       <el-icon><Calendar /></el-icon>
@@ -457,7 +465,7 @@ const goToAnnouncementDetail = (id) => {
                     <span class="article-user-name">{{ article.nickname || article.username }}</span>
                   </div>
                   <div class="article-title">{{ article.title }}</div>
-                  <div v-if="article.summary" class="article-summary">{{ article.summary }}</div>
+                  <div v-if="article.summary" class="article-summary">{{ truncateText(article.summary, 80) }}</div>
                   <div class="article-meta">
                     <span class="meta-item">
                       <el-icon><Calendar /></el-icon>
@@ -696,17 +704,17 @@ const goToAnnouncementDetail = (id) => {
 
   .avatar-admin-badge {
     position: absolute;
-    bottom: -4px;
-    right: -4px;
-    width: 24px;
-    height: 24px;
+    bottom: -9px;
+    right: -9px;
+    width: 38px;
+    height: 38px;
     background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
     border: 2px solid white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: 17px;
     font-weight: 700;
     color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
@@ -897,17 +905,19 @@ const goToAnnouncementDetail = (id) => {
 }
 
 .content-left {
-  flex: 1;
+  flex: 1.2;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
 }
 
 .content-right {
-  flex: 1;
+  flex: 0.8;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
 }
 
 .content-left .content-card:last-child,
@@ -1522,17 +1532,17 @@ const goToAnnouncementDetail = (id) => {
 
   .avatar-admin-badge {
     position: absolute;
-    bottom: -4px;
-    right: -4px;
-    width: 20px;
-    height: 20px;
+    bottom: -5px;
+    right: -5px;
+    width: 24px;
+    height: 24px;
     background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
     border: 2px solid white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);

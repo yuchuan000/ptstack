@@ -1,5 +1,4 @@
 import { execute } from '../config/db.js';
-import { checkAndGrantAchievements } from '../utils/achievementHelper.js';
 
 export const toggleLike = async (req, res) => {
   try {
@@ -23,12 +22,6 @@ export const toggleLike = async (req, res) => {
       await execute('INSERT INTO likes (article_id, user_id) VALUES (?, ?)', [internalArticleId, userId]);
       await execute('UPDATE articles SET like_count = like_count + 1 WHERE id = ?', [internalArticleId]);
       const result = await execute('SELECT like_count, author_id FROM articles WHERE id = ?', [internalArticleId]);
-      
-      const likeCountResult = await execute(
-        'SELECT COUNT(*) as count FROM likes l JOIN articles a ON l.article_id = a.id WHERE a.author_id = ?',
-        [result[0].author_id]
-      );
-      await checkAndGrantAchievements(result[0].author_id, 'like', likeCountResult[0].count);
       
       res.json({ message: '点赞成功', liked: true, like_count: result[0].like_count });
     } else {

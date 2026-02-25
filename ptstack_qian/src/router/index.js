@@ -111,26 +111,6 @@ const router = createRouter({
           meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
         },
         {
-          path: 'achievements-manage', // 成就管理页面路径
-          component: () => import('@/views/AchievementManagePage/AchievementManagePage.vue'), // 懒加载成就管理页面组件
-          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
-        },
-        {
-          path: 'achievements-manage/edit/:id', // 成就编辑页面路径
-          component: () => import('@/views/AchievementManagePage/AchievementManagePage.vue'), // 懒加载成就管理页面组件（复用）
-          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
-        },
-        {
-          path: 'achievements-manage/:id', // 成就详情管理页面路径
-          component: () => import('@/views/AchievementDetailManagePage/AchievementDetailManagePage.vue'), // 懒加载成就详情管理页面组件
-          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
-        },
-        {
-          path: 'achievements', // 我的成就页面路径
-          component: () => import('@/views/AchievementsPage/AchievementsPage.vue'), // 懒加载我的成就页面组件
-          meta: { requiresAuth: true } // 路由元信息，需要认证
-        },
-        {
           path: 'users', // 用户管理页面路径
           component: () => import('@/views/UserManagePage/UserManagePage.vue'), // 懒加载用户管理页面组件
           meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限

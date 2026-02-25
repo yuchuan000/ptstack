@@ -61,18 +61,6 @@
  * 14. announcement_reads 表 - 公告阅读记录
  *     - 记录用户阅读公告的时间
  * 
- * 15. achievements 表 - 成就系统
- *     - 成就名称/描述
- *     - 成就类型（文章/评论/点赞/关注/粉丝等）
- *     - 活动成就 (is_event)
- *     - 限定成就 (is_limited)
- *     - 无条件成就 (is_unconditional)
- *     - 自定义标签 (custom_tag)
- *     - 开始/结束时间
- * 
- * 16. user_achievements 表 - 用户成就记录
- *     - 记录用户获得的成就
- * 
  * 功能说明：
  * - 创建数据库（如果不存在）
  * - 创建所有必要的表（幂等设计，可重复运行）
@@ -87,6 +75,7 @@
  * - 此脚本可安全重复运行，不会覆盖现有数据
  * - 确保 .env 文件中配置了正确的数据库连接信息
  * - 历史迁移脚本已归档到 historical-migrations 文件夹
+ * - 此脚本已包含所有必要的字段定义，无需单独运行 add-missing-fields.js
  */
 
 import mysql from 'mysql2/promise';
@@ -526,48 +515,6 @@ async function step2CreateBaseTables() {
     `);
     console.log('✓ announcement_reads 表创建成功（或已存在）');
 
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS achievements (
-        id INT AUTO_INCREMENT PRIMARY KEY COMMENT '成就ID',
-        name VARCHAR(100) NOT NULL COMMENT '成就名称',
-        description TEXT NOT NULL COMMENT '成就描述',
-        type VARCHAR(50) DEFAULT NULL COMMENT '成就类型：article, comment, like, follow, etc.',
-        category VARCHAR(50) DEFAULT 'regular' COMMENT '成就分类',
-        condition_value VARCHAR(255) DEFAULT NULL COMMENT '达成条件数值',
-        icon VARCHAR(100) DEFAULT NULL COMMENT '成就图标',
-        start_time TIMESTAMP NULL COMMENT '开始时间',
-        end_time TIMESTAMP NULL COMMENT '结束时间',
-        is_event TINYINT(1) DEFAULT 0 COMMENT '是否为活动成就：0-否，1-是',
-        is_limited TINYINT(1) DEFAULT 0 COMMENT '是否为限定成就：0-否，1-是',
-        is_unconditional TINYINT(1) DEFAULT 0 COMMENT '是否为无条件成就：0-否，1-是',
-        custom_tag VARCHAR(50) DEFAULT NULL COMMENT '自定义标签',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ achievements 表创建成功（或已存在）');
-    
-    await addColumnIfNotExists(connection, 'achievements', 'category', 'VARCHAR(50) DEFAULT "regular" COMMENT "成就分类" AFTER type');
-    await addColumnIfNotExists(connection, 'achievements', 'condition_value', 'VARCHAR(255) DEFAULT NULL COMMENT "达成条件数值"');
-    await addColumnIfNotExists(connection, 'achievements', 'start_time', 'TIMESTAMP NULL COMMENT "开始时间" AFTER icon');
-    await addColumnIfNotExists(connection, 'achievements', 'end_time', 'TIMESTAMP NULL COMMENT "结束时间" AFTER start_time');
-    await addColumnIfNotExists(connection, 'achievements', 'is_event', 'TINYINT(1) DEFAULT 0 COMMENT "是否为活动成就：0-否，1-是" AFTER end_time');
-    await addColumnIfNotExists(connection, 'achievements', 'is_limited', 'TINYINT(1) DEFAULT 0 COMMENT "是否为限定成就：0-否，1-是" AFTER is_event');
-    await addColumnIfNotExists(connection, 'achievements', 'is_unconditional', 'TINYINT(1) DEFAULT 0 COMMENT "是否为无条件成就：0-否，1-是" AFTER is_limited');
-    await addColumnIfNotExists(connection, 'achievements', 'custom_tag', 'VARCHAR(50) DEFAULT NULL COMMENT "自定义标签" AFTER is_unconditional');
-
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS user_achievements (
-        id INT AUTO_INCREMENT PRIMARY KEY COMMENT '记录ID',
-        user_id INT NOT NULL COMMENT '用户ID',
-        achievement_id INT NOT NULL COMMENT '成就ID',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '获得时间',
-        UNIQUE KEY unique_user_achievement (user_id, achievement_id),
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ user_achievements 表创建成功（或已存在）');
-
     await addColumnIfNotExists(connection, 'users', 'last_read_notifications', 'TIMESTAMP NULL COMMENT "最后一次查看消息的时间" AFTER following_count');
 
   } finally {
@@ -595,20 +542,6 @@ async function step3InsertDefaultData() {
       ('其他', '其他类型的文章')
     `);
     console.log('✓ 默认分类插入成功（或已存在）');
-
-    await connection.execute(`
-      INSERT IGNORE INTO achievements (name, description, type, condition_value, icon) VALUES
-      ('初出茅庐', '发布第 1 篇文章', 'article', 1, 'Document'),
-      ('小有所成', '发布 5 篇文章', 'article', 5, 'Document'),
-      ('著作等身', '发布 20 篇文章', 'article', 20, 'Document'),
-      ('妙语连珠', '发布第 1 条评论', 'comment', 1, 'ChatDotRound'),
-      ('口若悬河', '发布 10 条评论', 'comment', 10, 'ChatDotRound'),
-      ('点赞达人', '收到第 1 个点赞', 'like', 1, 'Star'),
-      ('万众瞩目', '收到 50 个点赞', 'like', 50, 'Star'),
-      ('广结善缘', '关注第 1 位用户', 'follow', 1, 'User'),
-      ('人气爆棚', '拥有 100 位粉丝', 'follower', 100, 'UserFilled')
-    `);
-    console.log('✓ 默认成就插入成功（或已存在）');
 
   } finally {
     await connection.end();

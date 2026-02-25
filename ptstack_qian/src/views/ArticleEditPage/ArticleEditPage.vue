@@ -1,9 +1,11 @@
 <script setup>
+// 文章编辑页面组件
+// 功能：创建和编辑文章，支持Markdown编辑和AI生成摘要
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getArticleById, createArticle, updateArticle, getCategories, getTags, applyCategory } from '@/api/articles'
-import { Check, Setting, Plus, Document, DocumentAdd, ArrowLeft } from '@element-plus/icons-vue'
-import PageHeader from '@/components/PageHeader/PageHeader.vue'
+import { generateSummary } from '@/api/ai'
+import { Check, Setting, Plus, Document, DocumentAdd, ArrowLeft, MagicStick } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { MdEditor, NormalToolbar } from 'md-editor-v3'
 
@@ -47,18 +49,20 @@ const fetchArticle = async () => {
   try {
     loading.value = true
     const res = await getArticleById(route.params.id)
+    console.log('获取到的文章数据:', res)
     formData.value = {
-      title: res.title,
-      content: res.content,
-      category_id: res.category_id,
+      title: res.title || '',
+      content: res.content || '',
+      category_id: res.category_id || '',
       tags: (res.tags || []).map(tag => typeof tag === 'object' ? tag.name : tag),
-      summary: res.summary,
-      cover: res.cover,
-      status: res.status
+      summary: res.summary || '',
+      cover: res.cover || '',
+      status: res.status !== undefined ? res.status : 1
     }
+    console.log('设置后的表单数据:', formData.value)
   } catch (error) {
     console.error('获取文章失败:', error)
-    ElMessage.error('获取文章失败')
+    ElMessage.error(error.response?.data?.message || '获取文章失败')
   } finally {
     loading.value = false
   }
@@ -148,7 +152,7 @@ const handleSubmit = async (saveAsDraft = false) => {
 
     if (isEdit.value) {
       await updateArticle(route.params.id, formData.value)
-      ElMessage.success(saveAsDraft ? '草稿保存成功' : '文章更新成功')
+      ElMessage.success(saveAsDraft ? '草稿保存成功' : '文章发布成功')
     } else {
       await createArticle(formData.value)
       ElMessage.success(saveAsDraft ? '草稿保存成功' : '文章发布成功')
@@ -168,6 +172,39 @@ const handleSubmit = async (saveAsDraft = false) => {
 
 const goBack = () => {
   router.back()
+}
+
+const generatingSummary = ref(false)
+const lastGenerateTime = ref(0)
+const handleGenerateSummary = async () => {
+  if (!formData.value.content || formData.value.content.trim().length === 0) {
+    ElMessage.warning('请先输入文章内容')
+    return
+  }
+
+  const now = Date.now()
+  const timeSinceLastGenerate = now - lastGenerateTime.value
+  if (timeSinceLastGenerate < 60000) {
+    const remainingSeconds = Math.ceil((60000 - timeSinceLastGenerate) / 1000)
+    ElMessage.warning(`请稍候，${remainingSeconds}秒后可再次生成摘要`)
+    return
+  }
+
+  try {
+    generatingSummary.value = true
+    lastGenerateTime.value = now
+    const res = await generateSummary({
+      title: formData.value.title,
+      content: formData.value.content
+    })
+    formData.value.summary = res.summary
+    ElMessage.success('摘要生成成功')
+  } catch (error) {
+    console.error('生成摘要失败:', error)
+    ElMessage.error(error.response?.data?.message || '生成摘要失败，请稍后重试')
+  } finally {
+    generatingSummary.value = false
+  }
 }
 
 onMounted(() => {
@@ -217,7 +254,19 @@ onMounted(() => {
           </div>
 
           <div class="form-section">
-            <label class="form-label">文章摘要</label>
+            <div class="summary-label-row">
+              <label class="form-label">文章摘要</label>
+              <el-button
+                type="primary"
+                size="small"
+                :loading="generatingSummary"
+                @click="handleGenerateSummary"
+                class="generate-summary-btn"
+              >
+                <el-icon><MagicStick /></el-icon>
+                AI生成
+              </el-button>
+            </div>
             <el-input
               v-model="formData.summary"
               type="textarea"
@@ -331,7 +380,7 @@ onMounted(() => {
             </el-button>
             <el-button type="primary" size="large" @click="handleSubmit(false)" :loading="saving" class="submit-btn">
               <el-icon><Check /></el-icon>
-              {{ isEdit ? '更新文章' : '发布文章' }}
+              {{ isEdit ? '发布' : '发布文章' }}
             </el-button>
           </div>
         </div>
@@ -433,7 +482,25 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
+.summary-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
 
+.generate-summary-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  border: none;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
+  }
+}
 
 .category-label-row {
   display: flex;

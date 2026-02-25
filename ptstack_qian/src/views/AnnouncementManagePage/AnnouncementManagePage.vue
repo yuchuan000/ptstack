@@ -1,4 +1,6 @@
 <template>
+<!-- 公告管理页面组件 -->
+<!-- 功能：管理系统公告，支持创建、编辑、删除和状态切换 -->
   <div class="announcement-manage-page">
     <PageHeader title="公告管理" subtitle="管理系统公告，支持精准投放和多种发送方式">
       <template #actions>
@@ -12,9 +14,13 @@
     <div class="content-wrapper">
       <el-card class="announcements-card">
         <el-table :data="announcements" v-loading="loading" stripe>
-          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column label="ID" width="100">
+            <template #default="{ row }">
+              <el-tag size="small" type="info">{{ row.id }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-          <el-table-column label="跑马灯" width="100">
+          <el-table-column label="首页顶部通告" width="120">
             <template #default="{ row }">
               <el-tag :type="row.is_marquee ? 'success' : 'info'">
                 {{ row.is_marquee ? '是' : '否' }}
@@ -63,6 +69,8 @@
 </template>
 
 <script setup>
+// 公告管理页面组件
+// 功能：管理系统公告，支持创建、编辑、删除和状态切换
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -89,7 +97,7 @@ const loadAnnouncements = async () => {
       is_active: !!item.is_active,
       is_marquee: !!item.is_marquee
     }))
-  } catch (error) {
+  } catch {
     ElMessage.error('获取公告列表失败')
   } finally {
     loading.value = false
@@ -132,7 +140,7 @@ const handleToggleActive = async (row, val) => {
   try {
     await updateAnnouncement(row.id, { is_active: val })
     ElMessage.success('状态更新成功')
-  } catch (error) {
+  } catch {
     row.is_active = originalValue
     ElMessage.error('状态更新失败')
   }

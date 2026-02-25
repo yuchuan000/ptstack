@@ -14,7 +14,7 @@ export const useUserStore = defineStore('user', () => {
     if (savedData) {
       try {
         return JSON.parse(savedData) // 解析JSON数据
-      } catch (e) {
+      } catch {
         localStorage.removeItem(STORAGE_KEY) // 解析失败则删除无效数据
       }
     }
@@ -39,7 +39,7 @@ export const useUserStore = defineStore('user', () => {
         return false // token已过期
       }
       return true // token有效
-    } catch (e) {
+    } catch {
       return false // 解码失败，返回未登录
     }
   })

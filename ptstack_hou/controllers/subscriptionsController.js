@@ -1,5 +1,4 @@
 import { execute } from '../config/db.js';
-import { checkAndGrantAchievements } from '../utils/achievementHelper.js';
 
 export const toggleSubscription = async (req, res) => {
   try {
@@ -53,18 +52,6 @@ export const toggleSubscription = async (req, res) => {
         'UPDATE users SET following_count = following_count + 1 WHERE id = ?',
         [followerId]
       );
-
-      const followingCountResult = await execute(
-        'SELECT COUNT(*) as count FROM subscriptions WHERE follower_id = ?',
-        [followerId]
-      );
-      await checkAndGrantAchievements(followerId, 'follow', followingCountResult[0].count);
-
-      const followerCountResult = await execute(
-        'SELECT COUNT(*) as count FROM subscriptions WHERE following_id = ?',
-        [internalFollowingId]
-      );
-      await checkAndGrantAchievements(internalFollowingId, 'follower', followerCountResult[0].count);
       
       res.json({ message: '订阅成功', isSubscribed: true });
     }

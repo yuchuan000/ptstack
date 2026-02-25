@@ -410,6 +410,91 @@ export const sendCategoryReviewEmail = async (to, username, categoryName, action
   }
 };
 
+export const sendMentionEmail = async (to, username, mentionerName, articleTitle, articleId, commentContent) => {
+  try {
+    const transporter = createTransporter();
+    const articleUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/article/${articleId}`;
+
+    const mailOptions = {
+      from: `"PTStack" <${process.env.EMAIL_USER}>`,
+      to: to,
+      subject: '【PTStack】有人在评论中提到了你',
+      html: `
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        </head>
+        <body style="margin: 0; padding: 0; background: #f7f8fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;">
+          <div style="max-width: 680px; margin: 0 auto; padding: 32px 16px;">
+            
+            <div style="background: linear-gradient(135deg, #165dff 0%, #4080ff 100%); border-radius: 12px 12px 0 0; padding: 28px 32px; text-align: center;">
+              <div style="font-size: 32px; font-weight: 800; color: white; margin: 0; letter-spacing: 2px;">PTStack</div>
+              <div style="font-size: 14px; color: rgba(255,255,255,0.85); margin-top: 8px;">有人提到了你</div>
+            </div>
+            
+            <div style="background: white; border-radius: 0 0 12px 12px; padding: 32px; box-shadow: 0 4px 16px rgba(22, 93, 255, 0.08);">
+              
+              <div style="margin-bottom: 24px;">
+                <p style="font-size: 15px; color: #4e5969; margin: 0 0 16px 0;">
+                  亲爱的 <strong style="color: #1d2129; font-weight: 600;">${username}</strong>：
+                </p>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, #f2f8ff 0%, #e6f4ff 100%); border-left: 4px solid #165dff; border-radius: 0 8px 8px 0; padding: 18px 20px; margin: 0 0 24px 0;">
+                <div style="font-size: 20px; font-weight: 700; color: #165dff; margin: 0; line-height: 1.4;">
+                  ${mentionerName} 在评论中提到了你
+                </div>
+              </div>
+              
+              <div style="color: #4e5969;">
+                <p style="font-size: 15px; line-height: 1.75; margin: 10px 0;">
+                  文章：<strong style="color: #1d2129;">${articleTitle}</strong>
+                </p>
+                <div style="background: #f7f8fa; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                  <p style="font-size: 14px; color: #4e5969; line-height: 1.75; margin: 0;">
+                    ${commentContent}
+                  </p>
+                </div>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${articleUrl}" 
+                     style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #165dff 0%, #4080ff 100%); color: white; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600;">
+                    查看评论
+                  </a>
+                </div>
+              </div>
+              
+            </div>
+            
+            <div style="background: white; border-radius: 8px; padding: 20px 24px; margin-top: 16px; text-align: center;">
+              <p style="font-size: 13px; color: #86909c; margin: 0 0 6px 0; line-height: 1.6;">
+                此邮件由系统自动发送，请勿直接回复
+              </p>
+              <p style="font-size: 13px; color: #86909c; margin: 0 0 8px 0; line-height: 1.6;">
+                如有疑问，请访问 <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" style="color: #165dff; text-decoration: none; font-weight: 500;">PTStack 官网</a> 联系我们
+              </p>
+              <p style="font-size: 12px; color: #c9cdd4; margin: 0; line-height: 1.5;">
+                © 2026 PTStack. All rights reserved.
+              </p>
+            </div>
+            
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`@提醒邮件已发送到: ${to}`);
+    return true;
+  } catch (error) {
+    console.error('发送@提醒邮件失败:', error.message);
+    throw error;
+  }
+};
+
 export default {
   generateVerificationToken,
   sendVerificationEmail,
@@ -417,4 +502,5 @@ export default {
   sendAnnouncementEmail,
   sendCategoryApplicationEmail,
   sendCategoryReviewEmail,
+  sendMentionEmail,
 };

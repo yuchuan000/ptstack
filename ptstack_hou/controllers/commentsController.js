@@ -1,5 +1,4 @@
 import { execute } from '../config/db.js';
-import { checkAndGrantAchievements } from '../utils/achievementHelper.js';
 
 const ensureReplyToCommentIdField = async () => {
   try {
@@ -215,7 +214,6 @@ export const createComment = async (req, res) => {
       'SELECT COUNT(*) as count FROM comments WHERE user_id = ?',
       [userId]
     );
-    await checkAndGrantAchievements(userId, 'comment', commentCountResult[0].count);
     
     res.status(201).json({ 
       message: '评论创建成功', 

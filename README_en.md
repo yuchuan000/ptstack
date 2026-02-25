@@ -73,6 +73,10 @@ Frontend application will start at http://localhost:5173
 
 ## 📋 Version History
 
+### v0.4 - System Optimization
+- 🔧 Removed achievement system to simplify project structure
+- 🗄️ Organized database scripts, cleaned up historical migration files
+
 ### v0.3 - Achievement System Refactoring
 - 🔧 Achievement system data model refactoring
 - ✨ Added event achievement (is_event), limited achievement (is_limited), unconditional achievement (is_unconditional) concepts
@@ -97,7 +101,6 @@ Frontend application will start at http://localhost:5173
 - ✅ Responsive panel layout
 - ✅ Enterprise-level UI design style
 - ✅ Announcement management system
-- ✅ Achievement system
 - ✅ Article management
 - ✅ Comment system
 - ✅ User follow
