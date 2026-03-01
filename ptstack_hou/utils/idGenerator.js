@@ -1,21 +1,18 @@
 import { customAlphabet } from 'nanoid'
-import dotenv from 'dotenv'
-
-dotenv.config()
 
 const ALPHABETS = {
   letter: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
   digit: '0123456789',
   symbol: '_-',
   alphanumeric: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-  all: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'
+  all: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-',
 }
 
 function generateIdByPattern(pattern) {
   const regex = /\{([a-z]+)\}\{(\d+)\}/g
   let result = pattern
   let match
-  
+
   while ((match = regex.exec(pattern)) !== null) {
     const type = match[1]
     const length = parseInt(match[2])
@@ -24,7 +21,7 @@ function generateIdByPattern(pattern) {
     const generator = customAlphabet(alphabet, length)
     result = result.replace(placeholder, generator())
   }
-  
+
   return result
 }
 

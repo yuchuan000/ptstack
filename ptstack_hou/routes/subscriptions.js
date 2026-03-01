@@ -1,17 +1,17 @@
-import express from 'express';
-import { 
-  toggleSubscription, 
-  checkSubscription, 
-  getUserFollowers, 
-  getUserFollowing 
-} from '../controllers/subscriptionsController.js';
-import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.js';
+import express from 'express'
+import {
+  toggleSubscription,
+  checkSubscription,
+  getUserFollowers,
+  getUserFollowing,
+} from '../controllers/subscriptionsController.js'
+import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.js'
 
-const router = express.Router();
+const router = express.Router()
 
-router.post('/:followingId', authMiddleware, toggleSubscription);
-router.get('/check/:followingId', authMiddleware, checkSubscription);
-router.get('/followers/:userId', optionalAuthMiddleware, getUserFollowers);
-router.get('/following/:userId', optionalAuthMiddleware, getUserFollowing);
+router.post('/:followingId', authMiddleware, toggleSubscription)
+router.get('/check/:followingId', authMiddleware, checkSubscription)
+router.get('/followers/:userId', optionalAuthMiddleware, getUserFollowers)
+router.get('/following/:userId', optionalAuthMiddleware, getUserFollowing)
 
-export default router;
+export default router

@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const DOUBAO_API_URL = process.env.DOUBAO_API_URL || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
+const DOUBAO_API_URL =
+  process.env.DOUBAO_API_URL || 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
 const DOUBAO_API_KEY = process.env.DOUBAO_API_KEY
 const DOUBAO_MODEL = process.env.DOUBAO_MODEL || 'doubao-seed-1-6-lite-251015'
 
@@ -63,22 +64,23 @@ ${content.substring(0, 3000)}`
         messages: [
           {
             role: 'system',
-            content: '你是一个专业的文章摘要生成助手，能够准确提取文章的核心内容，生成简洁明了的摘要。'
+            content:
+              '你是一个专业的文章摘要生成助手，能够准确提取文章的核心内容，生成简洁明了的摘要。',
           },
           {
             role: 'user',
-            content: prompt
-          }
+            content: prompt,
+          },
         ],
         temperature: 0.7,
-        max_tokens: 300
+        max_tokens: 300,
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DOUBAO_API_KEY}`
-        }
-      }
+          Authorization: `Bearer ${DOUBAO_API_KEY}`,
+        },
+      },
     )
 
     const summary = response.data.choices[0].message.content.trim()

@@ -73,6 +73,20 @@ Frontend application will start at http://localhost:5173
 
 ## 📋 Version History
 
+### v0.5 - Client Pages Refactoring
+- ✨ Added ClientHomePage - Modern homepage design with dynamic text carousel and number animations
+- ✨ Added ClientArticleCenterPage - Category sidebar and article list display
+- ✨ Added ClientProfilePage - User profile, articles, comments, and followers display
+- ✨ Added ClientLayout - Responsive top navigation bar with scroll hide/show support
+- ✨ Added ClientAboutPage - Team member showcase and portfolio
+- 🔧 Added frontend environment variable configuration files
+
+### v0.4 - Clean Version
+- ✨ Added functional comments to all Vue files
+- 🔧 Modified avatar upload functionality to automatically delete old avatar files when uploading new ones
+- 🗄️ Organized project structure, keeping code clean
+- 📝 Updated documentation, improved usage instructions
+
 ### v0.4 - System Optimization
 - 🔧 Removed achievement system to simplify project structure
 - 🗄️ Organized database scripts, cleaned up historical migration files

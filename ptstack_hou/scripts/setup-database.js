@@ -2,54 +2,54 @@
  * ========================================
  * PTStack 数据库初始化脚本
  * ========================================
- * 
+ *
  * 数据表及功能说明：
- * 
+ *
  * 1. users 表 - 用户管理
  *    - 用户基本信息（用户名、昵称、密码、邮箱、头像、简介）
  *    - 公开ID (public_id)
  *    - 粉丝数/关注数统计
  *    - 管理员标识
  *    - 最后查看消息时间
- * 
+ *
  * 2. email_verifications 表 - 邮箱验证
  *    - 邮箱验证码
  *    - 邮箱验证令牌
  *    - 验证状态
- * 
+ *
  * 3. categories 表 - 文章分类
  *    - 分类名称/描述
  *    - 创建者
- * 
+ *
  * 4. category_applications 表 - 分类申请
  *    - 用户申请新分类
  *    - 审核流程
- * 
+ *
  * 5. tags 表 - 文章标签
- * 
+ *
  * 6. articles 表 - 文章发布
  *    - 文章内容（标题、内容、摘要、封面）
  *    - 公开ID (public_id)
  *    - 阅读/点赞/分享/评论统计
  *    - 发布状态
- * 
+ *
  * 7. article_tags 表 - 文章-标签关联
- * 
+ *
  * 8. comments 表 - 文章评论
  *    - 多级评论支持
  *    - 评论点赞统计
- * 
+ *
  * 9. likes 表 - 文章点赞
- * 
+ *
  * 10. comment_likes 表 - 评论点赞
- * 
+ *
  * 11. subscriptions 表 - 用户关注
  *     - 关注者/被关注者关系
- * 
+ *
  * 12. notifications 表 - 消息通知
  *     - 系统消息推送
  *     - 已读/未读状态
- * 
+ *
  * 13. announcements 表 - 系统公告
  *     - 公告标题/内容/概述
  *     - 优先级
@@ -57,20 +57,20 @@
  *     - 目标用户/发送方式
  *     - 时间范围控制
  *     - 公开ID (public_id)
- * 
+ *
  * 14. announcement_reads 表 - 公告阅读记录
  *     - 记录用户阅读公告的时间
- * 
+ *
  * 功能说明：
  * - 创建数据库（如果不存在）
  * - 创建所有必要的表（幂等设计，可重复运行）
  * - 添加缺失的字段（使用 addColumnIfNotExists 函数）
  * - 添加缺失的索引（使用 addIndexIfNotExists 函数）
  * - 插入默认数据
- * 
+ *
  * 使用方法：
  *   node scripts/setup-database.js
- * 
+ *
  * 注意事项：
  * - 此脚本可安全重复运行，不会覆盖现有数据
  * - 确保 .env 文件中配置了正确的数据库连接信息
@@ -78,61 +78,67 @@
  * - 此脚本已包含所有必要的字段定义，无需单独运行 add-missing-fields.js
  */
 
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-import { customAlphabet } from 'nanoid';
+import mysql from 'mysql2/promise'
+import dotenv from 'dotenv'
+import { customAlphabet } from 'nanoid'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-const USER_ID_PATTERN = process.env.USER_ID_PATTERN || 'user_{digit}{12}';
-const ARTICLE_ID_PATTERN = process.env.ARTICLE_ID_PATTERN || 'article_{digit}{12}';
-const ANNOUNCEMENT_ID_PATTERN = process.env.ANNOUNCEMENT_ID_PATTERN || 'announce_{digit}{12}';
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
+dotenv.config({ path: path.join(__dirname, '..', envFile) })
+
+const USER_ID_PATTERN = process.env.USER_ID_PATTERN || 'user_{digit}{12}'
+const ARTICLE_ID_PATTERN = process.env.ARTICLE_ID_PATTERN || 'article_{digit}{12}'
+const ANNOUNCEMENT_ID_PATTERN = process.env.ANNOUNCEMENT_ID_PATTERN || 'announce_{digit}{12}'
 
 const ALPHABETS = {
   letter: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
   digit: '0123456789',
   symbol: '_-',
   alphanumeric: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-  all: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-'
-};
+  all: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-',
+}
 
 function calculatePatternLength(pattern) {
-  const regex = /\{([a-z]+)\}\{(\d+)\}/g;
-  let result = pattern;
-  let match;
-  let totalLength = 0;
-  
+  const regex = /\{([a-z]+)\}\{(\d+)\}/g
+  let result = pattern
+  let match
+  let totalLength = 0
+
   while ((match = regex.exec(pattern)) !== null) {
-    const placeholder = match[0];
-    const length = parseInt(match[2]);
-    result = result.replace(placeholder, '');
-    totalLength += length;
+    const placeholder = match[0]
+    const length = parseInt(match[2])
+    result = result.replace(placeholder, '')
+    totalLength += length
   }
-  
-  return result.length + totalLength;
+
+  return result.length + totalLength
 }
 
 function generateIdByPattern(pattern) {
-  const regex = /\{([a-z]+)\}\{(\d+)\}/g;
-  let result = pattern;
-  let match;
-  
+  const regex = /\{([a-z]+)\}\{(\d+)\}/g
+  let result = pattern
+  let match
+
   while ((match = regex.exec(pattern)) !== null) {
-    const type = match[1];
-    const length = parseInt(match[2]);
-    const placeholder = match[0];
-    const alphabet = ALPHABETS[type] || ALPHABETS.alphanumeric;
-    const generator = customAlphabet(alphabet, length);
-    result = result.replace(placeholder, generator());
+    const type = match[1]
+    const length = parseInt(match[2])
+    const placeholder = match[0]
+    const alphabet = ALPHABETS[type] || ALPHABETS.alphanumeric
+    const generator = customAlphabet(alphabet, length)
+    result = result.replace(placeholder, generator())
   }
-  
-  return result;
+
+  return result
 }
 
-const userIdLength = calculatePatternLength(USER_ID_PATTERN);
-const articleIdLength = calculatePatternLength(ARTICLE_ID_PATTERN);
-const announcementIdLength = calculatePatternLength(ANNOUNCEMENT_ID_PATTERN);
-const PUBLIC_ID_LENGTH = Math.max(21, userIdLength, articleIdLength, announcementIdLength);
+const userIdLength = calculatePatternLength(USER_ID_PATTERN)
+const articleIdLength = calculatePatternLength(ARTICLE_ID_PATTERN)
+const announcementIdLength = calculatePatternLength(ANNOUNCEMENT_ID_PATTERN)
+const PUBLIC_ID_LENGTH = Math.max(21, userIdLength, articleIdLength, announcementIdLength)
 
 const config = {
   host: process.env.DB_HOST || 'localhost',
@@ -140,33 +146,35 @@ const config = {
   password: process.env.DB_PASSWORD || '',
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME || 'ptstack_db',
-  multipleStatements: true
-};
+  multipleStatements: true,
+}
 
-const DB_NAME = process.env.DB_NAME || 'ptstack_db';
+const DB_NAME = process.env.DB_NAME || 'ptstack_db'
 
 /**
  * 步骤 1: 创建数据库
  * 如果数据库不存在则创建，使用 utf8mb4 字符集（支持 emoji）
  */
 async function step1CreateDatabase() {
-  console.log('\n========================================');
-  console.log('步骤 1: 创建数据库');
-  console.log('========================================');
+  console.log('\n========================================')
+  console.log('步骤 1: 创建数据库')
+  console.log('========================================')
 
   const connection = await mysql.createConnection({
     host: config.host,
     user: config.user,
     password: config.password,
     port: config.port,
-    multipleStatements: true
-  });
+    multipleStatements: true,
+  })
 
   try {
-    await connection.query(`CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-    console.log(`✓ 数据库 ${DB_NAME} 创建成功（或已存在）`);
+    await connection.query(
+      `CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    )
+    console.log(`✓ 数据库 ${DB_NAME} 创建成功（或已存在）`)
   } finally {
-    await connection.end();
+    await connection.end()
   }
 }
 
@@ -179,13 +187,13 @@ async function step1CreateDatabase() {
  * @returns {boolean} 是否成功添加了字段
  */
 async function addColumnIfNotExists(connection, table, column, definition) {
-  const [columns] = await connection.query(`SHOW COLUMNS FROM ${table} LIKE '${column}'`);
+  const [columns] = await connection.query(`SHOW COLUMNS FROM ${table} LIKE '${column}'`)
   if (columns.length === 0) {
-    await connection.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-    console.log(`  ✓ 添加字段 ${table}.${column} 成功`);
-    return true;
+    await connection.query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+    console.log(`  ✓ 添加字段 ${table}.${column} 成功`)
+    return true
   }
-  return false;
+  return false
 }
 
 /**
@@ -197,13 +205,15 @@ async function addColumnIfNotExists(connection, table, column, definition) {
  * @returns {boolean} 是否成功添加了索引
  */
 async function addIndexIfNotExists(connection, table, indexName, indexDefinition) {
-  const [indexes] = await connection.query(`SHOW INDEX FROM ${table} WHERE Key_name = '${indexName}'`);
+  const [indexes] = await connection.query(
+    `SHOW INDEX FROM ${table} WHERE Key_name = '${indexName}'`,
+  )
   if (indexes.length === 0) {
-    await connection.query(`ALTER TABLE ${table} ADD INDEX ${indexName} ${indexDefinition}`);
-    console.log(`  ✓ 添加索引 ${table}.${indexName} 成功`);
-    return true;
+    await connection.query(`ALTER TABLE ${table} ADD INDEX ${indexName} ${indexDefinition}`)
+    console.log(`  ✓ 添加索引 ${table}.${indexName} 成功`)
+    return true
   }
-  return false;
+  return false
 }
 
 /**
@@ -212,11 +222,11 @@ async function addIndexIfNotExists(connection, table, indexName, indexDefinition
  * article_tags, comments, likes, comment_likes, subscriptions
  */
 async function step2CreateBaseTables() {
-  console.log('\n========================================');
-  console.log('步骤 2: 创建/更新基础表');
-  console.log('========================================');
+  console.log('\n========================================')
+  console.log('步骤 2: 创建/更新基础表')
+  console.log('========================================')
 
-  const connection = await mysql.createConnection(config);
+  const connection = await mysql.createConnection(config)
 
   try {
     await connection.execute(`
@@ -236,29 +246,65 @@ async function step2CreateBaseTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ users 表创建成功（或已存在）');
-    
-    const [usersPublicIdColumns] = await connection.query(`SHOW COLUMNS FROM users LIKE 'public_id'`);
+    `)
+    console.log('✓ users 表创建成功（或已存在）')
+
+    const [usersPublicIdColumns] = await connection.query(
+      `SHOW COLUMNS FROM users LIKE 'public_id'`,
+    )
     if (usersPublicIdColumns.length === 0) {
-      await connection.query(`ALTER TABLE users ADD COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) DEFAULT NULL COMMENT "公开ID（对外用）" AFTER id`);
-      console.log(`  ✓ 添加字段 users.public_id 成功`);
-      
-      const [existingUsers] = await connection.query(`SELECT id FROM users`);
+      await connection.query(
+        `ALTER TABLE users ADD COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) DEFAULT NULL COMMENT "公开ID（对外用）" AFTER id`,
+      )
+      console.log(`  ✓ 添加字段 users.public_id 成功`)
+
+      const [existingUsers] = await connection.query(`SELECT id FROM users`)
       for (const user of existingUsers) {
-        const publicId = generateIdByPattern(USER_ID_PATTERN);
-        await connection.execute(`UPDATE users SET public_id = ? WHERE id = ?`, [publicId, user.id]);
+        const publicId = generateIdByPattern(USER_ID_PATTERN)
+        await connection.execute(`UPDATE users SET public_id = ? WHERE id = ?`, [publicId, user.id])
       }
-      
-      await connection.query(`ALTER TABLE users MODIFY COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) NOT NULL COMMENT "公开ID（对外用）", ADD UNIQUE KEY idx_public_id (public_id)`);
-      console.log(`  ✓ 设置 users.public_id 为 NOT NULL 并添加唯一索引成功`);
+
+      await connection.query(
+        `ALTER TABLE users MODIFY COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) NOT NULL COMMENT "公开ID（对外用）", ADD UNIQUE KEY idx_public_id (public_id)`,
+      )
+      console.log(`  ✓ 设置 users.public_id 为 NOT NULL 并添加唯一索引成功`)
     }
-    await addColumnIfNotExists(connection, 'users', 'nickname', 'VARCHAR(50) DEFAULT NULL COMMENT "用户昵称" AFTER username');
-    await addColumnIfNotExists(connection, 'users', 'avatar', 'VARCHAR(500) DEFAULT NULL COMMENT "头像URL" AFTER email');
-    await addColumnIfNotExists(connection, 'users', 'bio', 'VARCHAR(500) DEFAULT NULL COMMENT "个人简介" AFTER avatar');
-    await addColumnIfNotExists(connection, 'users', 'follower_count', 'INT DEFAULT 0 COMMENT "粉丝数" AFTER profile_completed');
-    await addColumnIfNotExists(connection, 'users', 'following_count', 'INT DEFAULT 0 COMMENT "关注数" AFTER follower_count');
-    await addColumnIfNotExists(connection, 'users', 'is_admin', 'TINYINT DEFAULT 0 COMMENT "是否为管理员：0-否，1-是" AFTER following_count');
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'nickname',
+      'VARCHAR(50) DEFAULT NULL COMMENT "用户昵称" AFTER username',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'avatar',
+      'VARCHAR(500) DEFAULT NULL COMMENT "头像URL" AFTER email',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'bio',
+      'VARCHAR(500) DEFAULT NULL COMMENT "个人简介" AFTER avatar',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'follower_count',
+      'INT DEFAULT 0 COMMENT "粉丝数" AFTER profile_completed',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'following_count',
+      'INT DEFAULT 0 COMMENT "关注数" AFTER follower_count',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'is_admin',
+      'TINYINT DEFAULT 0 COMMENT "是否为管理员：0-否，1-是" AFTER following_count',
+    )
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS email_verifications (
@@ -272,11 +318,21 @@ async function step2CreateBaseTables() {
         INDEX idx_email (email),
         INDEX idx_expires (verification_code_expires_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ email_verifications 表创建成功（或已存在）');
-    await addColumnIfNotExists(connection, 'email_verifications', 'verification_token', 'VARCHAR(64) DEFAULT NULL COMMENT "邮箱验证令牌" AFTER email_verified');
-    await addIndexIfNotExists(connection, 'email_verifications', 'idx_email', '(email)');
-    await addIndexIfNotExists(connection, 'email_verifications', 'idx_expires', '(verification_code_expires_at)');
+    `)
+    console.log('✓ email_verifications 表创建成功（或已存在）')
+    await addColumnIfNotExists(
+      connection,
+      'email_verifications',
+      'verification_token',
+      'VARCHAR(64) DEFAULT NULL COMMENT "邮箱验证令牌" AFTER email_verified',
+    )
+    await addIndexIfNotExists(connection, 'email_verifications', 'idx_email', '(email)')
+    await addIndexIfNotExists(
+      connection,
+      'email_verifications',
+      'idx_expires',
+      '(verification_code_expires_at)',
+    )
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS categories (
@@ -287,9 +343,14 @@ async function step2CreateBaseTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ categories 表创建成功（或已存在）');
-    await addColumnIfNotExists(connection, 'categories', 'created_by', 'INT DEFAULT NULL COMMENT "创建者ID" AFTER description');
+    `)
+    console.log('✓ categories 表创建成功（或已存在）')
+    await addColumnIfNotExists(
+      connection,
+      'categories',
+      'created_by',
+      'INT DEFAULT NULL COMMENT "创建者ID" AFTER description',
+    )
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS category_applications (
@@ -307,8 +368,8 @@ async function step2CreateBaseTables() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ category_applications 表创建成功（或已存在）');
+    `)
+    console.log('✓ category_applications 表创建成功（或已存在）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS tags (
@@ -316,8 +377,8 @@ async function step2CreateBaseTables() {
         name VARCHAR(50) NOT NULL UNIQUE COMMENT '标签名称',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ tags 表创建成功（或已存在）');
+    `)
+    console.log('✓ tags 表创建成功（或已存在）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS articles (
@@ -339,25 +400,44 @@ async function step2CreateBaseTables() {
         FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ articles 表创建成功（或已存在）');
-    
-    const [articlesPublicIdColumns] = await connection.query(`SHOW COLUMNS FROM articles LIKE 'public_id'`);
+    `)
+    console.log('✓ articles 表创建成功（或已存在）')
+
+    const [articlesPublicIdColumns] = await connection.query(
+      `SHOW COLUMNS FROM articles LIKE 'public_id'`,
+    )
     if (articlesPublicIdColumns.length === 0) {
-      await connection.query(`ALTER TABLE articles ADD COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) DEFAULT NULL COMMENT "公开ID（对外用）" AFTER id`);
-      console.log(`  ✓ 添加字段 articles.public_id 成功`);
-      
-      const [existingArticles] = await connection.query(`SELECT id FROM articles`);
+      await connection.query(
+        `ALTER TABLE articles ADD COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) DEFAULT NULL COMMENT "公开ID（对外用）" AFTER id`,
+      )
+      console.log(`  ✓ 添加字段 articles.public_id 成功`)
+
+      const [existingArticles] = await connection.query(`SELECT id FROM articles`)
       for (const article of existingArticles) {
-        const publicId = generateIdByPattern(ARTICLE_ID_PATTERN);
-        await connection.execute(`UPDATE articles SET public_id = ? WHERE id = ?`, [publicId, article.id]);
+        const publicId = generateIdByPattern(ARTICLE_ID_PATTERN)
+        await connection.execute(`UPDATE articles SET public_id = ? WHERE id = ?`, [
+          publicId,
+          article.id,
+        ])
       }
-      
-      await connection.query(`ALTER TABLE articles MODIFY COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) NOT NULL COMMENT "公开ID（对外用）", ADD UNIQUE KEY idx_public_id (public_id)`);
-      console.log(`  ✓ 设置 articles.public_id 为 NOT NULL 并添加唯一索引成功`);
+
+      await connection.query(
+        `ALTER TABLE articles MODIFY COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) NOT NULL COMMENT "公开ID（对外用）", ADD UNIQUE KEY idx_public_id (public_id)`,
+      )
+      console.log(`  ✓ 设置 articles.public_id 为 NOT NULL 并添加唯一索引成功`)
     }
-    await addColumnIfNotExists(connection, 'articles', 'share_count', 'INT DEFAULT 0 COMMENT "分享次数" AFTER like_count');
-    await addColumnIfNotExists(connection, 'articles', 'comment_count', 'INT DEFAULT 0 COMMENT "评论次数" AFTER share_count');
+    await addColumnIfNotExists(
+      connection,
+      'articles',
+      'share_count',
+      'INT DEFAULT 0 COMMENT "分享次数" AFTER like_count',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'articles',
+      'comment_count',
+      'INT DEFAULT 0 COMMENT "评论次数" AFTER share_count',
+    )
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS article_tags (
@@ -368,8 +448,8 @@ async function step2CreateBaseTables() {
         FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
         FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ article_tags 表创建成功（或已存在）');
+    `)
+    console.log('✓ article_tags 表创建成功（或已存在）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS comments (
@@ -389,11 +469,26 @@ async function step2CreateBaseTables() {
         FOREIGN KEY (reply_to_comment_id) REFERENCES comments(id) ON DELETE SET NULL,
         FOREIGN KEY (reply_to_user_id) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ comments 表创建成功（或已存在）');
-    await addColumnIfNotExists(connection, 'comments', 'reply_to_comment_id', 'INT DEFAULT NULL COMMENT "回复的评论ID" AFTER parent_id');
-    await addColumnIfNotExists(connection, 'comments', 'reply_to_user_id', 'INT DEFAULT NULL COMMENT "回复的用户ID" AFTER reply_to_comment_id');
-    await addColumnIfNotExists(connection, 'comments', 'like_count', 'INT DEFAULT 0 COMMENT "点赞次数" AFTER content');
+    `)
+    console.log('✓ comments 表创建成功（或已存在）')
+    await addColumnIfNotExists(
+      connection,
+      'comments',
+      'reply_to_comment_id',
+      'INT DEFAULT NULL COMMENT "回复的评论ID" AFTER parent_id',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'comments',
+      'reply_to_user_id',
+      'INT DEFAULT NULL COMMENT "回复的用户ID" AFTER reply_to_comment_id',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'comments',
+      'like_count',
+      'INT DEFAULT 0 COMMENT "点赞次数" AFTER content',
+    )
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS likes (
@@ -405,8 +500,8 @@ async function step2CreateBaseTables() {
         FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ likes 表创建成功（或已存在）');
+    `)
+    console.log('✓ likes 表创建成功（或已存在）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS comment_likes (
@@ -418,8 +513,8 @@ async function step2CreateBaseTables() {
         FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ comment_likes 表创建成功（或已存在）');
+    `)
+    console.log('✓ comment_likes 表创建成功（或已存在）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS subscriptions (
@@ -431,8 +526,8 @@ async function step2CreateBaseTables() {
         FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ subscriptions 表创建成功（或已存在）');
+    `)
+    console.log('✓ subscriptions 表创建成功（或已存在）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS notifications (
@@ -447,8 +542,8 @@ async function step2CreateBaseTables() {
         INDEX idx_is_read (is_read),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ notifications 表创建成功（或已存在）');
+    `)
+    console.log('✓ notifications 表创建成功（或已存在）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS announcements (
@@ -471,34 +566,88 @@ async function step2CreateBaseTables() {
         INDEX idx_created_by (created_by),
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ announcements 表创建成功（或已存在）');
-    
-    await addColumnIfNotExists(connection, 'announcements', 'summary', 'VARCHAR(500) DEFAULT NULL COMMENT "公告概述，用于首页顶部和消息中心的省略展示" AFTER content');
-    
-    const [announcementsPublicIdColumns] = await connection.query(`SHOW COLUMNS FROM announcements LIKE 'public_id'`);
+    `)
+    console.log('✓ announcements 表创建成功（或已存在）')
+
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'summary',
+      'VARCHAR(500) DEFAULT NULL COMMENT "公告概述，用于首页顶部和消息中心的省略展示" AFTER content',
+    )
+
+    const [announcementsPublicIdColumns] = await connection.query(
+      `SHOW COLUMNS FROM announcements LIKE 'public_id'`,
+    )
     if (announcementsPublicIdColumns.length === 0) {
-      await connection.query(`ALTER TABLE announcements ADD COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) DEFAULT NULL COMMENT "公开ID（对外用）" AFTER id`);
-      console.log(`  ✓ 添加字段 announcements.public_id 成功`);
-      
-      const [existingAnnouncements] = await connection.query(`SELECT id FROM announcements`);
+      await connection.query(
+        `ALTER TABLE announcements ADD COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) DEFAULT NULL COMMENT "公开ID（对外用）" AFTER id`,
+      )
+      console.log(`  ✓ 添加字段 announcements.public_id 成功`)
+
+      const [existingAnnouncements] = await connection.query(`SELECT id FROM announcements`)
       for (const announcement of existingAnnouncements) {
-        const publicId = generateIdByPattern(ANNOUNCEMENT_ID_PATTERN);
-        await connection.execute(`UPDATE announcements SET public_id = ? WHERE id = ?`, [publicId, announcement.id]);
+        const publicId = generateIdByPattern(ANNOUNCEMENT_ID_PATTERN)
+        await connection.execute(`UPDATE announcements SET public_id = ? WHERE id = ?`, [
+          publicId,
+          announcement.id,
+        ])
       }
-      
-      await connection.query(`ALTER TABLE announcements MODIFY COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) NOT NULL COMMENT "公开ID（对外用）", ADD UNIQUE KEY idx_public_id (public_id)`);
-      console.log(`  ✓ 设置 announcements.public_id 为 NOT NULL 并添加唯一索引成功`);
+
+      await connection.query(
+        `ALTER TABLE announcements MODIFY COLUMN public_id VARCHAR(${PUBLIC_ID_LENGTH}) NOT NULL COMMENT "公开ID（对外用）", ADD UNIQUE KEY idx_public_id (public_id)`,
+      )
+      console.log(`  ✓ 设置 announcements.public_id 为 NOT NULL 并添加唯一索引成功`)
     }
-    await addColumnIfNotExists(connection, 'announcements', 'priority', 'INT DEFAULT 0 COMMENT "优先级：数字越大越优先" AFTER content');
-    await addColumnIfNotExists(connection, 'announcements', 'is_marquee', 'TINYINT DEFAULT 0 COMMENT "是否显示在首页跑马灯：0-否，1-是" AFTER priority');
-    await addColumnIfNotExists(connection, 'announcements', 'target_type', 'VARCHAR(20) DEFAULT "all" COMMENT "目标类型：all-全部用户，group-用户组，specific-指定用户" AFTER is_marquee');
-    await addColumnIfNotExists(connection, 'announcements', 'target_user_ids', 'TEXT COMMENT "目标用户ID列表，JSON格式" AFTER target_type');
-    await addColumnIfNotExists(connection, 'announcements', 'delivery_methods', 'TEXT COMMENT "发送方式：email-邮箱，popup-弹窗，notification-消息中心，JSON数组格式" AFTER target_user_ids');
-    await addColumnIfNotExists(connection, 'announcements', 'created_by', 'INT DEFAULT NULL COMMENT "创建者ID" AFTER delivery_methods');
-    await addColumnIfNotExists(connection, 'announcements', 'start_time', 'TIMESTAMP NULL COMMENT "开始显示时间" AFTER created_by');
-    await addColumnIfNotExists(connection, 'announcements', 'end_time', 'TIMESTAMP NULL COMMENT "结束显示时间" AFTER start_time');
-    await addIndexIfNotExists(connection, 'announcements', 'idx_created_by', '(created_by)');
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'priority',
+      'INT DEFAULT 0 COMMENT "优先级：数字越大越优先" AFTER content',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'is_marquee',
+      'TINYINT DEFAULT 0 COMMENT "是否显示在首页跑马灯：0-否，1-是" AFTER priority',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'target_type',
+      'VARCHAR(20) DEFAULT "all" COMMENT "目标类型：all-全部用户，group-用户组，specific-指定用户" AFTER is_marquee',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'target_user_ids',
+      'TEXT COMMENT "目标用户ID列表，JSON格式" AFTER target_type',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'delivery_methods',
+      'TEXT COMMENT "发送方式：email-邮箱，popup-弹窗，notification-消息中心，JSON数组格式" AFTER target_user_ids',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'created_by',
+      'INT DEFAULT NULL COMMENT "创建者ID" AFTER delivery_methods',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'start_time',
+      'TIMESTAMP NULL COMMENT "开始显示时间" AFTER created_by',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'announcements',
+      'end_time',
+      'TIMESTAMP NULL COMMENT "结束显示时间" AFTER start_time',
+    )
+    await addIndexIfNotExists(connection, 'announcements', 'idx_created_by', '(created_by)')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS announcement_reads (
@@ -512,13 +661,17 @@ async function step2CreateBaseTables() {
         FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    console.log('✓ announcement_reads 表创建成功（或已存在）');
+    `)
+    console.log('✓ announcement_reads 表创建成功（或已存在）')
 
-    await addColumnIfNotExists(connection, 'users', 'last_read_notifications', 'TIMESTAMP NULL COMMENT "最后一次查看消息的时间" AFTER following_count');
-
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'last_read_notifications',
+      'TIMESTAMP NULL COMMENT "最后一次查看消息的时间" AFTER following_count',
+    )
   } finally {
-    await connection.end();
+    await connection.end()
   }
 }
 
@@ -527,11 +680,11 @@ async function step2CreateBaseTables() {
  * 包括：默认分类数据
  */
 async function step3InsertDefaultData() {
-  console.log('\n========================================');
-  console.log('步骤 3: 插入默认数据');
-  console.log('========================================');
+  console.log('\n========================================')
+  console.log('步骤 3: 插入默认数据')
+  console.log('========================================')
 
-  const connection = await mysql.createConnection(config);
+  const connection = await mysql.createConnection(config)
 
   try {
     await connection.execute(`
@@ -540,11 +693,10 @@ async function step3InsertDefaultData() {
       ('项目实战', '项目开发实战经验'),
       ('心得体会', '学习和工作心得体会'),
       ('其他', '其他类型的文章')
-    `);
-    console.log('✓ 默认分类插入成功（或已存在）');
-
+    `)
+    console.log('✓ 默认分类插入成功（或已存在）')
   } finally {
-    await connection.end();
+    await connection.end()
   }
 }
 
@@ -552,25 +704,24 @@ async function step3InsertDefaultData() {
  * 主函数：执行数据库初始化的所有步骤
  */
 async function main() {
-  console.log('========================================');
-  console.log('PTStack 数据库初始化脚本');
-  console.log('========================================');
-  console.log('开始初始化数据库...\n');
+  console.log('========================================')
+  console.log('PTStack 数据库初始化脚本')
+  console.log('========================================')
+  console.log('开始初始化数据库...\n')
 
   try {
-    await step1CreateDatabase();
-    await step2CreateBaseTables();
-    await step3InsertDefaultData();
+    await step1CreateDatabase()
+    await step2CreateBaseTables()
+    await step3InsertDefaultData()
 
-    console.log('\n========================================');
-    console.log('✓ 数据库初始化完成！');
-    console.log('========================================\n');
-
+    console.log('\n========================================')
+    console.log('✓ 数据库初始化完成！')
+    console.log('========================================\n')
   } catch (error) {
-    console.error('\n✗ 数据库初始化失败:', error.message);
-    console.error('错误详情:', error);
-    process.exit(1);
+    console.error('\n✗ 数据库初始化失败:', error.message)
+    console.error('错误详情:', error)
+    process.exit(1)
   }
 }
 
-main();
+main()

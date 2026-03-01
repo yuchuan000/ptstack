@@ -1,12 +1,12 @@
 html,
 body,
 #app {
-  height: 100%;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
 
   /* 隐藏当前容器的滚动条 */
-  overflow: auto; /* 内容超出时可滚动，只是隐藏滚动条 */
+  overflow-y: auto; /* 内容超出时可滚动，只是隐藏滚动条 */
   /* 如果想彻底禁止滚动，就把auto改成hidden */
   /* overflow: hidden; */
 

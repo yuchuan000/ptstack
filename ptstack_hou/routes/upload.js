@@ -1,10 +1,10 @@
-import express from 'express';
-import { upload, uploadAvatar } from '../controllers/uploadController.js';
-import { authMiddleware } from '../middlewares/auth.js';
+import express from 'express'
+import { upload, uploadAvatar } from '../controllers/uploadController.js'
+import { authMiddleware } from '../middlewares/auth.js'
 
-const router = express.Router();
+const router = express.Router()
 
 // 上传头像（需要认证）
-router.post('/avatar', authMiddleware, upload.single('avatar'), uploadAvatar);
+router.post('/avatar', authMiddleware, upload.single('avatar'), uploadAvatar)
 
-export default router;
+export default router

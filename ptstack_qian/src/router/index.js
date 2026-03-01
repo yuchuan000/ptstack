@@ -1,144 +1,228 @@
-import { createRouter, createWebHistory } from 'vue-router' // 导入Vue Router的创建方法
-import { useUserStore } from '@/stores/user' // 导入用户状态管理
+import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { markRaw } from 'vue'
+import { House, Tickets, Collection, Bell, User, Setting } from '@element-plus/icons-vue'
+
+// 管理端路由配置
+const adminRoutes = [
+  {
+    path: '/admin',
+    component: () => import('@/views/PannelPage/PannelPage.vue'),
+    meta: { requiresAuth: true, isAdmin: true },
+    children: [
+      {
+        path: '',
+        name: 'AdminDashboard',
+        component: () => import('@/views/HomePage/HomePage.vue'),
+        meta: {
+          requiresAuth: true,
+          isAdmin: true,
+          menuName: '首页',
+          menuIcon: markRaw(House)
+        }
+      },
+      {
+        path: 'articles',
+        name: 'AdminArticles',
+        component: () => import('@/views/ArticleListPage/ArticleListPage.vue'),
+        meta: {
+          requiresAuth: true,
+          isAdmin: true,
+          menuName: '文章列表',
+          menuIcon: markRaw(Tickets)
+        }
+      },
+      {
+        path: 'categories',
+        name: 'AdminCategories',
+        component: () => import('@/views/CategoryManagePage/CategoryManagePage.vue'),
+        meta: {
+          requiresAuth: true,
+          isAdmin: true,
+          requiresAdmin: true,
+          menuName: '分类管理',
+          menuIcon: markRaw(Collection)
+        }
+      },
+      {
+        path: 'announcements',
+        name: 'AdminAnnouncements',
+        component: () => import('@/views/AnnouncementManagePage/AnnouncementManagePage.vue'),
+        meta: {
+          requiresAuth: true,
+          isAdmin: true,
+          requiresAdmin: true,
+          menuName: '公告管理',
+          menuIcon: markRaw(Bell)
+        }
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: () => import('@/views/UserManagePage/UserManagePage.vue'),
+        meta: {
+          requiresAuth: true,
+          isAdmin: true,
+          requiresAdmin: true,
+          menuName: '用户管理',
+          menuIcon: markRaw(User)
+        }
+      },
+      {
+        path: 'settings',
+        name: 'AdminSettings',
+        component: () => import('@/views/SettingsPage/SettingsPage.vue'),
+        meta: {
+          requiresAuth: true,
+          isAdmin: true,
+          menuName: '设置',
+          menuIcon: markRaw(Setting)
+        }
+      }
+    ]
+  }
+]
+
+// 客户端路由配置
+const clientRoutes = [
+  {
+    path: '/',
+    component: () => import('@/views/ClientLayout/ClientLayout.vue'),
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: '',
+        component: () => import('@/views/ClientHomePage/ClientHomePage.vue'),
+        meta: { requiresAuth: false }
+      },
+      {
+        path: 'articles',
+        component: () => import('@/views/ClientArticleCenterPage/ClientArticleCenterPage.vue'),
+        meta: { requiresAuth: false }
+      },
+      {
+        path: 'about',
+        component: () => import('@/views/ClientAboutPage/ClientAboutPage.vue'),
+        meta: { requiresAuth: false }
+      },
+      {
+        path: 'profile',
+        component: () => import('@/views/ClientProfilePage/ClientProfilePage.vue'),
+        meta: { requiresAuth: true }
+      }
+    ]
+  }
+]
+
+// 公共路由配置
+const publicRoutes = [
+  {
+    path: '/login',
+    component: () => import('@/views/AuthPage/AuthPage.vue'),
+    meta: { requiresAuth: false, view: 'login' }
+  },
+  {
+    path: '/register',
+    component: () => import('@/views/AuthPage/AuthPage.vue'),
+    meta: { requiresAuth: false, view: 'register' }
+  },
+  {
+    path: '/terms',
+    component: () => import('@/views/TermsPage/TermsPage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/privacy',
+    component: () => import('@/views/PrivacyPage/PrivacyPage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/complete-profile',
+    component: () => import('@/views/CompleteProfilePage/CompleteProfilePage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/article/:id',
+    component: () => import('@/views/ArticleDetailPage/ArticleDetailPage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/report/article/:id',
+    component: () => import('@/views/ReportPage/ReportPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/profile/:userId',
+    component: () => import('@/views/ProfilePage/ProfilePage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/notifications',
+    component: () => import('@/views/NotificationsPage/NotificationsPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/article/create',
+    component: () => import('@/views/ArticleEditPage/ArticleEditPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/article/edit/:id',
+    component: () => import('@/views/ArticleEditPage/ArticleEditPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/announcement/:id',
+    component: () => import('@/views/AnnouncementDetailPage/AnnouncementDetailPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/announcement/create',
+    component: () => import('@/views/AnnouncementEditPage/AnnouncementEditPage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/announcement/edit/:id',
+    component: () => import('@/views/AnnouncementEditPage/AnnouncementEditPage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
+]
 
 // 创建路由实例
 const router = createRouter({
-  // 使用HTML5 History模式
   history: createWebHistory(import.meta.env.BASE_URL),
-  // 路由配置数组
-  routes: [
-    {
-      path: '/login', // 登录页面路径
-      component: () => import('@/views/AuthPage/AuthPage.vue'), // 懒加载认证页面组件
-      meta: { requiresAuth: false, view: 'login' } // 路由元信息，不需要认证，显示登录视图
-    },
-    {
-      path: '/register', // 注册页面路径
-      component: () => import('@/views/AuthPage/AuthPage.vue'), // 懒加载认证页面组件
-      meta: { requiresAuth: false, view: 'register' } // 路由元信息，不需要认证，显示注册视图
-    },
-    {
-      path: '/terms', // 服务条款页面路径
-      component: () => import('@/views/TermsPage/TermsPage.vue'), // 懒加载服务条款页面组件
-      meta: { requiresAuth: false } // 路由元信息，不需要认证
-    },
-    {
-      path: '/privacy', // 隐私政策页面路径
-      component: () => import('@/views/PrivacyPage/PrivacyPage.vue'), // 懒加载隐私政策页面组件
-      meta: { requiresAuth: false } // 路由元信息，不需要认证
-    },
-    {
-      path: '/complete-profile', // 资料完善页面路径
-      component: () => import('@/views/CompleteProfilePage/CompleteProfilePage.vue'), // 懒加载资料完善页面组件
-      meta: { requiresAuth: true } // 路由元信息，需要认证
-    },
-    {
-      path: '/article/:id', // 文章详情页面路径，带动态参数id
-      component: () => import('@/views/ArticleDetailPage/ArticleDetailPage.vue'), // 懒加载文章详情页面组件
-      meta: { requiresAuth: false } // 路由元信息，不需要认证
-    },
-    {
-      path: '/report/article/:id', // 文章举报页面路径，带动态参数id
-      component: () => import('@/views/ReportPage/ReportPage.vue'), // 懒加载文章举报页面组件
-      meta: { requiresAuth: true } // 路由元信息，需要认证
-    },
-    {
-      path: '/profile/:userId', // 用户个人主页路径，带动态参数userId
-      component: () => import('@/views/ProfilePage/ProfilePage.vue'), // 懒加载用户个人主页组件
-      meta: { requiresAuth: false } // 路由元信息，不需要认证
-    },
-    {
-      path: '/notifications', // 消息通知页面路径
-      component: () => import('@/views/NotificationsPage/NotificationsPage.vue'), // 懒加载消息通知页面组件
-      meta: { requiresAuth: true } // 路由元信息，需要认证
-    },
-    {
-      path: '/article/create', // 创建文章路径
-      component: () => import('@/views/ArticleEditPage/ArticleEditPage.vue'), // 懒加载文章编辑组件
-      meta: { requiresAuth: true } // 路由元信息，需要认证
-    },
-    {
-      path: '/article/edit/:id', // 编辑文章路径，带动态参数id
-      component: () => import('@/views/ArticleEditPage/ArticleEditPage.vue'), // 懒加载文章编辑组件
-      meta: { requiresAuth: true } // 路由元信息，需要认证
-    },
-
-    {
-      path: '/announcement/:id', // 公告详情页面路径，带动态参数id
-      component: () => import('@/views/AnnouncementDetailPage/AnnouncementDetailPage.vue'), // 懒加载公告详情页面组件
-      meta: { requiresAuth: true } // 路由元信息，需要认证
-    },
-    {
-      path: '/announcement/create', // 创建公告路径
-      component: () => import('@/views/AnnouncementEditPage/AnnouncementEditPage.vue'), // 懒加载公告编辑组件
-      meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
-    },
-    {
-      path: '/announcement/edit/:id', // 编辑公告路径，带动态参数id
-      component: () => import('@/views/AnnouncementEditPage/AnnouncementEditPage.vue'), // 懒加载公告编辑组件
-      meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
-    },
-    {
-      path: '/', // 根路径
-      component: () => import('@/views/PannelPage/PannelPage.vue'), // 懒加载主面板页面组件
-      meta: { requiresAuth: true }, // 路由元信息，需要认证
-      // 子路由配置
-      children: [
-        {
-          path: '', // 空路径，默认显示首页
-          component: () => import('@/views/HomePage/HomePage.vue'), // 懒加载首页组件
-          meta: { requiresAuth: true } // 路由元信息，需要认证
-        },
-        {
-          path: 'articles', // 文章列表路径
-          component: () => import('@/views/ArticleListPage/ArticleListPage.vue'), // 懒加载文章列表组件
-          meta: { requiresAuth: true } // 路由元信息，需要认证
-        },
-        {
-          path: 'categories', // 分类管理路径
-          component: () => import('@/views/CategoryManagePage/CategoryManagePage.vue'), // 懒加载分类管理组件
-          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
-        },
-        {
-          path: 'settings', // 设置页面路径
-          component: () => import('@/views/SettingsPage/SettingsPage.vue'), // 懒加载设置页面组件
-          meta: { requiresAuth: true } // 路由元信息，需要认证
-        },
-        {
-          path: 'announcements', // 公告管理页面路径
-          component: () => import('@/views/AnnouncementManagePage/AnnouncementManagePage.vue'), // 懒加载公告管理页面组件
-          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
-        },
-        {
-          path: 'users', // 用户管理页面路径
-          component: () => import('@/views/UserManagePage/UserManagePage.vue'), // 懒加载用户管理页面组件
-          meta: { requiresAuth: true, requiresAdmin: true } // 路由元信息，需要认证和管理员权限
-        }
-      ]
-    }
-  ],
+  routes: [...adminRoutes, ...clientRoutes, ...publicRoutes]
 })
+
+// 判断用户是否为管理员
+const isAdmin = (userInfo) => {
+  return userInfo?.isAdmin === true || userInfo?.isAdmin === 1
+}
 
 // 全局前置导航守卫
 router.beforeEach((to, from, next) => {
-  const userStore = useUserStore() // 获取用户状态仓库实例
+  const userStore = useUserStore()
 
   // 判断目标路由是否需要认证
   if (to.meta.requiresAuth) {
     // 如果有Access Token或Refresh Token
     if (userStore.accessToken || userStore.refreshToken) {
       // 检查是否需要管理员权限
-      if (to.meta.requiresAdmin && !(userStore.userInfo?.isAdmin === true || userStore.userInfo?.isAdmin === 1)) {
+      if (to.meta.requiresAdmin && !isAdmin(userStore.userInfo)) {
         ElMessage.warning('您没有权限访问此页面')
         next('/')
         return
       }
       // 检查是否已完善资料，但资料完善页本身不需要检查
       if (to.path !== '/complete-profile' && userStore.userInfo && !userStore.userInfo.profileCompleted) {
-        next('/complete-profile') // 跳转到资料完善页
+        next('/complete-profile')
       } else {
-        next() // 放行，继续导航
+        next()
       }
     } else {
       // 两个token都没有，跳转到登录页
@@ -151,17 +235,27 @@ router.beforeEach((to, from, next) => {
     if (userStore.userInfo && !userStore.userInfo.profileCompleted) {
       next('/complete-profile')
     } else {
-      next('/') // 重定向到首页
+      // 根据用户角色跳转到不同页面
+      if (isAdmin(userStore.userInfo)) {
+        next('/admin')
+      } else {
+        next('/')
+      }
     }
   }
   // 如果访问资料完善页但已完善资料
   else if (to.path === '/complete-profile' && userStore.userInfo && userStore.userInfo.profileCompleted) {
-    next('/') // 重定向到首页
+    // 根据用户角色跳转到不同页面
+    if (isAdmin(userStore.userInfo)) {
+      next('/admin')
+    } else {
+      next('/')
+    }
   }
   // 其他情况，正常放行
   else {
-    next() // 放行，继续导航
+    next()
   }
 })
 
-export default router // 导出路由实例
+export default router

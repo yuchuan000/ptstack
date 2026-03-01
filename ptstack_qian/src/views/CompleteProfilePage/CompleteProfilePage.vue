@@ -376,6 +376,11 @@ const saveAvatar = async () => {
   }
 }
 
+// 判断用户是否为管理员
+const isAdmin = (userInfo) => {
+  return userInfo?.isAdmin === true || userInfo?.isAdmin === 1
+}
+
 const handleSubmit = async () => {
   if (!formRef.value) return
 
@@ -391,7 +396,12 @@ const handleSubmit = async () => {
 
         ElMessage.success(response.message || '资料完善成功！')
         userStore.updateUserInfo(response.user)
-        router.push('/')
+        // 根据用户角色跳转到不同页面
+        if (isAdmin(response.user)) {
+          router.push('/admin')
+        } else {
+          router.push('/')
+        }
       } catch (error) {
         console.error('完善资料失败:', error)
         ElMessage.error(error.response?.data?.message || '完善资料失败，请稍后重试')

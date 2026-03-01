@@ -139,6 +139,10 @@ const handleSubmit = async (saveAsDraft = false) => {
       ElMessage.warning('请输入文章内容')
       return
     }
+    if (!formData.value.category_id) {
+      ElMessage.warning('请选择文章分类')
+      return
+    }
   }
 
   formData.value.status = saveAsDraft ? 0 : 1
@@ -159,11 +163,11 @@ const handleSubmit = async (saveAsDraft = false) => {
     }
 
     if (!saveAsDraft) {
-      router.push('/articles')
+      router.push('/admin/articles')
     }
   } catch (error) {
     console.error('保存失败:', error)
-    ElMessage.error('保存失败')
+    ElMessage.error(error.response?.data?.message || '保存失败')
   } finally {
     saving.value = false
     savingDraft.value = false

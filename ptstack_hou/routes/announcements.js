@@ -1,14 +1,14 @@
 import express from 'express'
-import { 
-  getAnnouncements, 
+import {
+  getAnnouncements,
   getMarqueeAnnouncements,
   getAnnouncementById,
-  createAnnouncement, 
+  createAnnouncement,
   updateAnnouncement,
   deleteAnnouncement,
   markAnnouncementRead,
   getUnreadPopupAnnouncements,
-  getAllAnnouncementsAdmin
+  getAllAnnouncementsAdmin,
 } from '../controllers/announcementsController.js'
 import { authMiddleware } from '../middlewares/auth.js'
 

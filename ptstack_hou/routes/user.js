@@ -60,14 +60,16 @@ router.put('/profile', authenticateToken, async (req, res) => {
     }
 
     await execute(
-      'UPDATE users SET nickname = ?, profile_completed = 1' + (avatar ? ', avatar = ?' : '') + ' WHERE id = ?',
-      avatar ? [nickname, avatar, userId] : [nickname, userId]
+      'UPDATE users SET nickname = ?, profile_completed = 1' +
+        (avatar ? ', avatar = ?' : '') +
+        ' WHERE id = ?',
+      avatar ? [nickname, avatar, userId] : [nickname, userId],
     )
 
     // 获取更新后的用户信息
     const users = await execute(
       'SELECT id, username, nickname, email, avatar, profile_completed FROM users WHERE id = ?',
-      [userId]
+      [userId],
     )
 
     res.status(200).json({
@@ -78,8 +80,8 @@ router.put('/profile', authenticateToken, async (req, res) => {
         nickname: users[0].nickname,
         email: users[0].email,
         avatar: users[0].avatar,
-        profileCompleted: users[0].profile_completed === 1
-      }
+        profileCompleted: users[0].profile_completed === 1,
+      },
     })
   } catch (error) {
     console.error('更新用户资料失败:', error.message)
@@ -111,7 +113,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
 
     const users = await execute(
       'SELECT id, username, nickname, email, avatar, profile_completed, created_at FROM users WHERE id = ?',
-      [userId]
+      [userId],
     )
 
     if (users.length === 0) {
@@ -126,8 +128,8 @@ router.get('/profile', authenticateToken, async (req, res) => {
         email: users[0].email,
         avatar: users[0].avatar,
         profileCompleted: users[0].profile_completed === 1,
-        createdAt: users[0].created_at
-      }
+        createdAt: users[0].created_at,
+      },
     })
   } catch (error) {
     console.error('获取用户信息失败:', error.message)

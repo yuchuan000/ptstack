@@ -4,7 +4,7 @@ import {
   getUnreadCount,
   markAsRead,
   markAllAsRead,
-  deleteNotification
+  deleteNotification,
 } from '../controllers/notificationsController.js'
 import { authMiddleware } from '../middlewares/auth.js'
 

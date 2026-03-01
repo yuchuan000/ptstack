@@ -2,7 +2,7 @@
  * ========================================
  * 历史迁移脚本 - 已弃用
  * ========================================
- * 
+ *
  * 数据表及功能说明：
  * - users 表：添加字段注释
  * - email_verifications 表：添加字段注释
@@ -14,19 +14,19 @@
  * - likes 表：添加字段注释
  * - comment_likes 表：添加字段注释
  * - subscriptions 表：添加字段注释
- * 
+ *
  * 功能说明：
  * - 为所有数据表的字段添加中文注释
  * - 提高数据库的可读性和可维护性
- * 
+ *
  * 此脚本已弃用，功能已被 setup-database.js 完全替代
  * 此文件仅作为历史记录保留
  */
 
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
+import mysql from 'mysql2/promise'
+import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config()
 
 const config = {
   host: process.env.DB_HOST || 'localhost',
@@ -34,17 +34,17 @@ const config = {
   password: process.env.DB_PASSWORD || '',
   port: process.env.DB_PORT || 3306,
   database: 'ptstack_db',
-  multipleStatements: true
-};
+  multipleStatements: true,
+}
 
 async function migrate() {
-  const connection = await mysql.createConnection(config);
-  
+  const connection = await mysql.createConnection(config)
+
   try {
-    console.log('开始更新数据库字段备注...\n');
-    
+    console.log('开始更新数据库字段备注...\n')
+
     // 更新 users 表
-    console.log('更新 users 表...');
+    console.log('更新 users 表...')
     await connection.execute(`
       ALTER TABLE users 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '用户ID',
@@ -59,11 +59,11 @@ async function migrate() {
       MODIFY COLUMN following_count INT DEFAULT 0 COMMENT '关注数',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
       MODIFY COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-    `);
-    console.log('  users 表更新完成');
-    
+    `)
+    console.log('  users 表更新完成')
+
     // 更新 email_verifications 表
-    console.log('更新 email_verifications 表...');
+    console.log('更新 email_verifications 表...')
     await connection.execute(`
       ALTER TABLE email_verifications 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '记录ID',
@@ -73,32 +73,32 @@ async function migrate() {
       MODIFY COLUMN email_verified TINYINT DEFAULT 0 COMMENT '邮箱是否已验证：0-未验证，1-已验证',
       MODIFY COLUMN verification_token VARCHAR(64) DEFAULT NULL COMMENT '邮箱验证令牌',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-    `);
-    console.log('  email_verifications 表更新完成');
-    
+    `)
+    console.log('  email_verifications 表更新完成')
+
     // 更新 categories 表
-    console.log('更新 categories 表...');
+    console.log('更新 categories 表...')
     await connection.execute(`
       ALTER TABLE categories 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '分类ID',
       MODIFY COLUMN name VARCHAR(50) NOT NULL COMMENT '分类名称',
       MODIFY COLUMN description VARCHAR(200) DEFAULT NULL COMMENT '分类描述',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-    `);
-    console.log('  categories 表更新完成');
-    
+    `)
+    console.log('  categories 表更新完成')
+
     // 更新 tags 表
-    console.log('更新 tags 表...');
+    console.log('更新 tags 表...')
     await connection.execute(`
       ALTER TABLE tags 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '标签ID',
       MODIFY COLUMN name VARCHAR(50) NOT NULL COMMENT '标签名称',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-    `);
-    console.log('  tags 表更新完成');
-    
+    `)
+    console.log('  tags 表更新完成')
+
     // 更新 articles 表
-    console.log('更新 articles 表...');
+    console.log('更新 articles 表...')
     await connection.execute(`
       ALTER TABLE articles 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '文章ID',
@@ -115,21 +115,21 @@ async function migrate() {
       MODIFY COLUMN comment_count INT DEFAULT 0 COMMENT '评论次数',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
       MODIFY COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-    `);
-    console.log('  articles 表更新完成');
-    
+    `)
+    console.log('  articles 表更新完成')
+
     // 更新 article_tags 表
-    console.log('更新 article_tags 表...');
+    console.log('更新 article_tags 表...')
     await connection.execute(`
       ALTER TABLE article_tags 
       MODIFY COLUMN article_id INT NOT NULL COMMENT '文章ID',
       MODIFY COLUMN tag_id INT NOT NULL COMMENT '标签ID',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-    `);
-    console.log('  article_tags 表更新完成');
-    
+    `)
+    console.log('  article_tags 表更新完成')
+
     // 更新 comments 表
-    console.log('更新 comments 表...');
+    console.log('更新 comments 表...')
     await connection.execute(`
       ALTER TABLE comments 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '评论ID',
@@ -142,50 +142,49 @@ async function migrate() {
       MODIFY COLUMN like_count INT DEFAULT 0 COMMENT '点赞次数',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
       MODIFY COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-    `);
-    console.log('  comments 表更新完成');
-    
+    `)
+    console.log('  comments 表更新完成')
+
     // 更新 likes 表
-    console.log('更新 likes 表...');
+    console.log('更新 likes 表...')
     await connection.execute(`
       ALTER TABLE likes 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '点赞记录ID',
       MODIFY COLUMN article_id INT NOT NULL COMMENT '文章ID',
       MODIFY COLUMN user_id INT NOT NULL COMMENT '点赞用户ID',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-    `);
-    console.log('  likes 表更新完成');
-    
+    `)
+    console.log('  likes 表更新完成')
+
     // 更新 comment_likes 表
-    console.log('更新 comment_likes 表...');
+    console.log('更新 comment_likes 表...')
     await connection.execute(`
       ALTER TABLE comment_likes 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '评论点赞记录ID',
       MODIFY COLUMN comment_id INT NOT NULL COMMENT '评论ID',
       MODIFY COLUMN user_id INT NOT NULL COMMENT '点赞用户ID',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-    `);
-    console.log('  comment_likes 表更新完成');
-    
+    `)
+    console.log('  comment_likes 表更新完成')
+
     // 更新 subscriptions 表
-    console.log('更新 subscriptions 表...');
+    console.log('更新 subscriptions 表...')
     await connection.execute(`
       ALTER TABLE subscriptions 
       MODIFY COLUMN id INT AUTO_INCREMENT COMMENT '订阅记录ID',
       MODIFY COLUMN follower_id INT NOT NULL COMMENT '关注者ID',
       MODIFY COLUMN following_id INT NOT NULL COMMENT '被关注者ID',
       MODIFY COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
-    `);
-    console.log('  subscriptions 表更新完成');
-    
-    console.log('\n所有表字段备注更新完成！');
-    
+    `)
+    console.log('  subscriptions 表更新完成')
+
+    console.log('\n所有表字段备注更新完成！')
   } catch (error) {
-    console.error('更新失败:', error);
-    throw error;
+    console.error('更新失败:', error)
+    throw error
   } finally {
-    await connection.end();
+    await connection.end()
   }
 }
 
-migrate();
+migrate()

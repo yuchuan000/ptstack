@@ -1,11 +1,11 @@
 import express from 'express'
-import { 
-  register, 
-  login, 
+import {
+  register,
+  login,
   refreshToken,
   sendEmailVerification,
   verifyEmailCode,
-  checkEmailVerified
+  checkEmailVerified,
 } from '../controllers/authController.js'
 
 const router = express.Router()

@@ -64,30 +64,42 @@ export const getNotifications = async (req, res) => {
       params.push(type)
     }
 
-    const notifications = await execute(`
+    const notifications = await execute(
+      `
       SELECT * FROM notifications 
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT ? OFFSET ?
-    `, [...params, pageSize, offset])
+    `,
+      [...params, pageSize, offset],
+    )
 
-    const countResult = await execute(`
+    const countResult = await execute(
+      `
       SELECT COUNT(*) as total FROM notifications ${whereClause}
-    `, params)
+    `,
+      params,
+    )
 
-    const unreadCountResult = await execute(`
+    const unreadCountResult = await execute(
+      `
       SELECT COUNT(*) as unreadCount FROM notifications 
       WHERE user_id = ? AND is_read = 0
-    `, [userId])
+    `,
+      [userId],
+    )
 
     const typeUnreadCounts = {}
-    const typeCounts = await execute(`
+    const typeCounts = await execute(
+      `
       SELECT type, COUNT(*) as count FROM notifications 
       WHERE user_id = ? AND is_read = 0 
       GROUP BY type
-    `, [userId])
-    
-    typeCounts.forEach(item => {
+    `,
+      [userId],
+    )
+
+    typeCounts.forEach((item) => {
       typeUnreadCounts[item.type] = item.count
     })
 
@@ -97,10 +109,10 @@ export const getNotifications = async (req, res) => {
         page,
         pageSize,
         total: countResult[0]?.total || 0,
-        totalPages: Math.ceil((countResult[0]?.total || 0) / pageSize)
+        totalPages: Math.ceil((countResult[0]?.total || 0) / pageSize),
       },
       unreadCount: unreadCountResult[0]?.unreadCount || 0,
-      typeUnreadCounts
+      typeUnreadCounts,
     })
   } catch (error) {
     console.error('获取消息列表失败:', error.message)
@@ -129,13 +141,16 @@ export const getUnreadCount = async (req, res) => {
   try {
     const userId = req.user.id
 
-    const result = await execute(`
+    const result = await execute(
+      `
       SELECT COUNT(*) as count FROM notifications 
       WHERE user_id = ? AND is_read = 0
-    `, [userId])
+    `,
+      [userId],
+    )
 
     res.status(200).json({
-      count: result[0]?.count || 0
+      count: result[0]?.count || 0,
     })
   } catch (error) {
     console.error('获取未读消息数量失败:', error.message)
@@ -176,17 +191,14 @@ export const markAsRead = async (req, res) => {
 
     const notifications = await execute(
       'SELECT * FROM notifications WHERE id = ? AND user_id = ?',
-      [notificationId, userId]
+      [notificationId, userId],
     )
 
     if (notifications.length === 0) {
       return res.status(404).json({ message: '消息不存在' })
     }
 
-    await execute(
-      'UPDATE notifications SET is_read = 1 WHERE id = ?',
-      [notificationId]
-    )
+    await execute('UPDATE notifications SET is_read = 1 WHERE id = ?', [notificationId])
 
     res.status(200).json({ message: '标记已读成功' })
   } catch (error) {
@@ -216,15 +228,9 @@ export const markAllAsRead = async (req, res) => {
   try {
     const userId = req.user.id
 
-    await execute(
-      'UPDATE notifications SET is_read = 1 WHERE user_id = ?',
-      [userId]
-    )
+    await execute('UPDATE notifications SET is_read = 1 WHERE user_id = ?', [userId])
 
-    await execute(
-      'UPDATE users SET last_read_notifications = NOW() WHERE id = ?',
-      [userId]
-    )
+    await execute('UPDATE users SET last_read_notifications = NOW() WHERE id = ?', [userId])
 
     res.status(200).json({ message: '全部标记已读成功' })
   } catch (error) {
@@ -266,17 +272,14 @@ export const deleteNotification = async (req, res) => {
 
     const notifications = await execute(
       'SELECT * FROM notifications WHERE id = ? AND user_id = ?',
-      [notificationId, userId]
+      [notificationId, userId],
     )
 
     if (notifications.length === 0) {
       return res.status(404).json({ message: '消息不存在' })
     }
 
-    await execute(
-      'DELETE FROM notifications WHERE id = ?',
-      [notificationId]
-    )
+    await execute('DELETE FROM notifications WHERE id = ?', [notificationId])
 
     res.status(200).json({ message: '删除成功' })
   } catch (error) {

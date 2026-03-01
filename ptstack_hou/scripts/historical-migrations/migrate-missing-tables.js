@@ -2,56 +2,60 @@
  * ========================================
  * 历史迁移脚本 - 已弃用
  * ========================================
- * 
+ *
  * 数据表及功能说明：
  * - articles 表：添加评论数字段
  * - comment_likes 表：创建评论点赞表
  * - comments 表：添加评论点赞数字段
  * - subscriptions 表：创建订阅表
  * - users 表：添加粉丝和关注数字段
- * 
+ *
  * 功能说明：
  * - 添加 articles.comment_count 字段：文章评论数
  * - 创建 comment_likes 表：评论点赞记录
  * - 添加 comments.like_count 字段：评论点赞数
  * - 创建 subscriptions 表：用户关注记录
  * - 添加 users.follower_count 和 following_count 字段：粉丝数和关注数
- * 
+ *
  * 此脚本已弃用，功能已被 setup-database.js 完全替代
  * 此文件仅作为历史记录保留
  */
 
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
+import mysql from 'mysql2/promise'
+import dotenv from 'dotenv'
 
-dotenv.config();
+dotenv.config()
 
 const config = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   port: process.env.DB_PORT || 3306,
-  database: 'ptstack_db'
-};
+  database: 'ptstack_db',
+}
 
 async function migrate() {
-  const connection = await mysql.createConnection(config);
-  
+  const connection = await mysql.createConnection(config)
+
   try {
-    console.log('开始迁移数据库...');
-    
-    console.log('添加 articles.comment_count 字段...');
-    await connection.execute(`
+    console.log('开始迁移数据库...')
+
+    console.log('添加 articles.comment_count 字段...')
+    await connection
+      .execute(
+        `
       ALTER TABLE articles 
       ADD COLUMN comment_count INT DEFAULT 0 AFTER like_count
-    `).catch(err => {
-      if (err.code !== 'ER_DUP_FIELDNAME') {
-        throw err;
-      }
-      console.log('  articles.comment_count 字段已存在');
-    });
-    
-    console.log('创建 comment_likes 表...');
+    `,
+      )
+      .catch((err) => {
+        if (err.code !== 'ER_DUP_FIELDNAME') {
+          throw err
+        }
+        console.log('  articles.comment_count 字段已存在')
+      })
+
+    console.log('创建 comment_likes 表...')
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS comment_likes (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,20 +66,24 @@ async function migrate() {
         FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    
-    console.log('添加 comments.like_count 字段...');
-    await connection.execute(`
+    `)
+
+    console.log('添加 comments.like_count 字段...')
+    await connection
+      .execute(
+        `
       ALTER TABLE comments 
       ADD COLUMN like_count INT DEFAULT 0 AFTER content
-    `).catch(err => {
-      if (err.code !== 'ER_DUP_FIELDNAME') {
-        throw err;
-      }
-      console.log('  comments.like_count 字段已存在');
-    });
-    
-    console.log('创建 subscriptions 表...');
+    `,
+      )
+      .catch((err) => {
+        if (err.code !== 'ER_DUP_FIELDNAME') {
+          throw err
+        }
+        console.log('  comments.like_count 字段已存在')
+      })
+
+    console.log('创建 subscriptions 表...')
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS subscriptions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -86,38 +94,45 @@ async function migrate() {
         FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    
-    console.log('添加 users.follower_count 字段...');
-    await connection.execute(`
+    `)
+
+    console.log('添加 users.follower_count 字段...')
+    await connection
+      .execute(
+        `
       ALTER TABLE users 
       ADD COLUMN follower_count INT DEFAULT 0 AFTER profile_completed
-    `).catch(err => {
-      if (err.code !== 'ER_DUP_FIELDNAME') {
-        throw err;
-      }
-      console.log('  users.follower_count 字段已存在');
-    });
-    
-    console.log('添加 users.following_count 字段...');
-    await connection.execute(`
+    `,
+      )
+      .catch((err) => {
+        if (err.code !== 'ER_DUP_FIELDNAME') {
+          throw err
+        }
+        console.log('  users.follower_count 字段已存在')
+      })
+
+    console.log('添加 users.following_count 字段...')
+    await connection
+      .execute(
+        `
       ALTER TABLE users 
       ADD COLUMN following_count INT DEFAULT 0 AFTER follower_count
-    `).catch(err => {
-      if (err.code !== 'ER_DUP_FIELDNAME') {
-        throw err;
-      }
-      console.log('  users.following_count 字段已存在');
-    });
-    
-    console.log('数据库迁移完成！');
-    
+    `,
+      )
+      .catch((err) => {
+        if (err.code !== 'ER_DUP_FIELDNAME') {
+          throw err
+        }
+        console.log('  users.following_count 字段已存在')
+      })
+
+    console.log('数据库迁移完成！')
   } catch (error) {
-    console.error('迁移失败:', error);
-    throw error;
+    console.error('迁移失败:', error)
+    throw error
   } finally {
-    await connection.end();
+    await connection.end()
   }
 }
 
-migrate();
+migrate()

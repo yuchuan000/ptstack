@@ -1,11 +1,13 @@
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import mysql from 'mysql2/promise'
+import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '../.env') });
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
+dotenv.config({ path: path.join(__dirname, '..', envFile) })
 
 // 创建数据库连接池
 const pool = mysql.createPool({
@@ -31,49 +33,49 @@ const pool = mysql.createPool({
   // 增加连接池健康检查
   idleTimeout: 60000,
   // 禁用SSL（本地开发环境）
-  ssl: false
-});
+  ssl: false,
+})
 
 // 测试数据库连接
 async function testConnection() {
   try {
-    const connection = await pool.getConnection();
-    console.log('数据库连接成功');
-    connection.release();
-    return true;
+    const connection = await pool.getConnection()
+    console.log('数据库连接成功')
+    connection.release()
+    return true
   } catch (error) {
-    console.error('数据库连接失败:', error.message);
-    return false;
+    console.error('数据库连接失败:', error.message)
+    return false
   }
 }
 
 // 执行SQL语句（带重试机制）
 async function execute(sql, params = [], retries = 3) {
-  let lastError;
-  
+  let lastError
+
   for (let i = 0; i < retries; i++) {
     try {
-      const [results] = await pool.execute(sql, params);
-      return results;
+      const [results] = await pool.execute(sql, params)
+      return results
     } catch (error) {
-      console.error(`SQL执行失败 (尝试 ${i + 1}/${retries}):`, error.message);
-      lastError = error;
-      
+      console.error(`SQL执行失败 (尝试 ${i + 1}/${retries}):`, error.message)
+      lastError = error
+
       // 如果是连接错误，等待后重试
       if (error.code === 'ECONNRESET' || error.code === 'EPIPE' || error.code === 'ECONNREFUSED') {
         if (i < retries - 1) {
-          console.log('等待500ms后重试...');
-          await new Promise(resolve => setTimeout(resolve, 500));
+          console.log('等待500ms后重试...')
+          await new Promise((resolve) => setTimeout(resolve, 500))
         }
       } else {
         // 非连接错误，直接抛出
-        throw error;
+        throw error
       }
     }
   }
-  
+
   // 所有重试都失败
-  throw lastError;
+  throw lastError
 }
 
-export { pool, testConnection, execute };
+export { pool, testConnection, execute }

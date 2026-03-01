@@ -1,9 +1,9 @@
 import express from 'express'
-import { 
-  getUsers, 
-  getProfile, 
-  getUserPublicProfile, 
-  updateProfile, 
+import {
+  getUsers,
+  getProfile,
+  getUserPublicProfile,
+  updateProfile,
   getUserArticles,
   getUserComments,
   getRecommendedUsers,
@@ -12,7 +12,7 @@ import {
   getAllUsersAdmin,
   getUserAdmin,
   updateUserAdmin,
-  deleteUserAdmin
+  deleteUserAdmin,
 } from '../controllers/usersController.js'
 import { authMiddleware, optionalAuthMiddleware } from '../middlewares/auth.js'
 

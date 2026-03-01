@@ -131,7 +131,7 @@ const handleSubmit = async () => {
       await createAnnouncement(data)
       ElMessage.success('发布公告成功')
     }
-    router.push('/announcements')
+    router.push('/admin/announcements')
   } catch (error) {
     console.error('保存公告失败:', error)
     ElMessage.error(error.response?.data?.message || '保存失败')

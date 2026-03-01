@@ -321,6 +321,11 @@ const checkEmailStatus = async () => {
   }
 }
 
+// 判断用户是否为管理员
+const isAdmin = (userInfo) => {
+  return userInfo?.isAdmin === true || userInfo?.isAdmin === 1
+}
+
 // 处理登录
 const handleLogin = async () => {
   // 如果表单引用不存在
@@ -362,8 +367,12 @@ const handleLogin = async () => {
 
     // 检查是否需要完善资料
     if (response.user.profileCompleted) {
-      // 已完善资料，跳转到首页
-      router.push('/')
+      // 已完善资料，根据用户角色跳转到不同页面
+      if (isAdmin(response.user)) {
+        router.push('/admin')
+      } else {
+        router.push('/')
+      }
     } else {
       // 未完善资料，跳转到资料完善页
       router.push('/complete-profile')

@@ -25,6 +25,10 @@
 - ✅ 分类管理
 - ✅ 用户管理（管理员）
 - ✅ 举报功能
+- ✅ 客户端首页（动态文字轮播、数字动画）
+- ✅ 客户端文章中心（分类侧边栏）
+- ✅ 客户端个人主页（用户资料、文章、评论、关注者）
+- ✅ 客户端关于我们（团队成员展示）
 
 ## 开发指南
 
@@ -54,27 +58,123 @@ pnpm format
 ```
 
 ## 项目结构
+
 ```
 ptstack_qian/
-├── src/
-│   ├── api/              # API 接口
-│   ├── assets/           # 静态资源
-│   ├── components/       # 公共组件
-│   ├── router/           # 路由配置
-│   ├── stores/           # Pinia 状态管理
-│   ├── style/            # 全局样式
-│   ├── utils/            # 工具函数
-│   ├── views/            # 页面组件
-│   ├── App.vue           # 根组件
-│   └── main.js           # 入口文件
-├── .env.development      # 开发环境变量
-├── .env.production       # 生产环境变量
-├── vite.config.js        # Vite 配置
-├── eslint.config.js      # ESLint 配置
-└── package.json          # 项目配置
+├── public/                      # 静态资源目录
+│   └── favicon.ico             # 网站图标
+├── src/                        # 源代码目录
+│   ├── api/                    # API 接口层
+│   │   ├── ai.js              # AI 相关接口
+│   │   ├── announcements.js    # 公告接口
+│   │   ├── articles.js        # 文章接口
+│   │   ├── auth.js            # 认证接口
+│   │   ├── notifications.js   # 通知接口
+│   │   ├── subscriptions.js   # 订阅接口
+│   │   └── users.js           # 用户接口
+│   ├── assets/                 # 静态资源
+│   │   └── login_background.svg # 登录页背景图
+│   ├── components/             # 公共组件
+│   │   ├── ArticleFilter/     # 文章筛选组件
+│   │   │   └── ArticleFilter.vue
+│   │   ├── MentionInput/      # 提及输入组件
+│   │   │   └── MentionInput.vue
+│   │   ├── MentionText/       # 提及文本组件
+│   │   │   └── MentionText.vue
+│   │   ├── PageHeader/        # 页面头部组件
+│   │   │   └── PageHeader.vue
+│   │   ├── PolicyPage/        # 政策页面组件
+│   │   │   └── PolicyPage.vue
+│   │   └── TabContainer/      # 标签容器组件
+│   │       └── TabContainer.vue
+│   ├── router/                 # 路由配置
+│   │   └── index.js           # 路由主文件
+│   ├── stores/                 # Pinia 状态管理
+│   │   └── user.js            # 用户状态
+│   ├── style/                  # 全局样式
+│   │   └── main.scss          # 主样式文件
+│   ├── utils/                  # 工具函数
+│   │   ├── request.js         # HTTP 请求封装
+│   │   └── url.js             # URL 处理工具
+│   ├── views/                  # 页面组件
+│   │   ├── AnnouncementDetailPage/    # 公告详情页
+│   │   │   └── AnnouncementDetailPage.vue
+│   │   ├── AnnouncementEditPage/      # 公告编辑页
+│   │   │   └── AnnouncementEditPage.vue
+│   │   ├── AnnouncementManagePage/    # 公告管理页
+│   │   │   └── AnnouncementManagePage.vue
+│   │   ├── ArticleDetailPage/         # 文章详情页
+│   │   │   └── ArticleDetailPage.vue
+│   │   ├── ArticleEditPage/           # 文章编辑页
+│   │   │   └── ArticleEditPage.vue
+│   │   ├── ArticleListPage/           # 文章列表页
+│   │   │   └── ArticleListPage.vue
+│   │   ├── AuthPage/                  # 认证页（登录/注册）
+│   │   │   └── AuthPage.vue
+│   │   ├── CategoryManagePage/        # 分类管理页
+│   │   │   └── CategoryManagePage.vue
+│   │   ├── ClientAboutPage/           # 客户端关于我们页
+│   │   │   └── ClientAboutPage.vue
+│   │   ├── ClientArticleCenterPage/   # 客户端文章中心页
+│   │   │   └── ClientArticleCenterPage.vue
+│   │   ├── ClientHomePage/            # 客户端首页
+│   │   │   └── ClientHomePage.vue
+│   │   ├── ClientLayout/              # 客户端布局组件
+│   │   │   └── ClientLayout.vue
+│   │   ├── ClientProfilePage/         # 客户端个人主页
+│   │   │   └── ClientProfilePage.vue
+│   │   ├── CompleteProfilePage/        # 完善资料页
+│   │   │   └── CompleteProfilePage.vue
+│   │   ├── HomePage/                  # 管理后台首页
+│   │   │   └── HomePage.vue
+│   │   ├── NotificationsPage/         # 通知页
+│   │   │   └── NotificationsPage.vue
+│   │   ├── PannelPage/                # 面板页
+│   │   │   └── PannelPage.vue
+│   │   ├── PrivacyPage/               # 隐私政策页
+│   │   │   └── PrivacyPage.vue
+│   │   ├── ProfilePage/               # 个人主页
+│   │   │   └── ProfilePage.vue
+│   │   ├── ReportPage/                # 举报页
+│   │   │   └── ReportPage.vue
+│   │   ├── SettingsPage/              # 设置页
+│   │   │   └── SettingsPage.vue
+│   │   ├── TermsPage/                 # 服务协议页
+│   │   │   └── TermsPage.vue
+│   │   └── UserManagePage/            # 用户管理页
+│   │       └── UserManagePage.vue
+│   ├── App.vue                  # 根组件
+│   └── main.js                  # 应用入口文件
+├── 设计规范/                     # 设计规范文档
+│   └── 头像和管理员角标设计规范.md
+├── .editorconfig               # 编辑器配置
+├── .env.development            # 开发环境变量
+├── .env.development.example    # 开发环境变量示例
+├── .env.production             # 生产环境变量
+├── .env.production.example     # 生产环境变量示例
+├── .gitattributes              # Git 属性配置
+├── .gitignore                  # Git 忽略文件
+├── .oxlintrc.json              # OxLint 配置
+├── .prettierrc.json            # Prettier 配置
+├── eslint.config.js            # ESLint 配置
+├── index.html                  # HTML 模板
+├── jsconfig.json               # JS 配置
+├── package.json                # 项目配置
+├── pnpm-lock.yaml              # 依赖锁定文件
+├── vite.config.js              # Vite 配置
+└── README.md                   # 本文档
 ```
 
 ## 版本历史
+
+### v0.5 - 客户端页面重构
+- ✨ 新增客户端首页（ClientHomePage）- 现代化首页设计，包含动态文字轮播和数字动画
+- ✨ 新增客户端文章中心（ClientArticleCenterPage）- 分类侧边栏和文章列表展示
+- ✨ 新增客户端个人主页（ClientProfilePage）- 用户资料、文章、评论、关注者展示
+- ✨ 新增客户端布局（ClientLayout）- 响应式顶部导航栏，支持滚动隐藏/显示
+- ✨ 新增客户端关于我们（ClientAboutPage）- 团队成员展示和作品集
+- 🔧 新增环境变量配置文件
+
 ### v0.4 - 纯净版
 - ✨ 为所有Vue文件添加了功能注释
 - 🔧 修改头像上传功能，上传新头像时自动删除旧头像文件

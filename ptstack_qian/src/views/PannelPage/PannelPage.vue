@@ -1,18 +1,18 @@
 <script setup>
 // 应用布局框架页面组件
 // 功能：包含侧边栏导航和弹窗公告功能
-import { ref, computed, onMounted, onUnmounted, markRaw, nextTick, watch } from 'vue' // 导入Vue响应式API和生命周期钩子
-import { useRouter, useRoute } from 'vue-router' // 导入Vue Router
-import { useUserStore } from '@/stores/user' // 导入用户状态管理
-import { ElMessageBox, ElMessage, ElDialog } from 'element-plus' // 导入Element Plus的消息提示组件
-import { House, Setting, Menu, CaretLeft, CaretRight, Tickets, Collection, Switch, Bell, User } from '@element-plus/icons-vue' // 导入Element Plus图标
-import { getFullUrl } from '@/utils/url' // 导入URL处理工具函数
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { ElMessageBox, ElMessage, ElDialog } from 'element-plus'
+import { Menu, CaretLeft, CaretRight, Switch, Bell, House } from '@element-plus/icons-vue'
+import { getFullUrl } from '@/utils/url'
 import { getUnreadPopupAnnouncements, markAnnouncementRead } from '@/api/announcements'
 import { MdPreview } from 'md-editor-v3'
 
-const router = useRouter() // 获取路由实例
-const route = useRoute() // 获取当前路由信息
-const userStore = useUserStore() // 获取用户状态仓库
+const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
 
 const isMobile = ref(window.innerWidth < 768) // 判断是否为移动端
 const isTablet = ref(window.innerWidth >= 768 && window.innerWidth < 992) // 判断是否为平板端
@@ -80,48 +80,21 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize) // 移除resize事件监听
 })
 
-// 菜单列表数据
-const menuList = ref([
-  {
-    id: 'dashboard', // 菜单项ID
-    name: '首页', // 菜单项名称
-    icon: markRaw(House), // 菜单项图标，使用markRaw避免响应式
-    path: '/', // 菜单项路径
-  },
-  {
-    id: 'articles', // 菜单项ID
-    name: '文章列表', // 菜单项名称
-    icon: markRaw(Tickets), // 菜单项图标
-    path: '/articles', // 菜单项路径
-  },
-  {
-    id: 'categories', // 菜单项ID
-    name: '分类管理', // 菜单项名称
-    icon: markRaw(Collection), // 菜单项图标
-    path: '/categories', // 菜单项路径
-    requiresAdmin: true, // 需要管理员权限
-  },
-  {
-    id: 'announcements', // 菜单项ID
-    name: '公告管理', // 菜单项名称
-    icon: markRaw(Bell), // 菜单项图标
-    path: '/announcements', // 菜单项路径
-    requiresAdmin: true, // 需要管理员权限
-  },
-  {
-    id: 'users', // 菜单项ID
-    name: '用户管理', // 菜单项名称
-    icon: markRaw(User), // 菜单项图标
-    path: '/users', // 菜单项路径
-    requiresAdmin: true, // 需要管理员权限
-  },
-  {
-    id: 'settings', // 菜单项ID
-    name: '设置', // 菜单项名称
-    icon: markRaw(Setting), // 菜单项图标
-    path: '/settings', // 菜单项路径
-  },
-])
+// 从路由配置获取管理端菜单
+const menuList = computed(() => {
+  const adminRoute = router.options.routes.find(r => r.path === '/admin')
+  if (!adminRoute?.children) return []
+
+  return adminRoute.children
+    .filter(child => child.meta?.menuName)
+    .map(child => ({
+      id: child.name,
+      name: child.meta.menuName,
+      icon: child.meta.menuIcon,
+      path: child.path === '' ? '/admin' : `/admin/${child.path}`,
+      requiresAdmin: child.meta.requiresAdmin || false
+    }))
+})
 
 // 过滤菜单，只显示有权限的菜单项
 const filteredMenuList = computed(() => {
@@ -159,6 +132,11 @@ const goToProfile = () => {
   if (userStore.userInfo?.id) {
     router.push(`/profile/${userStore.userInfo.id}`)
   }
+}
+
+// 跳转到客户端首页
+const goToClientHome = () => {
+  router.push('/')
 }
 </script>
 
@@ -221,6 +199,16 @@ const goToProfile = () => {
               </div>
             </div>
             <div v-if="!isCollapse" class="logout-section">
+              <el-button
+                type="primary"
+                size="small"
+                @click="goToClientHome"
+                class="logout-btn"
+                plain
+              >
+                <el-icon><House /></el-icon>
+                前往首页
+              </el-button>
               <el-button
                 type="primary"
                 size="small"
@@ -308,16 +296,28 @@ const goToProfile = () => {
               <div class="email">{{ userStore.userInfo?.email || 'user@example.com' }}</div>
             </div>
           </div>
-          <el-button
-            type="primary"
-            size="small"
-            @click="handleLogout"
-            class="logout-btn"
-            plain
-          >
-            <el-icon><Switch /></el-icon>
-            退出登录
-          </el-button>
+          <div class="logout-section">
+            <el-button
+              type="primary"
+              size="small"
+              @click="goToClientHome"
+              class="logout-btn"
+              plain
+            >
+              <el-icon><House /></el-icon>
+              前往首页
+            </el-button>
+            <el-button
+              type="primary"
+              size="small"
+              @click="handleLogout"
+              class="logout-btn"
+              plain
+            >
+              <el-icon><Switch /></el-icon>
+              退出登录
+            </el-button>
+          </div>
         </div>
       </div>
     </el-drawer>
@@ -591,10 +591,12 @@ const goToProfile = () => {
 
 .logout-section {
   width: 100%;
+  display: flex;
+  gap: 8px;
 }
 
 .logout-btn {
-  width: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
