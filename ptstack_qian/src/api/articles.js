@@ -40,7 +40,7 @@ export function getArticleById(id) {
  * @param {string} data.summary - 文章摘要
  * @param {string} data.cover - 封面图片
  * @param {number} data.category_id - 分类ID
- * @param {number} data.status - 状态（0草稿/1已发布）
+ * @param {number} data.status - 状态（0草稿/1公开/2私密）
  * @param {Array<string>} data.tags - 标签列表
  * @returns {Promise<{message: string, articleId: number}>}
  */
@@ -61,7 +61,7 @@ export function createArticle(data) {
  * @param {string} data.summary - 文章摘要
  * @param {string} data.cover - 封面图片
  * @param {number} data.category_id - 分类ID
- * @param {number} data.status - 状态（0草稿/1已发布）
+ * @param {number} data.status - 状态（0草稿/1公开/2私密）
  * @param {Array<string>} data.tags - 标签列表
  * @returns {Promise<{message: string}>}
  */

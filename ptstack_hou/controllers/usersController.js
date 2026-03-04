@@ -68,7 +68,7 @@ export const getUserPublicProfile = async (req, res) => {
     const [user] = await execute(
       `
       SELECT id, public_id, username, nickname, email, avatar, bio, follower_count, following_count,
-             created_at, is_admin
+             created_at, is_admin, show_followers, show_following, show_articles, show_comments
       FROM users
       WHERE public_id = ?
     `,
@@ -103,21 +103,30 @@ export const getUserPublicProfile = async (req, res) => {
       [user.id],
     )
 
+    // 根据隐私设置控制返回的数据
+    const isOwnProfile = currentUserId === user.id
     const publicUser = {
       id: user.public_id,
       username: user.username,
       nickname: user.nickname,
       avatar: user.avatar,
       bio: user.bio,
-      follower_count: user.follower_count,
-      following_count: user.following_count,
+      follower_count: (isOwnProfile || user.show_followers) ? user.follower_count : 0,
+      following_count: (isOwnProfile || user.show_following) ? user.following_count : 0,
       created_at: user.created_at,
       isSubscribed,
-      isOwn: currentUserId === user.id,
-      article_count: articleCount.count,
-      total_views: totalViews.total,
-      comment_count: commentCount.count,
+      isOwn: isOwnProfile,
+      article_count: (isOwnProfile || user.show_articles) ? articleCount.count : 0,
+      total_views: (isOwnProfile || user.show_articles) ? totalViews.total : 0,
+      comment_count: (isOwnProfile || user.show_comments) ? commentCount.count : 0,
       isAdmin: user.is_admin === 1,
+      // 返回隐私设置（仅对自己可见）
+      ...(isOwnProfile && {
+        show_followers: user.show_followers === 1,
+        show_following: user.show_following === 1,
+        show_articles: user.show_articles === 1,
+        show_comments: user.show_comments === 1,
+      }),
     }
 
     res.json({ user: publicUser })
@@ -130,7 +139,7 @@ export const getUserPublicProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id
-    const { nickname, avatar, bio } = req.body
+    const { nickname, avatar, bio, show_followers, show_following, show_articles, show_comments } = req.body
 
     // 如果要更新头像，先获取旧头像URL
     let oldAvatar = null
@@ -162,6 +171,27 @@ export const updateProfile = async (req, res) => {
       updateValues.push(bio || null)
     }
 
+    // 处理隐私设置字段
+    if (show_followers !== undefined) {
+      updateFields.push('show_followers = ?')
+      updateValues.push(show_followers ? 1 : 0)
+    }
+
+    if (show_following !== undefined) {
+      updateFields.push('show_following = ?')
+      updateValues.push(show_following ? 1 : 0)
+    }
+
+    if (show_articles !== undefined) {
+      updateFields.push('show_articles = ?')
+      updateValues.push(show_articles ? 1 : 0)
+    }
+
+    if (show_comments !== undefined) {
+      updateFields.push('show_comments = ?')
+      updateValues.push(show_comments ? 1 : 0)
+    }
+
     if (nickname) {
       updateFields.push('profile_completed = 1')
     }
@@ -180,7 +210,7 @@ export const updateProfile = async (req, res) => {
     }
 
     const users = await execute(
-      'SELECT id, public_id, username, nickname, email, avatar, profile_completed, bio FROM users WHERE id = ?',
+      'SELECT id, public_id, username, nickname, email, avatar, profile_completed, bio, show_followers, show_following, show_articles, show_comments FROM users WHERE id = ?',
       [userId],
     )
 
@@ -194,6 +224,10 @@ export const updateProfile = async (req, res) => {
         avatar: users[0].avatar,
         profileCompleted: users[0].profile_completed === 1,
         bio: users[0].bio,
+        show_followers: users[0].show_followers === 1,
+        show_following: users[0].show_following === 1,
+        show_articles: users[0].show_articles === 1,
+        show_comments: users[0].show_comments === 1,
       },
     })
   } catch (error) {
@@ -213,17 +247,29 @@ export const getUserArticles = async (req, res) => {
       sortOrder = 'desc',
     } = req.query
     const offset = (page - 1) * pageSize
+    const currentUserId = req.user?.id
 
     const validSortFields = ['created_at', 'view_count', 'like_count']
     const validOrder = ['asc', 'desc']
     const sortField = validSortFields.includes(sort) ? sort : 'created_at'
     const order = validOrder.includes(sortOrder) ? sortOrder : 'desc'
 
-    const users = await execute('SELECT id FROM users WHERE public_id = ?', [userId])
-    if (users.length === 0) {
+    const [user] = await execute('SELECT id, show_articles FROM users WHERE public_id = ?', [userId])
+    if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
-    const authorId = users[0].id
+    const authorId = user.id
+
+    // 检查隐私设置
+    const isOwnProfile = currentUserId === authorId
+    if (!isOwnProfile && !user.show_articles) {
+      return res.json({
+        articles: [],
+        total: 0,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+      })
+    }
 
     let whereClause = 'WHERE a.author_id = ? AND a.status = 1'
     let queryParams = [authorId]
@@ -292,17 +338,29 @@ export const getUserComments = async (req, res) => {
       sortOrder = 'desc',
     } = req.query
     const offset = (page - 1) * pageSize
+    const currentUserId = req.user?.id
 
     const validSortFields = ['created_at', 'like_count']
     const validOrder = ['asc', 'desc']
     const sortField = validSortFields.includes(sort) ? sort : 'created_at'
     const order = validOrder.includes(sortOrder) ? sortOrder : 'desc'
 
-    const users = await execute('SELECT id FROM users WHERE public_id = ?', [userId])
-    if (users.length === 0) {
+    const [user] = await execute('SELECT id, show_comments FROM users WHERE public_id = ?', [userId])
+    if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
-    const commentUserId = users[0].id
+    const commentUserId = user.id
+
+    // 检查隐私设置
+    const isOwnProfile = currentUserId === commentUserId
+    if (!isOwnProfile && !user.show_comments) {
+      return res.json({
+        comments: [],
+        total: 0,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+      })
+    }
 
     let whereClause = 'WHERE c.user_id = ?'
     let queryParams = [commentUserId]

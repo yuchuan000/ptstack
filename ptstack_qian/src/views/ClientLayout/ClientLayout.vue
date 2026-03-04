@@ -237,7 +237,7 @@ const handleLogout = () => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .client-layout {
   min-height: 100vh;
   display: flex;
@@ -256,74 +256,76 @@ const handleLogout = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   z-index: 1000;
   transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
 
-/* 隐藏导航栏 - 优先级最高 */
-.client-header.header-hidden {
-  transform: translateY(-100%) !important;
-}
+  /* 隐藏导航栏 - 优先级最高 */
+  &.header-hidden {
+    transform: translateY(-100%) !important;
+  }
 
-/* 首页透明头部 */
-.client-header.transparent-header {
-  background: transparent;
-  box-shadow: none;
-}
+  /* 首页透明头部 */
+  &.transparent-header {
+    background: transparent;
+    box-shadow: none;
 
-.client-header.transparent-header .logo-text,
-.client-header.transparent-header .nav-item,
-.client-header.transparent-header .user-name,
-.client-header.transparent-header .dropdown-arrow {
-  color: #fff;
-}
+    .logo-text,
+    .nav-item,
+    .user-name,
+    .dropdown-arrow {
+      color: #fff;
+    }
 
-.client-header.transparent-header .nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
 
-.client-header.transparent-header .nav-item.active {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
+    .nav-item.active {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
 
-.client-header.transparent-header .user-info:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
+    .user-info:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
 
-:deep(.client-header.transparent-header .auth-buttons .el-button) {
-  color: #fff;
-  border-color: #fff;
-  background: transparent;
-}
+    :deep(.auth-buttons .el-button) {
+      color: #fff;
+      border-color: #fff;
+      background: transparent;
 
-:deep(.client-header.transparent-header .auth-buttons .el-button--primary) {
-  background: #fff;
-  color: #1d2129;
-  border-color: #fff;
-}
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border-color: #fff;
+      }
+    }
 
-/* 文章中心页面的登录按钮样式 */
-:deep(.client-header.article-center-header .auth-buttons .el-button--primary) {
-  background: #165dff;
-  color: #fff;
-  border-color: #165dff;
-}
+    :deep(.auth-buttons .el-button--primary) {
+      background: #fff;
+      color: #1d2129;
+      border-color: #fff;
 
-:deep(.client-header.article-center-header .auth-buttons .el-button--primary:hover) {
-  background: #4080ff;
-  border-color: #4080ff;
-}
+      &:hover {
+        background: #f2f3f5;
+        color: #1d2129;
+        border-color: #fff;
+      }
+    }
+  }
 
-:deep(.client-header.transparent-header .auth-buttons .el-button:hover) {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: #fff;
-}
+  /* 文章中心页面的登录按钮样式 */
+  &.article-center-header {
+    :deep(.auth-buttons .el-button--primary) {
+      background: #165dff;
+      color: #fff;
+      border-color: #165dff;
 
-:deep(.client-header.transparent-header .auth-buttons .el-button--primary:hover) {
-  background: #f2f3f5;
-  color: #1d2129;
-  border-color: #fff;
+      &:hover {
+        background: #4080ff;
+        border-color: #4080ff;
+      }
+    }
+  }
 }
 
 .header-container {
@@ -342,10 +344,10 @@ const handleLogout = () => {
   align-items: center;
   cursor: pointer;
   transition: opacity 0.2s;
-}
 
-.header-logo:hover {
-  opacity: 0.8;
+  &:hover {
+    opacity: 0.8;
+  }
 }
 
 .logo-text {
@@ -373,16 +375,16 @@ const handleLogout = () => {
   color: #4e5969;
   font-size: 15px;
   font-weight: 500;
-}
 
-.nav-item:hover {
-  background: #f2f3f5;
-  color: #165dff;
-}
+  &:hover {
+    background: #f2f3f5;
+    color: #165dff;
+  }
 
-.nav-item.active {
-  background: #e8f0ff;
-  color: #165dff;
+  &.active {
+    background: #e8f0ff;
+    color: #165dff;
+  }
 }
 
 /* 用户信息区域 */
@@ -399,10 +401,10 @@ const handleLogout = () => {
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s;
-}
 
-.user-info:hover {
-  background: #f2f3f5;
+  &:hover {
+    background: #f2f3f5;
+  }
 }
 
 .user-avatar {
@@ -473,11 +475,11 @@ const handleLogout = () => {
   flex: 1;
   margin-top: 64px;
   min-height: calc(100vh - 64px - 60px);
-}
 
-/* 首页内容区域 - 始终无上边距，因为导航栏是透明的 */
-.client-main.home-page {
-  margin-top: 0;
+  /* 首页内容区域 - 始终无上边距，因为导航栏是透明的 */
+  &.home-page {
+    margin-top: 0;
+  }
 }
 
 /* 回到顶部按钮 */
@@ -499,23 +501,23 @@ const handleLogout = () => {
   transform: translateY(20px);
   transition: all 0.3s ease;
   z-index: 999;
-}
 
-.back-to-top.show {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
+  &.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
 
-.back-to-top:hover {
-  background: #165dff;
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(22, 93, 255, 0.3);
-}
+  &:hover {
+    background: #165dff;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.3);
+  }
 
-.back-to-top .el-icon {
-  font-size: 20px;
+  .el-icon {
+    font-size: 20px;
+  }
 }
 
 /* 底部版权 */
@@ -556,10 +558,10 @@ const handleLogout = () => {
   .nav-item {
     padding: 8px 12px;
     font-size: 13px;
-  }
 
-  .nav-item span {
-    display: none;
+    span {
+      display: none;
+    }
   }
 
   .user-info {

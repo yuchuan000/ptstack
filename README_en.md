@@ -73,6 +73,15 @@ Frontend application will start at http://localhost:5173
 
 ## 📋 Version History
 
+### v0.6 - Router System Optimization
+- 🔧 Split navigation guard logic, extracted permission check functions (checkIsAdmin, checkIsAuthenticated, checkNeedsProfileCompletion)
+- 🔧 Created independent guards.js file and migrated navigation guard logic
+- 🔧 Fixed manualChunks configuration in Vite, using functional approach for optimized code splitting
+- 🔧 Extracted route path constants (ROUTE_PATHS, ROUTE_NAMES, ROUTE_META, VIEW_TYPES) to reduce magic strings
+- 🔧 Added static resource hash naming configuration (assetFileNames, chunkFileNames, entryFileNames) for long-term caching
+- 🔧 Modularized route configuration, split into three independent modules: admin.js, client.js, public.js
+- 🔧 Added necessary comments and rewrote variable naming, following camelCase convention and unified boolean prefix rules
+
 ### v0.5 - Client Pages Refactoring
 - ✨ Added ClientHomePage - Modern homepage design with dynamic text carousel and number animations
 - ✨ Added ClientArticleCenterPage - Category sidebar and article list display

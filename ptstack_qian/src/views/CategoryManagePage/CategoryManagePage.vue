@@ -15,6 +15,9 @@ const goToUserProfile = (userId) => {
   router.push(`/profile/${userId}`)
 }
 
+// 判断是否为移动端
+const isMobile = computed(() => window.innerWidth < 768)
+
 const loading = ref(false)
 const categories = ref([])
 const applications = ref([])
@@ -297,7 +300,8 @@ onMounted(() => {
           </div>
         </div>
 
-        <el-table :data="filteredApplications" style="width: 100%">
+        <!-- PC端表格 -->
+        <el-table v-if="!isMobile" :data="filteredApplications" style="width: 100%">
           <el-table-column prop="name" label="分类名称" width="150" />
           <el-table-column prop="description" label="分类描述" min-width="200" />
           <el-table-column label="申请人" width="150">
@@ -340,6 +344,37 @@ onMounted(() => {
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 移动端卡片列表 -->
+        <div v-else class="mobile-card-list">
+          <div
+            v-for="app in filteredApplications"
+            :key="app.id"
+            class="mobile-application-card"
+          >
+            <div class="card-header-row">
+              <span class="card-title">{{ app.name }}</span>
+              <el-tag :type="getStatusType(app.status)" size="small">{{ getStatusText(app.status) }}</el-tag>
+            </div>
+            <div class="card-desc">{{ app.description || '暂无描述' }}</div>
+            <div class="card-meta-row">
+              <div class="card-applicant" @click="goToUserProfile(app.user_id)">
+                <div class="applicant-avatar-tiny">
+                  <img v-if="app.avatar" :src="getFullUrl(app.avatar)" alt="avatar">
+                  <span v-else>{{ (app.nickname || app.username || '').charAt(0) }}</span>
+                </div>
+                <span class="applicant-name">{{ app.nickname || app.username }}</span>
+              </div>
+              <span class="card-time">{{ app.created_at }}</span>
+            </div>
+            <div v-if="app.review_comment" class="card-review-comment">
+              审核意见: {{ app.review_comment }}
+            </div>
+            <div v-if="app.status === 0" class="card-actions-row">
+              <el-button type="primary" size="small" @click="openReviewDialog(app)">审核</el-button>
+            </div>
+          </div>
+        </div>
 
         <el-empty v-if="filteredApplications.length === 0 && !applicationsLoading" description="暂无分类申请" />
       </div>
@@ -651,9 +686,143 @@ onMounted(() => {
   margin-top: 24px;
 }
 
+/* 移动端卡片列表样式 */
+.mobile-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-application-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f2f3f5;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d2129;
+}
+
+.card-desc {
+  font-size: 13px;
+  color: #86909c;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.card-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-applicant {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.applicant-avatar-tiny {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.applicant-name {
+  font-size: 13px;
+  color: #4e5969;
+}
+
+.card-time {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.card-review-comment {
+  font-size: 12px;
+  color: #86909c;
+  background: #f7f8fa;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.card-actions-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f2f3f5;
+}
+
 @media (max-width: 768px) {
+  .category-manage-page {
+    padding: 16px;
+  }
+
+  .card-header {
+    padding: 16px;
+  }
+
+  .tabs-section {
+    flex-wrap: wrap;
+  }
+
+  .tab-item {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .categories-container,
+  .applications-container {
+    padding: 16px;
+  }
+
   .category-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .category-card {
+    padding: 16px;
+  }
+
+  .category-icon {
+    width: 48px;
+    height: 48px;
+
+    span {
+      font-size: 20px;
+    }
+  }
+
+  .category-actions {
+    opacity: 1;
   }
 }
 </style>

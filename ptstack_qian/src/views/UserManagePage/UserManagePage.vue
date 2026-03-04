@@ -22,7 +22,8 @@
 
     <div class="content-wrapper">
       <el-card class="users-card">
-        <el-table :data="users" v-loading="loading" stripe>
+        <!-- PC端表格 -->
+        <el-table v-if="!isMobile" :data="users" v-loading="loading" stripe>
           <el-table-column label="用户ID" width="100">
             <template #default="{ row }">
               <el-tag size="small" type="info">{{ row.id }}</el-tag>
@@ -50,6 +51,41 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 移动端卡片列表 -->
+        <div v-else class="mobile-card-list">
+          <div
+            v-for="user in users"
+            :key="user.id"
+            class="mobile-user-card"
+          >
+            <div class="card-header-row">
+              <div class="card-user-info">
+                <span class="card-username">{{ user.username }}</span>
+                <el-tag size="small" type="info">#{{ user.id }}</el-tag>
+              </div>
+              <el-tag :type="user.isAdmin ? 'success' : 'info'" size="small">
+                {{ user.isAdmin ? '管理员' : '普通用户' }}
+              </el-tag>
+            </div>
+            <div class="card-detail-row">
+              <span class="detail-label">昵称:</span>
+              <span class="detail-value">{{ user.nickname || '-' }}</span>
+            </div>
+            <div class="card-detail-row">
+              <span class="detail-label">邮箱:</span>
+              <span class="detail-value">{{ user.email }}</span>
+            </div>
+            <div class="card-detail-row">
+              <span class="detail-label">注册时间:</span>
+              <span class="detail-value">{{ formatDate(user.created_at) }}</span>
+            </div>
+            <div class="card-actions-row">
+              <el-button size="small" @click="handleEdit(user)">编辑</el-button>
+              <el-button size="small" type="danger" @click="handleDelete(user)">删除</el-button>
+            </div>
+          </div>
+        </div>
 
         <div class="pagination-wrapper">
           <el-pagination
@@ -123,7 +159,7 @@
 <script setup>
 // 用户管理页面组件
 // 功能：管理员用于管理系统用户，编辑用户信息和分配权限
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader/PageHeader.vue'
@@ -132,6 +168,9 @@ import {
   updateUserAdmin,
   deleteUserAdmin
 } from '@/api/users'
+
+// 判断是否为移动端
+const isMobile = computed(() => window.innerWidth < 768)
 
 const loading = ref(false)
 const users = ref([])
@@ -283,5 +322,111 @@ onMounted(() => {
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid #e5e6eb;
+}
+
+/* 移动端卡片列表样式 */
+.mobile-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.mobile-user-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f2f3f5;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-username {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d2129;
+}
+
+.card-detail-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+
+  .detail-label {
+    color: #86909c;
+    flex-shrink: 0;
+  }
+
+  .detail-value {
+    color: #4e5969;
+    word-break: break-all;
+  }
+}
+
+.card-actions-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f2f3f5;
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .user-manage-page {
+    padding: 16px;
+  }
+
+  .content-wrapper {
+    margin-top: 16px;
+  }
+
+  .users-card {
+    .el-card__body {
+      padding: 0;
+    }
+  }
+
+  .pagination-wrapper {
+    padding: 16px;
+    margin-top: 0;
+  }
+
+  .pagination-wrapper .el-pagination {
+    .el-pagination__sizes,
+    .el-pagination__total {
+      display: none;
+    }
+
+    .el-pagination__jump {
+      display: none;
+    }
+
+    .el-pagination__button {
+      min-width: 32px;
+      height: 32px;
+      line-height: 32px;
+      font-size: 12px;
+    }
+
+    .el-pagination__page-btn {
+      min-width: 32px;
+      height: 32px;
+      line-height: 32px;
+      font-size: 12px;
+    }
+  }
 }
 </style>

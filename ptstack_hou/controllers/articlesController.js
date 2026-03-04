@@ -33,9 +33,15 @@ export const getArticles = async (req, res) => {
       order = 'desc',
     } = req.query
     const offset = (page - 1) * pageSize
+    const currentUserId = req.user?.id
 
     let whereClause = 'WHERE a.status = 1'
     const params = []
+
+    if (currentUserId) {
+      whereClause = `WHERE (a.status = 1 OR (a.status = 2 AND a.author_id = ?))`
+      params.push(currentUserId)
+    }
 
     if (category) {
       whereClause += ' AND a.category_id = ?'
@@ -126,6 +132,10 @@ export const getArticleById = async (req, res) => {
       return res.status(403).json({ message: '无权访问此文章' })
     }
 
+    if (article.status === 2 && (!currentUserId || currentUserId !== article.original_author_id)) {
+      return res.status(403).json({ message: '无权访问此私密文章' })
+    }
+
     if (article.status === 1) {
       await execute('UPDATE articles SET view_count = view_count + 1 WHERE public_id = ?', [id])
     }
@@ -196,7 +206,7 @@ export const createArticle = async (req, res) => {
     }
 
     res.status(201).json({
-      message: status === 1 ? '文章发布成功' : '草稿保存成功',
+      message: status === 0 ? '草稿保存成功' : status === 2 ? '私密文章创建成功' : '文章发布成功',
       articleId: publicId,
     })
   } catch (error) {

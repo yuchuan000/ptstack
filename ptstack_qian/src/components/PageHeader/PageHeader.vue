@@ -59,4 +59,39 @@ defineProps({
     gap: 12px;
   }
 }
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 0;
+    margin-bottom: 16px;
+
+    .header-left {
+      width: 100%;
+
+      .header-info {
+        .header-title {
+          font-size: 24px;
+        }
+      }
+    }
+
+    .header-actions {
+      width: 100%;
+      flex-wrap: wrap;
+
+      .el-input {
+        width: 100% !important;
+        margin-right: 0 !important;
+        margin-bottom: 8px;
+      }
+
+      .el-button {
+        width: 100%;
+      }
+    }
+  }
+}
 </style>

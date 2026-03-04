@@ -413,7 +413,7 @@ const handleSubmit = async () => {
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .complete-profile-page {
   min-height: 100vh;
   display: flex;
@@ -427,28 +427,28 @@ const handleSubmit = async () => {
   justify-content: center;
   position: relative;
   overflow: hidden;
-}
 
-.welcome-section::before {
-  content: '';
-  position: absolute;
-  top: -100px;
-  right: -100px;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-}
+  &::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+  }
 
-.welcome-section::after {
-  content: '';
-  position: absolute;
-  bottom: -150px;
-  left: -80px;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -150px;
+    left: -80px;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+  }
 }
 
 .welcome-decoration {
@@ -504,10 +504,10 @@ const handleSubmit = async () => {
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-}
 
-.info-item:last-child {
-  margin-bottom: 0;
+  &:last-child {
+    margin-bottom: 0;
+  }
 }
 
 .info-icon {

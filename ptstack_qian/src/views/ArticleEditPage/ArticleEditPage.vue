@@ -30,7 +30,8 @@ const formData = ref({
   tags: [],
   summary: '',
   cover: '',
-  status: 1
+  status: 1,
+  visibility: 1
 })
 
 const categories = ref([])
@@ -49,7 +50,6 @@ const fetchArticle = async () => {
   try {
     loading.value = true
     const res = await getArticleById(route.params.id)
-    console.log('获取到的文章数据:', res)
     formData.value = {
       title: res.title || '',
       content: res.content || '',
@@ -57,9 +57,9 @@ const fetchArticle = async () => {
       tags: (res.tags || []).map(tag => typeof tag === 'object' ? tag.name : tag),
       summary: res.summary || '',
       cover: res.cover || '',
-      status: res.status !== undefined ? res.status : 1
+      status: res.status !== undefined ? res.status : 1,
+      visibility: res.status === 2 ? 2 : 1
     }
-    console.log('设置后的表单数据:', formData.value)
   } catch (error) {
     console.error('获取文章失败:', error)
     ElMessage.error(error.response?.data?.message || '获取文章失败')
@@ -145,7 +145,11 @@ const handleSubmit = async (saveAsDraft = false) => {
     }
   }
 
-  formData.value.status = saveAsDraft ? 0 : 1
+  if (saveAsDraft) {
+    formData.value.status = 0
+  } else {
+    formData.value.status = formData.value.visibility === 2 ? 2 : 1
+  }
 
   try {
     if (saveAsDraft) {
@@ -290,8 +294,8 @@ onMounted(() => {
           </div>
 
           <div class="form-section">
+            <label class="form-label">文章分类</label>
             <div class="category-label-row">
-              <label class="form-label">文章分类</label>
               <el-button
                 text
                 size="small"
@@ -315,6 +319,24 @@ onMounted(() => {
                 :value="cat.id"
               />
             </el-select>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label">可见性</label>
+            <el-radio-group v-model="formData.visibility" size="large" class="visibility-radio">
+              <el-radio :value="1">
+                <div class="radio-content">
+                  <div class="radio-title">公开</div>
+                  <div class="radio-desc">所有人可见</div>
+                </div>
+              </el-radio>
+              <el-radio :value="2">
+                <div class="radio-content">
+                  <div class="radio-title">私密</div>
+                  <div class="radio-desc">仅自己可见</div>
+                </div>
+              </el-radio>
+            </el-radio-group>
           </div>
 
           <div class="form-section">
@@ -567,6 +589,53 @@ onMounted(() => {
   }
 }
 
+.visibility-radio {
+  width: 100%;
+  display: flex;
+  gap: 16px;
+
+  :deep(.el-radio) {
+    flex: 1;
+    margin: 0;
+    padding: 16px;
+    border: 2px solid #e5e6eb;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #165dff;
+      background: rgba(22, 93, 255, 0.02);
+    }
+
+    &.is-checked {
+      border-color: #165dff;
+      background: rgba(22, 93, 255, 0.05);
+    }
+
+    .el-radio__label {
+      width: 100%;
+      padding-left: 8px;
+    }
+  }
+
+  .radio-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .radio-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1d2129;
+  }
+
+  .radio-desc {
+    font-size: 13px;
+    color: #86909c;
+  }
+}
+
 .tags-container {
   display: flex;
   flex-wrap: wrap;
@@ -639,6 +708,15 @@ onMounted(() => {
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid #e5e6eb;
+
+  .el-button {
+    margin: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
 }
 
 .action-btn {

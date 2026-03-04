@@ -1,6 +1,7 @@
 # 后端服务说明
 
 ## 技术栈
+
 - Express.js 5.2.1
 - MySQL 8.0+
 - bcrypt (密码加密)
@@ -101,18 +102,22 @@ ptstack_hou/
 ## 执行步骤
 
 ### 1. 前提条件
+
 - 已安装 Node.js (v20+)
 - 已安装 MySQL 8.0+ 数据库服务
 - 已安装 pnpm 包管理器
 
 ### 2. 安装依赖
+
 ```bash
 # 在 ptstack_hou 目录下执行
 pnpm install
 ```
 
 ### 3. 配置环境变量
+
 创建 `.env` 文件，配置数据库连接信息：
+
 ```env
 # 数据库连接配置
 DB_HOST=localhost
@@ -140,12 +145,14 @@ SMTP_PASS=your_email_password
 ```
 
 ### 4. 初始化数据库
+
 ```bash
 # 在 ptstack_hou 目录下执行
 node scripts/setup-database.js
 ```
 
 执行结果示例：
+
 ```
 开始初始化数据库...
 已连接到MySQL服务器
@@ -156,6 +163,7 @@ node scripts/setup-database.js
 ```
 
 ### 5. 启动服务
+
 ```bash
 # 在 ptstack_hou 目录下执行
 pnpm start
@@ -166,6 +174,7 @@ pnpm start
 ### 6. 测试登录注册功能
 
 #### 测试注册接口
+
 ```bash
 # 使用 curl 命令测试
 curl -X POST http://localhost:3000/auth/register \
@@ -174,6 +183,7 @@ curl -X POST http://localhost:3000/auth/register \
 ```
 
 预期响应：
+
 ```json
 {
   "message": "注册成功",
@@ -186,6 +196,7 @@ curl -X POST http://localhost:3000/auth/register \
 ```
 
 #### 测试登录接口
+
 ```bash
 # 使用 curl 命令测试
 curl -X POST http://localhost:3000/auth/login \
@@ -194,6 +205,7 @@ curl -X POST http://localhost:3000/auth/login \
 ```
 
 预期响应：
+
 ```json
 {
   "message": "登录成功",

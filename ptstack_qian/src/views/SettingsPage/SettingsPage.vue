@@ -29,6 +29,7 @@ const startX = ref(0)
 const startY = ref(0)
 const imageRef = ref(null)
 const windowWidth = ref(window.innerWidth)
+const saveTimeout = ref(null)
 
 const isMobile = computed(() => windowWidth.value < 768)
 
@@ -277,17 +278,39 @@ const saveAvatar = async () => {
 }
 
 const handleSavePrivacy = async () => {
-  try {
-    loading.value = true
-    const res = await updateProfile(privacyForm)
-    userStore.updateUserInfo(res.user)
-    ElMessage.success('隐私设置已保存')
-  } catch (error) {
-    console.error('保存失败:', error)
-    ElMessage.error('保存失败')
-  } finally {
-    loading.value = false
+  // 防抖处理，避免频繁请求
+  if (saveTimeout.value) {
+    clearTimeout(saveTimeout.value)
   }
+
+  saveTimeout.value = setTimeout(async () => {
+    try {
+      // 检查是否有实际变化
+      const currentUser = userStore.userInfo
+      if (!currentUser) return
+
+      // 构建包含所有隐私设置字段的对象
+      const updateData = {
+        show_followers: privacyForm.show_followers,
+        show_following: privacyForm.show_following,
+        show_articles: privacyForm.show_articles,
+        show_comments: privacyForm.show_comments
+      }
+
+      loading.value = true
+      const res = await updateProfile(updateData)
+      userStore.updateUserInfo(res.user)
+      ElMessage.success('隐私设置已保存')
+    } catch (error) {
+      console.error('保存失败:', error)
+      // 只在非400错误时显示错误提示，避免重复提示
+      if (error.response?.status !== 400) {
+        ElMessage.error('保存失败')
+      }
+    } finally {
+      loading.value = false
+    }
+  }, 300)
 }
 
 const goToProfile = () => {
@@ -329,10 +352,6 @@ const goToProfile = () => {
       <div class="tab-content">
         <div v-if="activeTab === 'profile'" class="tab-panel">
           <div class="view-section">
-            <div class="section-header">
-              <div class="section-title">个人资料</div>
-            </div>
-
             <div class="profile-info">
               <div class="info-item avatar-item">
                 <div class="info-label">头像</div>
@@ -445,7 +464,7 @@ const goToProfile = () => {
                   <div class="option-title">显示订阅者列表</div>
                   <div class="option-desc">允许其他人查看你的订阅者列表</div>
                 </div>
-                <el-switch v-model="privacyForm.show_followers" size="large" />
+                <el-switch v-model="privacyForm.show_followers" size="large" @change="handleSavePrivacy" />
               </div>
 
               <div class="privacy-option">
@@ -453,7 +472,7 @@ const goToProfile = () => {
                   <div class="option-title">显示订阅列表</div>
                   <div class="option-desc">允许其他人查看你订阅了哪些用户</div>
                 </div>
-                <el-switch v-model="privacyForm.show_following" size="large" />
+                <el-switch v-model="privacyForm.show_following" size="large" @change="handleSavePrivacy" />
               </div>
 
               <div class="privacy-option">
@@ -461,7 +480,7 @@ const goToProfile = () => {
                   <div class="option-title">显示发布的文章</div>
                   <div class="option-desc">允许其他人在你的主页看到你发布的文章</div>
                 </div>
-                <el-switch v-model="privacyForm.show_articles" size="large" />
+                <el-switch v-model="privacyForm.show_articles" size="large" @change="handleSavePrivacy" />
               </div>
 
               <div class="privacy-option">
@@ -469,21 +488,8 @@ const goToProfile = () => {
                   <div class="option-title">显示发表的评论</div>
                   <div class="option-desc">允许其他人在你的主页看到你发表的评论</div>
                 </div>
-                <el-switch v-model="privacyForm.show_comments" size="large" />
+                <el-switch v-model="privacyForm.show_comments" size="large" @change="handleSavePrivacy" />
               </div>
-            </div>
-
-            <div class="form-footer">
-              <el-button
-                type="primary"
-                size="large"
-                @click="handleSavePrivacy"
-                :loading="loading"
-                class="save-btn"
-              >
-                <el-icon><Check /></el-icon>
-                保存设置
-              </el-button>
             </div>
           </div>
         </div>
@@ -606,6 +612,8 @@ const goToProfile = () => {
 
 .tab-panel {
   max-width: 700px;
+  margin-left: 40px;
+  padding-right: 40px;
 }
 
 .view-section {
@@ -819,29 +827,7 @@ const goToProfile = () => {
   line-height: 1.5;
 }
 
-.form-footer {
-  display: flex;
-  justify-content: flex-start;
-  padding-top: 8px;
-}
 
-.save-btn {
-  border-radius: 8px;
-  height: 48px;
-  padding: 0 28px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-  border: none;
-  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
-
-  &:hover {
-    background: linear-gradient(135deg, #4080ff 0%, #165dff 100%);
-    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.35);
-  }
-}
 
 .avatar-dialog {
   :deep(.el-dialog__body) {
@@ -942,14 +928,30 @@ const goToProfile = () => {
     width: 100%;
   }
 
-  .save-btn {
-    width: 100%;
-    justify-content: center;
+  .tab-panel {
+    margin-left: 20px;
+    padding-right: 20px;
   }
 
   .cropper-container {
     width: 250px;
     height: 250px;
+  }
+
+  .header-actions {
+    width: 100%;
+
+    .el-button {
+      width: 100%;
+    }
+  }
+
+  .edit-actions {
+    flex-direction: column;
+
+    .el-button {
+      width: 100%;
+    }
   }
 }
 </style>

@@ -16,9 +16,10 @@ import {
   Document,
   HomeFilled,
   FolderAdd,
-  Check
+  Check,
+  Finished
 } from '@element-plus/icons-vue'
-import { getNotifications, markAsRead, deleteNotification } from '@/api/notifications'
+import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from '@/api/notifications'
 import { getAnnouncements, markAnnouncementRead } from '@/api/announcements'
 
 const router = useRouter()
@@ -169,6 +170,44 @@ const handleDelete = async (notification) => {
   }
 }
 
+// 一键已读功能
+const handleMarkAllAsRead = async () => {
+  const currentUnreadCount = getTabUnreadCount(currentType.value)
+  if (currentUnreadCount === 0) {
+    ElMessage.info('当前没有未读消息')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm('确定要将所有消息标记为已读吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'info'
+    })
+
+    await markAllAsRead()
+
+    // 更新本地状态
+    if (currentType.value === 'all' || currentType.value === 'announcement') {
+      announcements.value.forEach(a => { a.is_read = true })
+    }
+    if (currentType.value !== 'announcement') {
+      notifications.value.forEach(n => { n.is_read = 1 })
+    }
+
+    // 更新未读计数
+    unreadCount.value = 0
+    typeUnreadCounts.value = {}
+
+    ElMessage.success('已全部标记为已读')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('标记已读失败:', error)
+      ElMessage.error('操作失败')
+    }
+  }
+}
+
 const loadMore = () => {
   if (hasMore.value && !loading.value) {
     page.value++
@@ -263,6 +302,18 @@ onMounted(() => {
           <el-icon><ArrowLeft /></el-icon>
         </el-button>
         <h1 class="page-title">消息通知</h1>
+      </div>
+      <div class="nav-right">
+        <el-button
+          v-if="getTabUnreadCount(currentType) > 0"
+          type="primary"
+          text
+          class="mark-all-read-btn"
+          @click="handleMarkAllAsRead"
+        >
+          <el-icon><Finished /></el-icon>
+          一键已读
+        </el-button>
       </div>
     </div>
 
@@ -498,6 +549,26 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.mark-all-read-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(22, 93, 255, 0.1);
+    transform: scale(1.02);
+  }
+
+  .el-icon {
+    font-size: 16px;
+  }
 }
 
 .total-unread-badge {

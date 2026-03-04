@@ -301,7 +301,7 @@ const goToArticleDetail = (id) => {
 // 跳转到设置页的函数
 const goToSettings = () => {
   // 使用路由实例跳转到设置页
-  router.push('/settings')
+  router.push('/admin/settings')
 }
 
 // 返回上一页的函数

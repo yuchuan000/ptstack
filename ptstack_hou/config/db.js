@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename)
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'
 dotenv.config({ path: path.join(__dirname, '..', envFile) })
 
-// 创建数据库连接池
+// 创建数据库连接池（仅保留 MySQL2 支持的核心配置）
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -19,19 +19,11 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  // 连接池优化配置
+  // 连接池优化配置（MySQL2 支持）
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  // 增加连接超时和重连配置
+  // 仅保留 Connection 支持的合法超时配置
   connectTimeout: 30000,
-  acquireTimeout: 30000,
-  timeout: 60000,
-  // 连接重试配置
-  reconnect: true,
-  // 增加最大包大小限制（64MB）
-  maxAllowedPacket: 67108864,
-  // 增加连接池健康检查
-  idleTimeout: 60000,
   // 禁用SSL（本地开发环境）
   ssl: false,
 })

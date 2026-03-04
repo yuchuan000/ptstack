@@ -6,7 +6,6 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import {
-  User,
   Edit,
   Camera,
   Message,
@@ -19,6 +18,7 @@ import {
 } from '@element-plus/icons-vue'
 import { updateProfile, uploadAvatar, sendEmailVerification, verifyEmailCode } from '@/api/auth'
 import { getFullUrl } from '@/utils/url'
+import PageHeader from '@/components/PageHeader/PageHeader.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -381,169 +381,175 @@ onMounted(() => {
 
 <template>
   <div class="client-profile-page">
-    <div class="page-container">
-      <div class="profile-card">
-        <div class="profile-header">
-          <h2 class="profile-title">
-            <el-icon><User /></el-icon>
-            个人信息
-          </h2>
-          <p class="profile-subtitle">管理您的个人资料和账户信息</p>
-        </div>
+    <PageHeader title="个人信息" subtitle="管理您的个人资料和账户信息" />
 
-        <div class="profile-content">
-          <!-- 头像区域 -->
-          <div class="info-section avatar-section">
-            <div class="section-label">头像</div>
-            <div class="avatar-wrapper">
-              <div class="avatar-display">
-                <img
-                  v-if="profileForm.avatar"
-                  :src="getFullUrl(profileForm.avatar)"
-                  alt="avatar"
-                  class="avatar-img"
-                >
-                <div v-else class="avatar-placeholder">
-                  {{ (profileForm.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}
-                </div>
-                <div class="avatar-overlay" @click="openAvatarDialog">
-                  <el-icon><Camera /></el-icon>
-                  <span>更换头像</span>
-                </div>
-              </div>
+    <div class="content-card">
+      <div class="tab-content">
+        <div class="tab-panel">
+          <div class="view-section">
+            <div class="section-header">
+              <div class="section-title">个人资料</div>
             </div>
-          </div>
 
-          <!-- 昵称区域 -->
-          <div class="info-section">
-            <div class="section-label">昵称</div>
-            <div class="info-content">
-              <template v-if="!editingNickname">
-                <span class="info-value">{{ profileForm.nickname || '未设置' }}</span>
-                <el-button type="primary" text @click="startEditNickname">
-                  <el-icon><Edit /></el-icon>
-                  修改
-                </el-button>
-              </template>
-              <template v-else>
-                <div class="edit-form">
-                  <el-input
-                    v-model="tempForm.nickname"
-                    placeholder="请输入昵称"
-                    maxlength="20"
-                    show-word-limit
-                  />
-                  <div class="edit-actions">
-                    <el-button type="primary" @click="saveNickname" :loading="loading">
-                      <el-icon><Check /></el-icon>
-                      保存
-                    </el-button>
-                    <el-button @click="cancelEditNickname">
-                      <el-icon><Close /></el-icon>
-                      取消
-                    </el-button>
+            <div class="profile-info">
+              <!-- 头像区域 -->
+              <div class="info-item avatar-item">
+                <div class="info-label">头像</div>
+                <div class="info-value">
+                  <div class="avatar-display" @click="openAvatarDialog">
+                    <div class="avatar-wrapper">
+                      <div class="avatar-container">
+                        <img
+                          v-if="profileForm.avatar"
+                          :src="getFullUrl(profileForm.avatar)"
+                          alt="avatar"
+                          class="avatar-img"
+                        >
+                        <div v-else class="avatar-placeholder">
+                          {{ (profileForm.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}
+                        </div>
+                      </div>
+                      <div class="avatar-overlay">
+                        <el-icon><Camera /></el-icon>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </template>
-            </div>
-          </div>
+              </div>
 
-          <!-- 邮箱区域 -->
-          <div class="info-section">
-            <div class="section-label">邮箱</div>
-            <div class="info-content">
-              <template v-if="!editingEmail">
-                <span class="info-value">{{ profileForm.email || '未设置' }}</span>
-                <el-button type="primary" text @click="startEditEmail">
-                  <el-icon><Edit /></el-icon>
-                  修改
-                </el-button>
-              </template>
-              <template v-else>
-                <div class="edit-form email-edit-form">
-                  <!-- 步骤1：验证旧邮箱 -->
-                  <template v-if="emailVerification.step === 1">
-                    <div class="email-step">
-                      <div class="step-title">
-                        <el-icon><Lock /></el-icon>
-                        验证原邮箱
-                      </div>
-                      <p class="step-desc">验证码将发送到 {{ profileForm.email }}</p>
-                      <div class="verification-input">
-                        <el-input
-                          v-model="emailVerification.oldEmailCode"
-                          placeholder="请输入验证码"
-                          maxlength="6"
-                        >
-                          <template #append>
-                            <el-button
-                              @click="sendOldEmailCode"
-                              :loading="emailVerification.oldEmailSending"
-                              :disabled="emailVerification.oldEmailCountdown > 0"
-                            >
-                              {{ emailVerification.oldEmailCountdown > 0 ? `${emailVerification.oldEmailCountdown}s` : '获取验证码' }}
-                            </el-button>
-                          </template>
-                        </el-input>
-                      </div>
-                      <div class="edit-actions">
-                        <el-button type="primary" @click="verifyOldEmail" :loading="loading">
-                          下一步
-                        </el-button>
-                        <el-button @click="cancelEditEmail">取消</el-button>
-                      </div>
+              <!-- 昵称区域 -->
+              <div class="info-item">
+                <div class="info-label">昵称</div>
+                <div class="info-value">
+                  <template v-if="!editingNickname">
+                    <div class="field-display" @click="startEditNickname">
+                      <span class="field-text">{{ profileForm.nickname || '未设置' }}</span>
+                      <el-icon class="edit-icon"><Edit /></el-icon>
                     </div>
                   </template>
-
-                  <!-- 步骤2：输入新邮箱并验证 -->
-                  <template v-if="emailVerification.step === 2">
-                    <div class="email-step">
-                      <div class="step-title">
-                        <el-icon><Message /></el-icon>
-                        绑定新邮箱
-                      </div>
-                      <div class="verification-input">
-                        <el-input
-                          v-model="emailVerification.newEmail"
-                          placeholder="请输入新邮箱"
-                        />
-                      </div>
-                      <div class="verification-input">
-                        <el-input
-                          v-model="emailVerification.newEmailCode"
-                          placeholder="请输入验证码"
-                          maxlength="6"
-                        >
-                          <template #append>
-                            <el-button
-                              @click="sendNewEmailCode"
-                              :loading="emailVerification.newEmailSending"
-                              :disabled="emailVerification.newEmailCountdown > 0"
-                            >
-                              {{ emailVerification.newEmailCountdown > 0 ? `${emailVerification.newEmailCountdown}s` : '获取验证码' }}
-                            </el-button>
-                          </template>
-                        </el-input>
-                      </div>
+                  <template v-else>
+                    <div class="field-edit">
+                      <el-input
+                        v-model="tempForm.nickname"
+                        placeholder="请输入昵称"
+                        maxlength="20"
+                        show-word-limit
+                        size="large"
+                        class="edit-input"
+                      />
                       <div class="edit-actions">
-                        <el-button type="primary" @click="saveNewEmail" :loading="loading">
-                          保存
+                        <el-button size="small" @click="cancelEditNickname">
+                          <el-icon><Close /></el-icon>
                         </el-button>
-                        <el-button @click="emailVerification.step = 1">上一步</el-button>
+                        <el-button type="primary" size="small" @click="saveNickname" :loading="loading">
+                          <el-icon><Check /></el-icon>
+                        </el-button>
                       </div>
                     </div>
                   </template>
                 </div>
-              </template>
-            </div>
-          </div>
+              </div>
 
-          <!-- 用户名区域（只读） -->
-          <div class="info-section">
-            <div class="section-label">用户名</div>
-            <div class="info-content">
-              <span class="info-value">{{ userStore.userInfo?.username || '-' }}</span>
-              <span class="info-hint">用户名不可修改</span>
+              <!-- 邮箱区域 -->
+              <div class="info-item">
+                <div class="info-label">邮箱</div>
+                <div class="info-value">
+                  <template v-if="!editingEmail">
+                    <div class="field-display" @click="startEditEmail">
+                      <span class="field-text">{{ profileForm.email || '未设置' }}</span>
+                      <el-icon class="edit-icon"><Edit /></el-icon>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <div class="field-edit email-edit-form">
+                      <!-- 步骤1：验证旧邮箱 -->
+                      <template v-if="emailVerification.step === 1">
+                        <div class="email-step">
+                          <div class="step-title">
+                            <el-icon><Lock /></el-icon>
+                            验证原邮箱
+                          </div>
+                          <p class="step-desc">验证码将发送到 {{ profileForm.email }}</p>
+                          <div class="verification-input">
+                            <el-input
+                              v-model="emailVerification.oldEmailCode"
+                              placeholder="请输入验证码"
+                              maxlength="6"
+                              size="large"
+                            >
+                              <template #append>
+                                <el-button
+                                  @click="sendOldEmailCode"
+                                  :loading="emailVerification.oldEmailSending"
+                                  :disabled="emailVerification.oldEmailCountdown > 0"
+                                >
+                                  {{ emailVerification.oldEmailCountdown > 0 ? `${emailVerification.oldEmailCountdown}s` : '获取验证码' }}
+                                </el-button>
+                              </template>
+                            </el-input>
+                          </div>
+                          <div class="edit-actions">
+                            <el-button type="primary" @click="verifyOldEmail" :loading="loading">
+                              下一步
+                            </el-button>
+                            <el-button @click="cancelEditEmail">取消</el-button>
+                          </div>
+                        </div>
+                      </template>
+
+                      <!-- 步骤2：输入新邮箱并验证 -->
+                      <template v-if="emailVerification.step === 2">
+                        <div class="email-step">
+                          <div class="step-title">
+                            <el-icon><Message /></el-icon>
+                            绑定新邮箱
+                          </div>
+                          <div class="verification-input">
+                            <el-input
+                              v-model="emailVerification.newEmail"
+                              placeholder="请输入新邮箱"
+                              size="large"
+                            />
+                          </div>
+                          <div class="verification-input">
+                            <el-input
+                              v-model="emailVerification.newEmailCode"
+                              placeholder="请输入验证码"
+                              maxlength="6"
+                              size="large"
+                            >
+                              <template #append>
+                                <el-button
+                                  @click="sendNewEmailCode"
+                                  :loading="emailVerification.newEmailSending"
+                                  :disabled="emailVerification.newEmailCountdown > 0"
+                                >
+                                  {{ emailVerification.newEmailCountdown > 0 ? `${emailVerification.newEmailCountdown}s` : '获取验证码' }}
+                                </el-button>
+                              </template>
+                            </el-input>
+                          </div>
+                          <div class="edit-actions">
+                            <el-button type="primary" @click="saveNewEmail" :loading="loading">
+                              保存
+                            </el-button>
+                            <el-button @click="emailVerification.step = 1">上一步</el-button>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- 用户名区域（只读） -->
+              <div class="info-item">
+                <div class="info-label">用户名</div>
+                <div class="info-value">
+                  <span class="field-text">{{ userStore.userInfo?.username || '-' }}</span>
+                  <span class="info-hint">用户名不可修改</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -609,171 +615,188 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .client-profile-page {
-  min-height: 100%;
   padding: 24px;
-}
-
-.page-container {
-  max-width: 800px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-.profile-card {
-  background: #fff;
+.content-card {
+  background: white;
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
+  margin-top: 24px;
 }
 
-.profile-header {
-  padding: 32px;
-  background: linear-gradient(135deg, #165dff 0%, #722ed1 100%);
-  color: #fff;
+.tab-content {
+  padding: 32px 24px;
 }
 
-.profile-title {
+.tab-panel {
+  max-width: 700px;
+}
+
+.view-section {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 8px;
-}
-
-.profile-title .el-icon {
-  font-size: 28px;
-}
-
-.profile-subtitle {
-  font-size: 14px;
-  opacity: 0.9;
-  margin: 0;
-}
-
-.profile-content {
-  padding: 32px;
-}
-
-.info-section {
-  display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 24px;
-  padding: 24px 0;
-  border-bottom: 1px solid #f2f3f5;
 }
 
-.info-section:last-child {
-  border-bottom: none;
+.section-header {
+  margin-bottom: 8px;
 }
 
-.section-label {
-  width: 80px;
-  font-size: 14px;
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &.avatar-item {
+    align-items: flex-start;
+  }
+}
+
+.info-label {
+  font-size: 13px;
   font-weight: 500;
   color: #86909c;
-  flex-shrink: 0;
-}
-
-.info-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
 }
 
 .info-value {
   font-size: 15px;
   color: #1d2129;
-  font-weight: 500;
+  line-height: 1.6;
 }
 
-.info-hint {
-  font-size: 13px;
-  color: #86909c;
-}
-
-/* 头像区域 */
-.avatar-section {
+.field-display {
+  display: flex;
   align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: -8px -12px;
+
+  &:hover {
+    background: #f7f8fa;
+
+    .edit-icon {
+      opacity: 1;
+    }
+  }
+
+  .field-text {
+    flex: 1;
+
+    &.bio-text {
+      color: #4e5969;
+    }
+  }
+
+  .edit-icon {
+    font-size: 16px;
+    color: #86909c;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
 }
 
-.avatar-wrapper {
-  flex: 1;
+.field-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .edit-input {
+    width: 100%;
+  }
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .avatar-display {
+  cursor: pointer;
+}
+
+.avatar-wrapper {
   position: relative;
   width: 100px;
   height: 100px;
+
+  &:hover .avatar-overlay {
+    opacity: 1;
+  }
+}
+
+.avatar-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   overflow: hidden;
-  cursor: pointer;
+  border: 2px dashed #e5e6eb;
+  transition: var(--el-transition-duration-fast);
 }
 
 .avatar-img {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   object-fit: cover;
+  overflow: hidden;
 }
 
 .avatar-placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #165dff 0%, #722ed1 100%);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
   font-size: 36px;
   font-weight: 600;
+  color: white;
 }
 
 .avatar-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #fff;
   opacity: 0;
-  transition: opacity 0.2s;
-}
+  transition: opacity 0.2s ease;
 
-.avatar-display:hover .avatar-overlay {
-  opacity: 1;
-}
-
-.avatar-overlay .el-icon {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-.avatar-overlay span {
-  font-size: 12px;
-}
-
-/* 编辑表单 */
-.edit-form {
-  flex: 1;
-  min-width: 0;
-}
-
-.edit-form .el-input {
-  max-width: 300px;
-}
-
-.edit-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
+  .el-icon {
+    font-size: 28px;
+    color: white;
+  }
 }
 
 /* 邮箱编辑 */
@@ -795,10 +818,10 @@ onMounted(() => {
   font-weight: 600;
   color: #1d2129;
   margin-bottom: 8px;
-}
 
-.step-title .el-icon {
-  color: #165dff;
+  .el-icon {
+    color: #165dff;
+  }
 }
 
 .step-desc {
@@ -824,7 +847,7 @@ onMounted(() => {
 .upload-placeholder {
   width: 100%;
   height: 300px;
-  border: 2px dashed #dcdfe6;
+  border: 2px dashed #e5e6eb;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -833,16 +856,17 @@ onMounted(() => {
   color: #86909c;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.upload-placeholder:hover {
-  border-color: #165dff;
-  color: #165dff;
-}
+  &:hover {
+    border-color: #165dff;
+    background: #eaf2ff;
+    color: #165dff;
+  }
 
-.upload-placeholder p {
-  margin: 8px 0 0;
-  font-size: 16px;
+  p {
+    margin: 8px 0 0;
+    font-size: 16px;
+  }
 }
 
 .upload-hint {
@@ -863,6 +887,8 @@ onMounted(() => {
   overflow: hidden;
   cursor: move;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #f7f8fa;
+  border: 2px solid #e5e6eb;
 }
 
 .cropper-canvas {
@@ -888,38 +914,33 @@ onMounted(() => {
     padding: 16px;
   }
 
-  .profile-header {
-    padding: 24px;
+  .content-card {
+    margin-top: 16px;
   }
 
-  .profile-title {
-    font-size: 20px;
+  .tab-content {
+    padding: 20px 16px;
   }
 
-  .profile-content {
-    padding: 20px;
-  }
-
-  .info-section {
-    flex-direction: column;
-    align-items: flex-start;
+  .info-item {
     gap: 12px;
-  }
-
-  .section-label {
-    width: auto;
-  }
-
-  .info-content {
-    width: 100%;
-  }
-
-  .edit-form .el-input {
-    max-width: 100%;
   }
 
   .verification-input {
     max-width: 100%;
+  }
+
+  .edit-actions {
+    flex-direction: column;
+
+    .el-button {
+      width: 100%;
+    }
+  }
+
+  .canvas-container {
+    width: 250px;
+    height: 250px;
   }
 }
 </style>

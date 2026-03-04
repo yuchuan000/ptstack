@@ -13,7 +13,8 @@
 
     <div class="content-wrapper">
       <el-card class="announcements-card">
-        <el-table :data="announcements" v-loading="loading" stripe>
+        <!-- PC端表格 -->
+        <el-table v-if="!isMobile" :data="announcements" v-loading="loading" stripe>
           <el-table-column label="ID" width="100">
             <template #default="{ row }">
               <el-tag size="small" type="info">{{ row.id }}</el-tag>
@@ -63,6 +64,41 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 移动端卡片列表 -->
+        <div v-else class="mobile-card-list">
+          <div
+            v-for="announcement in announcements"
+            :key="announcement.id"
+            class="mobile-announcement-card"
+          >
+            <div class="card-header-row">
+              <span class="card-title">{{ announcement.title }}</span>
+              <el-tag size="small" type="info">#{{ announcement.id }}</el-tag>
+            </div>
+            <div class="card-tags-row">
+              <el-tag v-if="announcement.is_marquee" type="success" size="small">首页通告</el-tag>
+              <el-tag size="small">优先级: {{ announcement.priority }}</el-tag>
+              <el-tag v-if="announcement.target_type === 'all'" type="success" size="small">全部用户</el-tag>
+              <el-tag v-else-if="announcement.target_type === 'group'" type="warning" size="small">用户组</el-tag>
+              <el-tag v-else type="primary" size="small">指定用户</el-tag>
+            </div>
+            <div class="card-methods-row">
+              <span class="methods-label">发送方式:</span>
+              <el-tag v-for="method in parseDeliveryMethods(announcement.delivery_methods)" :key="method" size="small">
+                {{ method === 'email' ? '邮箱' : method === 'popup' ? '弹窗' : '消息中心' }}
+              </el-tag>
+            </div>
+            <div class="card-meta-row">
+              <span class="card-time">{{ formatDate(announcement.created_at) }}</span>
+              <el-switch v-model="announcement.is_active" @change="(val) => handleToggleActive(announcement, val)" />
+            </div>
+            <div class="card-actions-row">
+              <el-button size="small" @click="handleEdit(announcement)">编辑</el-button>
+              <el-button size="small" type="danger" @click="handleDelete(announcement)">删除</el-button>
+            </div>
+          </div>
+        </div>
       </el-card>
     </div>
   </div>
@@ -71,7 +107,7 @@
 <script setup>
 // 公告管理页面组件
 // 功能：管理系统公告，支持创建、编辑、删除和状态切换
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -83,6 +119,10 @@ import {
 } from '@/api/announcements'
 
 const router = useRouter()
+
+// 判断是否为移动端
+const isMobile = computed(() => window.innerWidth < 768)
+
 const loading = ref(false)
 const isInitializing = ref(false)
 const announcements = ref([])
@@ -179,6 +219,93 @@ onMounted(() => {
 .announcements-card {
   .el-table {
     margin-top: 16px;
+  }
+}
+
+/* 移动端卡片列表样式 */
+.mobile-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.mobile-announcement-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f2f3f5;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d2129;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.card-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.card-methods-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  .methods-label {
+    font-size: 13px;
+    color: #86909c;
+  }
+}
+
+.card-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-time {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.card-actions-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f2f3f5;
+}
+
+@media (max-width: 768px) {
+  .announcement-manage-page {
+    padding: 16px;
+  }
+
+  .content-wrapper {
+    margin-top: 16px;
+  }
+
+  .announcements-card {
+    .el-card__body {
+      padding: 0;
+    }
   }
 }
 </style>

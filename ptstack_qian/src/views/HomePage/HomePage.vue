@@ -1251,6 +1251,7 @@ const truncateText = (text, maxLength = 100) => {
 
 @media (max-width: 1200px) {
   .main-content {
+    display: grid;
     grid-template-columns: 1fr;
   }
 
@@ -1568,97 +1569,6 @@ const truncateText = (text, maxLength = 100) => {
 .user-stats {
   font-size: 12px;
   color: #86909c;
-}
-
-@media (max-width: 1200px) {
-  .main-content {
-    grid-template-columns: 1fr;
-  }
-
-  .content-right {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 992px) {
-  .stats-section {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .content-right {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .home-page {
-    gap: 16px;
-  }
-
-  .header-section {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 24px;
-  }
-
-  .user-greeting {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .user-avatar {
-    width: 56px;
-    height: 56px;
-    font-size: 20px;
-  }
-
-  .page-title {
-    font-size: 24px;
-  }
-
-  .create-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .stats-section {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-
-  .stat-card {
-    padding: 16px;
-  }
-
-  .stat-value {
-    font-size: 22px;
-  }
-
-  .main-content {
-    gap: 16px;
-  }
-
-  .card-header {
-    padding: 16px 20px 0;
-  }
-
-  .articles-list {
-    padding: 12px 20px 20px;
-  }
-
-  .article-summary {
-    display: none;
-  }
-
-  .hot-articles-list {
-    padding: 12px 20px 20px;
-  }
-
-  .notifications-list,
-  .recommended-users-list {
-    padding: 12px 20px 20px;
-  }
 }
 
 @media (max-width: 480px) {

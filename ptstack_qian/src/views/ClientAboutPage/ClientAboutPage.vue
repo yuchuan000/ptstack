@@ -246,7 +246,7 @@ const goToGithub = (url) => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .about-page {
   min-height: 100vh;
   background: #f5f7fa;
@@ -295,13 +295,13 @@ const goToGithub = (url) => {
   border-radius: 16px;
   padding: 40px;
   transition: all 0.3s ease;
-}
 
-.team-row:hover {
-  background: #fff;
-  border-color: #165dff;
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  &:hover {
+    background: #fff;
+    border-color: #165dff;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
 }
 
 .member-info {
@@ -317,12 +317,12 @@ const goToGithub = (url) => {
   overflow: hidden;
   flex-shrink: 0;
   border: 3px solid rgba(22, 93, 255, 0.3);
-}
 
-.member-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 .avatar-placeholder {
@@ -418,13 +418,13 @@ const goToGithub = (url) => {
   border-radius: 12px;
   padding: 24px;
   transition: all 0.3s ease;
-}
 
-.portfolio-item:hover {
-  background: #fff;
-  border-color: #165dff;
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  &:hover {
+    background: #fff;
+    border-color: #165dff;
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  }
 }
 
 .portfolio-image {
@@ -434,12 +434,12 @@ const goToGithub = (url) => {
   overflow: hidden;
   margin-bottom: 16px;
   background: #f0f2f5;
-}
 
-.portfolio-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 .portfolio-placeholder {
@@ -494,12 +494,17 @@ const goToGithub = (url) => {
   border: 1px solid #e5e6eb;
   border-radius: 12px;
   transition: all 0.3s ease;
-}
 
-.contact-card:hover {
-  border-color: #165dff;
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  &:hover {
+    border-color: #165dff;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+    .contact-icon {
+      background: #165dff;
+      color: #fff;
+    }
+  }
 }
 
 .contact-icon {
@@ -514,11 +519,6 @@ const goToGithub = (url) => {
   color: #165dff;
   margin: 0 auto 20px;
   transition: all 0.3s ease;
-}
-
-.contact-card:hover .contact-icon {
-  background: #165dff;
-  color: #fff;
 }
 
 .contact-title {

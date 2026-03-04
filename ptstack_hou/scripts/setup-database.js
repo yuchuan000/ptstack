@@ -31,7 +31,7 @@
  *    - 文章内容（标题、内容、摘要、封面）
  *    - 公开ID (public_id)
  *    - 阅读/点赞/分享/评论统计
- *    - 发布状态
+ *    - 发布状态：0-草稿，1-公开，2-私密（仅作者可见）
  *
  * 7. article_tags 表 - 文章-标签关联
  *
@@ -305,6 +305,30 @@ async function step2CreateBaseTables() {
       'is_admin',
       'TINYINT DEFAULT 0 COMMENT "是否为管理员：0-否，1-是" AFTER following_count',
     )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'show_followers',
+      'TINYINT DEFAULT 1 COMMENT "是否显示粉丝列表：0-否，1-是" AFTER is_admin',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'show_following',
+      'TINYINT DEFAULT 1 COMMENT "是否显示关注列表：0-否，1-是" AFTER show_followers',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'show_articles',
+      'TINYINT DEFAULT 1 COMMENT "是否显示发布的文章：0-否，1-是" AFTER show_following',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'users',
+      'show_comments',
+      'TINYINT DEFAULT 1 COMMENT "是否显示发表的评论：0-否，1-是" AFTER show_articles',
+    )
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS email_verifications (
@@ -390,7 +414,7 @@ async function step2CreateBaseTables() {
         cover VARCHAR(500) DEFAULT NULL COMMENT '封面图片URL',
         author_id INT NOT NULL COMMENT '作者ID',
         category_id INT DEFAULT NULL COMMENT '分类ID',
-        status TINYINT DEFAULT 1 COMMENT '发布状态：1-已发布，0-草稿',
+        status TINYINT DEFAULT 1 COMMENT '发布状态：0-草稿，1-公开，2-私密',
         view_count INT DEFAULT 0 COMMENT '阅读次数',
         like_count INT DEFAULT 0 COMMENT '点赞次数',
         share_count INT DEFAULT 0 COMMENT '分享次数',
@@ -438,6 +462,14 @@ async function step2CreateBaseTables() {
       'comment_count',
       'INT DEFAULT 0 COMMENT "评论次数" AFTER share_count',
     )
+
+    // 更新 status 字段注释以支持私密文章功能
+    await connection.execute(`
+      ALTER TABLE articles 
+      MODIFY COLUMN status TINYINT DEFAULT 1 
+      COMMENT '发布状态：0-草稿，1-公开，2-私密'
+    `)
+    console.log('✓ articles.status 字段注释已更新（支持私密文章）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS article_tags (

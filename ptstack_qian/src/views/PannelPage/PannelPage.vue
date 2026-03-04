@@ -23,6 +23,57 @@ const currentPopupIndex = ref(0) // 当前显示的弹窗公告索引
 const showPopup = ref(false) // 是否显示弹窗
 const hasPopupShown = ref(false) // 是否已显示过本次会话的弹窗
 
+// 窗口大小改变时的处理函数
+const handleResize = () => {
+  isMobile.value = window.innerWidth < 768 // 更新移动端判断
+  isTablet.value = window.innerWidth >= 768 && window.innerWidth < 992 // 更新平板端判断
+}
+
+// 监听用户信息加载
+watch(() => userStore.userInfo, (newUserInfo) => {
+  if (newUserInfo && !hasPopupShown.value) {
+    nextTick(() => {
+      fetchPopupAnnouncements()
+    })
+  }
+}, { immediate: true })
+
+// 组件挂载时添加窗口大小监听
+onMounted(() => {
+  window.addEventListener('resize', handleResize) // 添加resize事件监听
+})
+
+// 组件卸载时移除窗口大小监听
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize) // 移除resize事件监听
+})
+
+// 从路由配置获取管理端菜单 - 缓存结果避免重复计算
+const menuList = computed(() => {
+  const adminRoute = router.options.routes.find(r => r.path === '/admin')
+  if (!adminRoute?.children) return []
+
+  return adminRoute.children
+    .filter(child => child.meta?.menuName)
+    .map(child => ({
+      id: child.name,
+      name: child.meta.menuName,
+      icon: child.meta.menuIcon,
+      path: child.path === '' ? '/admin' : `/admin/${child.path}`,
+      requiresAdmin: child.meta.requiresAdmin || false
+    }))
+})
+
+// 过滤菜单，只显示有权限的菜单项 - 缓存结果避免重复计算
+const filteredMenuList = computed(() => {
+  return menuList.value.filter(item => {
+    if (item.requiresAdmin) {
+      return userStore.userInfo?.isAdmin === true || userStore.userInfo?.isAdmin === 1
+    }
+    return true
+  })
+})
+
 // 获取未读弹窗公告
 const fetchPopupAnnouncements = async () => {
   try {
@@ -55,57 +106,6 @@ const handleClosePopup = async () => {
   }
 }
 
-// 窗口大小改变时的处理函数
-const handleResize = () => {
-  isMobile.value = window.innerWidth < 768 // 更新移动端判断
-  isTablet.value = window.innerWidth >= 768 && window.innerWidth < 992 // 更新平板端判断
-}
-
-// 监听用户信息加载
-watch(() => userStore.userInfo, (newUserInfo) => {
-  if (newUserInfo && !hasPopupShown.value) {
-    nextTick(() => {
-      fetchPopupAnnouncements()
-    })
-  }
-}, { immediate: true })
-
-// 组件挂载时添加窗口大小监听
-onMounted(() => {
-  window.addEventListener('resize', handleResize) // 添加resize事件监听
-})
-
-// 组件卸载时移除窗口大小监听
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize) // 移除resize事件监听
-})
-
-// 从路由配置获取管理端菜单
-const menuList = computed(() => {
-  const adminRoute = router.options.routes.find(r => r.path === '/admin')
-  if (!adminRoute?.children) return []
-
-  return adminRoute.children
-    .filter(child => child.meta?.menuName)
-    .map(child => ({
-      id: child.name,
-      name: child.meta.menuName,
-      icon: child.meta.menuIcon,
-      path: child.path === '' ? '/admin' : `/admin/${child.path}`,
-      requiresAdmin: child.meta.requiresAdmin || false
-    }))
-})
-
-// 过滤菜单，只显示有权限的菜单项
-const filteredMenuList = computed(() => {
-  return menuList.value.filter(item => {
-    if (item.requiresAdmin) {
-      return userStore.userInfo?.isAdmin === true || userStore.userInfo?.isAdmin === 1
-    }
-    return true
-  })
-})
-
 // 处理菜单点击
 const handleMenuClick = (path) => {
   router.push(path) // 跳转到对应路径
@@ -116,15 +116,15 @@ const handleMenuClick = (path) => {
 
 // 处理退出登录
 const handleLogout = () => {
-  ElMessageBox.confirm('确定要退出登录吗？', '提示', { // 弹出确认对话框
-    confirmButtonText: '确定', // 确认按钮文本
-    cancelButtonText: '取消', // 取消按钮文本
-    type: 'warning', // 对话框类型
+  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
   }).then(() => {
-    userStore.logout() // 调用登出方法
-    ElMessage.success('退出登录成功') // 显示成功提示
-    router.push('/login') // 跳转到登录页
-  }).catch(() => {}) // 取消时不做任何操作
+    userStore.logout()
+    ElMessage.success('退出登录成功')
+    router.push('/login')
+  }).catch(() => {})
 }
 
 // 跳转到个人详情页
@@ -368,43 +368,44 @@ const goToClientHome = () => {
   height: 64px;
   border-bottom: 1px solid #f2f3f5;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
 
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-btn {
+  background: #f7f8fa;
+  border: none;
+  color: #1d2129;
+  transition: background 0.1s ease;
+
+  &:hover {
+    background: #f2f3f5;
   }
+}
 
-  .menu-btn {
-    background: #f7f8fa;
-    border: none;
-    color: #1d2129;
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-    &:hover {
-      background: #f2f3f5;
-    }
-  }
+.logo-dot {
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
-  .mobile-logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .logo-dot {
-    width: 12px;
-    height: 12px;
-    background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .header-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1d2129;
-    letter-spacing: -0.3px;
-  }
+.header-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1d2129;
+  letter-spacing: -0.3px;
 }
 
 .sidebar {
@@ -436,12 +437,9 @@ const goToClientHome = () => {
   gap: 10px;
 }
 
-.logo-dot {
+.logo-section .logo-dot {
   width: 16px;
   height: 16px;
-  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-  border-radius: 50%;
-  flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
 }
 
@@ -459,44 +457,45 @@ const goToClientHome = () => {
   padding: 12px 12px;
   overflow-y: auto;
   overflow-x: hidden;
+}
 
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
+.menu-section::-webkit-scrollbar {
+  width: 4px;
+}
 
-  &::-webkit-scrollbar-thumb {
-    background: #e5e6eb;
-    border-radius: 2px;
-  }
+.menu-section::-webkit-scrollbar-thumb {
+  background: #e5e6eb;
+  border-radius: 2px;
+}
 
-  :deep(.el-menu-item) {
-    color: #4e5969;
-    margin: 4px 0;
-    border-radius: 10px;
-    height: 48px;
-    line-height: 48px;
-    padding: 0 12px;
-    transition: all 0.2s ease;
+.menu-section :deep(.el-menu-item) {
+  color: #4e5969;
+  margin: 4px 0;
+  border-radius: 10px;
+  height: 48px;
+  line-height: 48px;
+  padding: 0 12px;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
 
-    .el-icon {
-      font-size: 18px;
-    }
+.menu-section :deep(.el-menu-item .el-icon) {
+  font-size: 18px;
+}
 
-    &:hover {
-      background-color: #f7f8fa;
-      color: #1d2129;
-    }
+.menu-section :deep(.el-menu-item:hover) {
+  background-color: #f7f8fa;
+  color: #1d2129;
+}
 
-    &.is-active {
-      background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-      color: #ffffff;
-      box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
+.menu-section :deep(.el-menu-item.is-active) {
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
+  transition: background 0.1s ease;
+}
 
-      &:hover {
-        background: linear-gradient(135deg, #4080ff 0%, #165dff 100%);
-      }
-    }
-  }
+.menu-section :deep(.el-menu-item.is-active:hover) {
+  background: linear-gradient(135deg, #4080ff 0%, #165dff 100%);
 }
 
 .user-section {
@@ -514,11 +513,11 @@ const goToClientHome = () => {
   cursor: pointer;
   padding: 8px;
   border-radius: 10px;
-  transition: all 0.2s ease;
+  transition: background-color 0.1s ease;
+}
 
-  &:hover {
-    background-color: #f7f8fa;
-  }
+.user-info:hover {
+  background-color: #f7f8fa;
 }
 
 .avatar {
@@ -536,25 +535,25 @@ const goToClientHome = () => {
   box-shadow: 0 4px 12px rgba(22, 93, 255, 0.25);
   overflow: visible;
   position: relative;
+}
 
-  .avatar-admin-badge {
-    position: absolute;
-    bottom: -6px;
-    right: -6px;
-    width: 26px;
-    height: 26px;
-    background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
-    border: 2px solid white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    color: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-    z-index: 1;
-  }
+.avatar-admin-badge {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+  border: 2px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 1;
 }
 
 .avatar-img {
@@ -624,23 +623,37 @@ const goToClientHome = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   z-index: 10;
   color: #86909c;
+  transition: all 0.1s ease;
+}
 
-  &:hover {
-    background: #f7f8fa;
-    color: #165dff;
-    border-color: #165dff;
-  }
+.collapse-btn:hover {
+  background: #f7f8fa;
+  color: #165dff;
+  border-color: #165dff;
 }
 
 .main-content {
   padding: 0;
   overflow: auto;
   background: #f7f8fa;
+  -webkit-overflow-scrolling: touch;
 }
 
 .content-wrapper {
   padding: 24px 32px;
   min-height: 100%;
+}
+
+/* 防止移动端嵌套滚动导致的卡顿问题 */
+:deep(.el-main) {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 确保内容区域可以正常滚动 */
+:deep(.el-container) {
+  height: 100vh;
+  overflow: hidden;
 }
 
 .drawer-sidebar {
@@ -650,10 +663,8 @@ const goToClientHome = () => {
   padding: 24px 16px;
 }
 
-.mobile-drawer {
-  :deep(.el-drawer__body) {
-    padding: 0;
-  }
+.mobile-drawer :deep(.el-drawer__body) {
+  padding: 0;
 }
 
 @media (max-width: 1024px) {
@@ -668,25 +679,23 @@ const goToClientHome = () => {
   }
 }
 
-.announcement-popup {
-  :deep(.el-dialog__header) {
-    text-align: center;
-    padding: 24px 24px 0;
-  }
+.announcement-popup :deep(.el-dialog__header) {
+  text-align: center;
+  padding: 24px 24px 0;
+}
 
-  :deep(.el-dialog__title) {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1d2129;
-  }
+.announcement-popup :deep(.el-dialog__title) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+}
 
-  :deep(.el-dialog__body) {
-    padding: 24px;
-  }
+.announcement-popup :deep(.el-dialog__body) {
+  padding: 24px;
+}
 
-  :deep(.el-dialog__footer) {
-    padding: 0 24px 24px;
-  }
+.announcement-popup :deep(.el-dialog__footer) {
+  padding: 0 24px 24px;
 }
 
 .popup-content {
@@ -706,10 +715,10 @@ const goToClientHome = () => {
   justify-content: center;
   color: white;
   flex-shrink: 0;
+}
 
-  .el-icon {
-    font-size: 32px;
-  }
+.popup-icon .el-icon {
+  font-size: 32px;
 }
 
 .popup-text {

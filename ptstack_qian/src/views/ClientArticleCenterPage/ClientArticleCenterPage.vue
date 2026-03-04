@@ -243,11 +243,17 @@ onMounted(() => {
                   <div class="article-category" v-if="article.category_name">
                     {{ article.category_name }}
                   </div>
+                  <el-tag v-if="article.status === 2" size="small" type="info" class="private-tag">
+                    私密
+                  </el-tag>
                 </div>
                 <div class="article-content">
                   <div class="article-category top-category" v-if="!article.cover && article.category_name">
                     {{ article.category_name }}
                   </div>
+                  <el-tag v-if="article.status === 2 && !article.cover" size="small" type="info" class="private-tag-inline">
+                    私密
+                  </el-tag>
                   <h3 class="article-title">{{ truncateText(article.title, 60) }}</h3>
                   <p v-if="article.summary" class="article-summary">{{ truncateText(article.summary, 100) }}</p>
 
@@ -303,7 +309,7 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .article-center-page {
   min-height: 100%;
   padding: 24px;
@@ -343,11 +349,11 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: #1d2129;
-}
 
-.sidebar-title .el-icon {
-  font-size: 20px;
-  color: #165dff;
+  .el-icon {
+    font-size: 20px;
+    color: #165dff;
+  }
 }
 
 .category-list {
@@ -363,18 +369,38 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: 4px;
-}
 
-.category-item:last-child {
-  margin-bottom: 0;
-}
+  &:last-child {
+    margin-bottom: 0;
+  }
 
-.category-item:hover {
-  background: #f7f8fa;
-}
+  &:hover {
+    background: #f7f8fa;
 
-.category-item.active {
-  background: #e8f0ff;
+    .category-icon {
+      background: #e8f0ff;
+      color: #165dff;
+    }
+  }
+
+  &.active {
+    background: #e8f0ff;
+
+    .category-icon {
+      background: #165dff;
+      color: #fff;
+    }
+
+    .category-name {
+      color: #165dff;
+      font-weight: 600;
+    }
+
+    .category-count {
+      background: #165dff;
+      color: #fff;
+    }
+  }
 }
 
 .category-icon {
@@ -387,16 +413,6 @@ onMounted(() => {
   justify-content: center;
   color: #86909c;
   transition: all 0.2s;
-}
-
-.category-item:hover .category-icon {
-  background: #e8f0ff;
-  color: #165dff;
-}
-
-.category-item.active .category-icon {
-  background: #165dff;
-  color: #fff;
 }
 
 .category-info {
@@ -412,22 +428,12 @@ onMounted(() => {
   color: #4e5969;
 }
 
-.category-item.active .category-name {
-  color: #165dff;
-  font-weight: 600;
-}
-
 .category-count {
   font-size: 12px;
   color: #86909c;
   background: #f2f3f5;
   padding: 2px 8px;
   border-radius: 10px;
-}
-
-.category-item.active .category-count {
-  background: #165dff;
-  color: #fff;
 }
 
 /* 右侧文章列表 */
@@ -455,13 +461,13 @@ onMounted(() => {
   display: flex;
   align-items: baseline;
   gap: 12px;
-}
 
-.header-title h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1d2129;
-  margin: 0;
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1d2129;
+    margin: 0;
+  }
 }
 
 .article-count {
@@ -497,12 +503,35 @@ onMounted(() => {
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.article-card:hover {
-  border-color: #165dff;
-  box-shadow: 0 4px 16px rgba(22, 93, 255, 0.1);
-  transform: translateY(-2px);
+  &:hover {
+    border-color: #165dff;
+    box-shadow: 0 4px 16px rgba(22, 93, 255, 0.1);
+    transform: translateY(-2px);
+
+    .article-cover img {
+      transform: scale(1.05);
+    }
+  }
+
+  &:not(:has(.article-cover)) .article-content {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &:not(:has(.article-cover)) .article-title {
+    margin-top: 8px;
+  }
+
+  &:not(:has(.article-cover)) .article-author {
+    margin-top: auto;
+    padding-top: 12px;
+  }
+
+  &:not(:has(.article-cover)) .article-meta {
+    padding-top: 8px;
+  }
 }
 
 .article-cover {
@@ -510,33 +539,13 @@ onMounted(() => {
   height: 160px;
   overflow: hidden;
   background: #f7f8fa;
-}
 
-.article-category.top-category {
-  display: inline-block;
-  margin-bottom: 12px;
-  margin-top: 4px;
-  padding: 4px 10px;
-  background: rgba(22, 93, 255, 0.9);
-  color: #fff;
-  font-size: 12px;
-  border-radius: 6px;
-  font-weight: 500;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: relative;
-  top: 0;
-  left: 0;
-}
-
-.article-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.article-card:hover .article-cover img {
-  transform: scale(1.05);
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+  }
 }
 
 .article-category {
@@ -551,48 +560,39 @@ onMounted(() => {
   font-weight: 500;
   z-index: 1;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  &.top-category {
+    display: inline-block;
+    margin-bottom: 8px;
+    align-self: flex-start;
+    position: relative;
+    top: 0;
+    left: 0;
+  }
 }
 
-.article-card:not(:has(.article-cover)) .article-content {
-  min-height: 280px;
-  display: flex;
-  flex-direction: column;
-}
-
-.article-card:not(:has(.article-cover)) .article-title {
-  margin-top: 8px;
-}
-
-.article-category.top-category {
-  display: inline-block;
-  margin-bottom: 8px;
-  background: rgba(22, 93, 255, 0.9);
+.private-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(134, 144, 156, 0.9);
   color: #fff;
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 6px;
   font-weight: 500;
+  z-index: 2;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.private-tag-inline {
+  display: inline-block;
+  margin-bottom: 8px;
   align-self: flex-start;
 }
 
 .article-content {
   padding: 16px;
-}
-
-.article-card:not(:has(.article-cover)) .article-content {
-  min-height: 280px;
-  display: flex;
-  flex-direction: column;
-}
-
-.article-card:not(:has(.article-cover)) .article-author {
-  margin-top: auto;
-  padding-top: 12px;
-}
-
-.article-card:not(:has(.article-cover)) .article-meta {
-  padding-top: 8px;
 }
 
 .article-title {
@@ -714,10 +714,10 @@ onMounted(() => {
     margin-bottom: 0;
     padding: 8px 12px;
     background: #f7f8fa;
-  }
 
-  .category-item.active {
-    background: #e8f0ff;
+    &.active {
+      background: #e8f0ff;
+    }
   }
 
   .category-icon {

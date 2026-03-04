@@ -1,5 +1,5 @@
 <template>
-  <div class="mention-input-wrapper">
+  <div class="mention-input-wrapper" @click="handleWrapperClick">
     <textarea
       ref="textareaRef"
       v-model="internalValue"
@@ -15,6 +15,8 @@
     <div
       v-if="showSuggestions && filteredUsers.length > 0"
       class="mention-suggestions"
+      @mousedown="isClickingSuggestion = true"
+      @mouseup="isClickingSuggestion = false"
     >
       <div
         v-for="(user, index) in filteredUsers"
@@ -34,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { getUserFollowing } from '@/api/subscriptions'
 import { getFullUrl } from '@/utils/url'
@@ -65,6 +67,7 @@ const activeIndex = ref(0)
 const mentionStartPos = ref(0)
 const followingUsers = ref([])
 const selectedMentions = ref([])
+const isClickingSuggestion = ref(false)
 
 const ZERO_WIDTH_SPACE = '\u200B'
 const ZERO_WIDTH_NON_JOINER = '\u200C'
@@ -146,14 +149,25 @@ const handleKeydown = (e) => {
 }
 
 const handleBlur = () => {
-  setTimeout(() => {
-    showSuggestions.value = false
-  }, 200)
+  // 检查是否正在点击建议列表
+  if (!isClickingSuggestion.value) {
+    setTimeout(() => {
+      showSuggestions.value = false
+    }, 200)
+  }
 }
 
 const handleFocus = () => {
   if (searchText.value) {
     showSuggestions.value = true
+  }
+}
+
+const handleWrapperClick = (e) => {
+  // 点击包装器时，确保textarea获得焦点
+  const textarea = textareaRef.value
+  if (textarea && e.target !== textarea && !e.target.closest('.mention-suggestions')) {
+    textarea.focus()
   }
 }
 
@@ -174,12 +188,11 @@ const selectUser = (user) => {
   emit('mentions', [...selectedMentions.value])
   showSuggestions.value = false
   searchText.value = ''
-  nextTick(() => {
-    const newCursorPos = textBefore.length + mentionText.length
-    textarea.selectionStart = newCursorPos
-    textarea.selectionEnd = newCursorPos
-    textarea.focus()
-  })
+  // 直接设置光标位置，不需要nextTick
+  const newCursorPos = textBefore.length + mentionText.length
+  textarea.selectionStart = newCursorPos
+  textarea.selectionEnd = newCursorPos
+  textarea.focus()
 }
 
 watch(() => props.modelValue, (newValue) => {
@@ -191,7 +204,7 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .mention-input-wrapper {
   position: relative;
   width: 100%;
@@ -208,12 +221,12 @@ onMounted(() => {
   resize: vertical;
   transition: border-color 0.2s;
   font-family: inherit;
-}
 
-.mention-textarea:focus {
-  outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  &:focus {
+    outline: none;
+    border-color: #1890ff;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  }
 }
 
 .mention-suggestions {
@@ -236,11 +249,11 @@ onMounted(() => {
   padding: 8px 12px;
   cursor: pointer;
   transition: background-color 0.2s;
-}
 
-.mention-suggestion-item:hover,
-.mention-suggestion-item.active {
-  background-color: #f5f5f5;
+  &:hover,
+  &.active {
+    background-color: #f5f5f5;
+  }
 }
 
 .mention-avatar {

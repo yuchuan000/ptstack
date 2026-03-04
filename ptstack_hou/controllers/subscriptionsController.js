@@ -90,12 +90,23 @@ export const getUserFollowers = async (req, res) => {
     const currentUserId = req.user?.id
 
     // 转换userId为内部id
-    const [user] = await execute('SELECT id FROM users WHERE public_id = ?', [userId])
+    const [user] = await execute('SELECT id, show_followers FROM users WHERE public_id = ?', [userId])
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
 
     const internalUserId = user.id
+
+    // 检查隐私设置
+    const isOwnProfile = currentUserId === internalUserId
+    if (!isOwnProfile && !user.show_followers) {
+      return res.json({
+        users: [],
+        total: 0,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+      })
+    }
 
     let whereClause = 'WHERE s.following_id = ?'
     let queryParams = [internalUserId]
@@ -168,12 +179,23 @@ export const getUserFollowing = async (req, res) => {
     const currentUserId = req.user?.id
 
     // 转换userId为内部id
-    const [user] = await execute('SELECT id FROM users WHERE public_id = ?', [userId])
+    const [user] = await execute('SELECT id, show_following FROM users WHERE public_id = ?', [userId])
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
 
     const internalUserId = user.id
+
+    // 检查隐私设置
+    const isOwnProfile = currentUserId === internalUserId
+    if (!isOwnProfile && !user.show_following) {
+      return res.json({
+        users: [],
+        total: 0,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+      })
+    }
 
     let whereClause = 'WHERE s.follower_id = ?'
     let queryParams = [internalUserId]

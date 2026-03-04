@@ -83,7 +83,7 @@ const parsedContent = computed(() => {
 })
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .mention-text {
   display: inline;
 }
@@ -99,11 +99,11 @@ const parsedContent = computed(() => {
   margin: 0 2px;
   transition: all 0.2s;
   background-color: transparent;
-}
 
-.mention-tag:hover {
-  background-color: #e6f7ff;
-  border-color: #40a9ff;
-  color: #40a9ff;
+  &:hover {
+    background-color: #e6f7ff;
+    border-color: #40a9ff;
+    color: #40a9ff;
+  }
 }
 </style>

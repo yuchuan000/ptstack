@@ -73,6 +73,15 @@ pnpm dev
 
 ## 📋 版本历史
 
+### v0.6 - 路由系统优化
+- 🔧 拆分导航守卫逻辑，提取权限检查函数（checkIsAdmin、checkIsAuthenticated、checkNeedsProfileCompletion）
+- 🔧 创建独立的 guards.js 文件并迁移导航守卫逻辑
+- 🔧 修正 Vite 配置中的 manualChunks，使用函数式写法优化代码拆分
+- 🔧 提取路由路径常量（ROUTE_PATHS、ROUTE_NAMES、ROUTE_META、VIEW_TYPES），减少魔法字符串
+- 🔧 添加静态资源哈希命名配置（assetFileNames、chunkFileNames、entryFileNames），支持长期缓存
+- 🔧 路由配置模块化，拆分为 admin.js、client.js、public.js 三个独立模块
+- 🔧 添加必要注释并重写变量命名，遵循小驼峰规范和布尔前缀统一规则
+
 ### v0.5 - 客户端页面重构
 - ✨ 新增客户端首页（ClientHomePage）- 现代化首页设计，包含动态文字轮播和数字动画
 - ✨ 新增客户端文章中心（ClientArticleCenterPage）- 分类侧边栏和文章列表展示

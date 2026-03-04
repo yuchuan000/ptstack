@@ -165,20 +165,29 @@ export const createComment = async (req, res) => {
     ])
 
     // 提取 @ 用户
-    const mentionPattern = /@(\S+)/g
-    const mentions = []
+    const mentionPattern = /@([^\s]+?)(?:\u200B([^\u200C]+)\u200C[^\u200B]*\u200B|\s|$)/g
+    const mentionedUserIds = new Set()
     let match
     while ((match = mentionPattern.exec(trimmedContent)) !== null) {
-      mentions.push(match[1])
+      if (match[2]) {
+        // 提取包含零宽空格和用户ID的格式
+        mentionedUserIds.add(match[2])
+      } else {
+        // 提取普通格式
+        mentionedUserIds.add(match[1])
+      }
     }
 
     // 查找被 @ 的用户
-    if (mentions.length > 0) {
-      const placeholders = mentions.map(() => '?').join(',')
+    if (mentionedUserIds.size > 0) {
+      const userIds = Array.from(mentionedUserIds)
+      const placeholders = userIds.map(() => '?').join(',')
+      // 为每个IN子句重复用户ID数组
+      const queryParams = [...userIds, ...userIds, ...userIds]
       const mentionedUsers = await execute(
         `SELECT id, nickname, username FROM users 
-         WHERE nickname IN (${placeholders}) OR username IN (${placeholders})`,
-        [...mentions, ...mentions],
+         WHERE public_id IN (${placeholders}) OR nickname IN (${placeholders}) OR username IN (${placeholders})`,
+        queryParams,
       )
 
       // 去重并排除自己

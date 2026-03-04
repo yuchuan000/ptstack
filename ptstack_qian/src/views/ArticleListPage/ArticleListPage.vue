@@ -2,7 +2,7 @@
 // 文章列表页面组件
 // 功能：展示全部文章和我的文章，支持分类筛选、搜索、排序和分页
 // 导入Vue的ref和onMounted函数
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 // 导入Vue Router的useRouter函数
 import { useRouter } from 'vue-router'
 // 导入用户状态管理store
@@ -213,12 +213,22 @@ const goToReport = (id) => {
   router.push(`/report/article/${id}`)
 }
 
+// 判断是否为移动端
+const isMobile = computed(() => window.innerWidth < 768)
+
+// 处理窗口大小变化
+const handleResize = () => {
+  // 强制重新计算isMobile
+}
+
 // 组件挂载时的生命周期钩子
 onMounted(() => {
   // 获取文章列表
   fetchArticles()
   // 获取分类列表
   fetchCategories()
+  // 添加窗口大小监听
+  window.addEventListener('resize', handleResize)
 })
 </script>
 
@@ -293,7 +303,9 @@ onMounted(() => {
       </div>
 
       <div class="table-container" v-loading="loading">
+        <!-- PC端表格 -->
         <el-table
+          v-if="!isMobile"
           :data="articles"
           style="width: 100%"
           :header-cell-style="{
@@ -312,6 +324,9 @@ onMounted(() => {
               <div class="title-cell">
                 <el-tag v-if="row.status === 0" size="small" type="warning" class="status-tag">
                   草稿
+                </el-tag>
+                <el-tag v-if="row.status === 2" size="small" type="info" class="status-tag">
+                  私密
                 </el-tag>
                 <span class="title-text" @click="goToDetail(row.id)">{{ row.title }}</span>
               </div>
@@ -409,6 +424,49 @@ onMounted(() => {
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 移动端卡片列表 -->
+        <div v-else class="mobile-card-list">
+          <div
+            v-for="article in articles"
+            :key="article.id"
+            class="mobile-article-card"
+            @click="goToDetail(article.id)"
+          >
+            <div class="card-header-row">
+              <div class="card-title-wrapper">
+                <el-tag v-if="article.status === 0" size="small" type="warning" class="status-tag">草稿</el-tag>
+                <el-tag v-if="article.status === 2" size="small" type="info" class="status-tag">私密</el-tag>
+                <span class="card-title">{{ article.title }}</span>
+              </div>
+            </div>
+            <div class="card-meta-row" v-if="activeTab !== 'my'">
+              <div class="card-author" @click.stop="goToUserProfile(article.author_id)">
+                <div class="author-avatar-tiny">
+                  <img v-if="article.author_avatar" :src="getFullUrl(article.author_avatar)" alt="avatar">
+                  <span v-else>{{ (article.author_nickname || article.author_name)?.charAt(0)?.toUpperCase() || 'U' }}</span>
+                </div>
+                <span class="author-name-tiny">{{ article.author_nickname || article.author_name }}</span>
+              </div>
+              <el-tag v-if="article.category_name" size="small" type="info">{{ article.category_name }}</el-tag>
+            </div>
+            <div class="card-stats-row">
+              <span class="stat-item"><el-icon><View /></el-icon>{{ article.view_count }}</span>
+              <span class="stat-item"><el-icon><Star /></el-icon>{{ article.like_count }}</span>
+              <span class="stat-item"><el-icon><ChatDotRound /></el-icon>{{ article.comment_count || 0 }}</span>
+              <span class="stat-item"><el-icon><Calendar /></el-icon>{{ new Date(article.created_at).toLocaleDateString('zh-CN') }}</span>
+            </div>
+            <div class="card-actions-row">
+              <el-button type="primary" size="small" @click.stop="goToDetail(article.id)">查看</el-button>
+              <template v-if="activeTab === 'my' || article.author_id === userStore.userInfo?.id">
+                <el-button type="primary" size="small" plain @click.stop="goToEdit(article.id)">编辑</el-button>
+              </template>
+              <template v-else>
+                <el-button type="danger" size="small" plain @click.stop="goToReport(article.id)">举报</el-button>
+              </template>
+            </div>
+          </div>
+        </div>
 
         <el-empty v-if="articles.length === 0 && !loading" description="暂无文章" />
       </div>
@@ -762,7 +820,120 @@ onMounted(() => {
   }
 }
 
+/* 移动端卡片列表样式 */
+.mobile-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.mobile-article-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f2f3f5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+    background: #f7f8fa;
+  }
+}
+
+.card-header-row {
+  margin-bottom: 12px;
+}
+
+.card-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d2129;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.card-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.author-avatar-tiny {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.author-name-tiny {
+  font-size: 13px;
+  color: #4e5969;
+}
+
+.card-stats-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #86909c;
+
+  .el-icon {
+    font-size: 14px;
+  }
+}
+
+.card-actions-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f2f3f5;
+}
+
 @media (max-width: 768px) {
+  .article-list-page {
+    padding: 16px;
+  }
+
   .filter-section {
     flex-direction: column;
     align-items: flex-start;
@@ -785,6 +956,24 @@ onMounted(() => {
 
   .create-btn {
     width: 100%;
+  }
+
+  .card-header {
+    padding: 16px;
+  }
+
+  .tabs-section {
+    flex-wrap: wrap;
+  }
+
+  .tab-item {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .pagination-section {
+    padding: 16px;
+    justify-content: center;
   }
 }
 </style>
