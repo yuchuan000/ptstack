@@ -5,7 +5,18 @@ import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Edit, Check, Close, Plus, Camera, RefreshLeft, ZoomIn, ZoomOut } from '@element-plus/icons-vue'
+import {
+  User,
+  Lock,
+  Edit,
+  Check,
+  Close,
+  Plus,
+  Camera,
+  RefreshLeft,
+  ZoomIn,
+  ZoomOut,
+} from '@element-plus/icons-vue'
 import { updateProfile, uploadAvatar } from '@/api/auth'
 import PageHeader from '@/components/PageHeader/PageHeader.vue'
 import { getFullUrl } from '@/utils/url'
@@ -55,20 +66,20 @@ onUnmounted(() => {
 const profileForm = reactive({
   nickname: '',
   bio: '',
-  avatar: ''
+  avatar: '',
 })
 
 const tempForm = reactive({
   nickname: '',
   bio: '',
-  avatar: ''
+  avatar: '',
 })
 
 const privacyForm = reactive({
   show_followers: true,
   show_following: true,
   show_articles: true,
-  show_comments: true
+  show_comments: true,
 })
 
 const tempAvatarFile = ref(null)
@@ -244,10 +255,14 @@ const getCroppedFile = () => {
       return
     }
 
-    canvasRef.value.toBlob((blob) => {
-      const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
-      resolve(croppedFile)
-    }, 'image/jpeg', 0.9)
+    canvasRef.value.toBlob(
+      (blob) => {
+        const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+        resolve(croppedFile)
+      },
+      'image/jpeg',
+      0.9,
+    )
   })
 }
 
@@ -294,7 +309,7 @@ const handleSavePrivacy = async () => {
         show_followers: privacyForm.show_followers,
         show_following: privacyForm.show_following,
         show_articles: privacyForm.show_articles,
-        show_comments: privacyForm.show_comments
+        show_comments: privacyForm.show_comments,
       }
 
       loading.value = true
@@ -365,9 +380,17 @@ const goToProfile = () => {
                         accept="image/*"
                       >
                         <div class="avatar-container">
-                          <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" class="avatar-preview" />
+                          <img
+                            v-if="userStore.userInfo?.avatar"
+                            :src="getFullUrl(userStore.userInfo.avatar)"
+                            class="avatar-preview"
+                          />
                           <span v-else class="avatar-placeholder">
-                            {{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}
+                            {{
+                              (userStore.userInfo?.nickname || userStore.userInfo?.username)
+                                ?.charAt(0)
+                                .toUpperCase() || 'U'
+                            }}
                           </span>
                         </div>
                       </el-upload>
@@ -382,7 +405,11 @@ const goToProfile = () => {
               <div class="info-item">
                 <div class="info-label">昵称</div>
                 <div class="info-value">
-                  <div v-if="editingField !== 'nickname'" class="field-display" @click="startEdit('nickname')">
+                  <div
+                    v-if="editingField !== 'nickname'"
+                    class="field-display"
+                    @click="startEdit('nickname')"
+                  >
                     <span class="field-text">{{ userStore.userInfo?.nickname || '-' }}</span>
                     <el-icon class="edit-icon"><Edit /></el-icon>
                   </div>
@@ -397,7 +424,12 @@ const goToProfile = () => {
                       <el-button size="small" @click="cancelEdit">
                         <el-icon><Close /></el-icon>
                       </el-button>
-                      <el-button type="primary" size="small" @click="saveField('nickname')" :loading="loading">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        @click="saveField('nickname')"
+                        :loading="loading"
+                      >
                         <el-icon><Check /></el-icon>
                       </el-button>
                     </div>
@@ -408,8 +440,14 @@ const goToProfile = () => {
               <div class="info-item">
                 <div class="info-label">个人简介</div>
                 <div class="info-value">
-                  <div v-if="editingField !== 'bio'" class="field-display" @click="startEdit('bio')">
-                    <span class="field-text bio-text">{{ userStore.userInfo?.bio || '暂无简介' }}</span>
+                  <div
+                    v-if="editingField !== 'bio'"
+                    class="field-display"
+                    @click="startEdit('bio')"
+                  >
+                    <span class="field-text bio-text">{{
+                      userStore.userInfo?.bio || '暂无简介'
+                    }}</span>
                     <el-icon class="edit-icon"><Edit /></el-icon>
                   </div>
                   <div v-else class="field-edit">
@@ -426,7 +464,12 @@ const goToProfile = () => {
                       <el-button size="small" @click="cancelEdit">
                         <el-icon><Close /></el-icon>
                       </el-button>
-                      <el-button type="primary" size="small" @click="saveField('bio')" :loading="loading">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        @click="saveField('bio')"
+                        :loading="loading"
+                      >
                         <el-icon><Check /></el-icon>
                       </el-button>
                     </div>
@@ -464,7 +507,11 @@ const goToProfile = () => {
                   <div class="option-title">显示订阅者列表</div>
                   <div class="option-desc">允许其他人查看你的订阅者列表</div>
                 </div>
-                <el-switch v-model="privacyForm.show_followers" size="large" @change="handleSavePrivacy" />
+                <el-switch
+                  v-model="privacyForm.show_followers"
+                  size="large"
+                  @change="handleSavePrivacy"
+                />
               </div>
 
               <div class="privacy-option">
@@ -472,7 +519,11 @@ const goToProfile = () => {
                   <div class="option-title">显示订阅列表</div>
                   <div class="option-desc">允许其他人查看你订阅了哪些用户</div>
                 </div>
-                <el-switch v-model="privacyForm.show_following" size="large" @change="handleSavePrivacy" />
+                <el-switch
+                  v-model="privacyForm.show_following"
+                  size="large"
+                  @change="handleSavePrivacy"
+                />
               </div>
 
               <div class="privacy-option">
@@ -480,7 +531,11 @@ const goToProfile = () => {
                   <div class="option-title">显示发布的文章</div>
                   <div class="option-desc">允许其他人在你的主页看到你发布的文章</div>
                 </div>
-                <el-switch v-model="privacyForm.show_articles" size="large" @change="handleSavePrivacy" />
+                <el-switch
+                  v-model="privacyForm.show_articles"
+                  size="large"
+                  @change="handleSavePrivacy"
+                />
               </div>
 
               <div class="privacy-option">
@@ -488,7 +543,11 @@ const goToProfile = () => {
                   <div class="option-title">显示发表的评论</div>
                   <div class="option-desc">允许其他人在你的主页看到你发表的评论</div>
                 </div>
-                <el-switch v-model="privacyForm.show_comments" size="large" @change="handleSavePrivacy" />
+                <el-switch
+                  v-model="privacyForm.show_comments"
+                  size="large"
+                  @change="handleSavePrivacy"
+                />
               </div>
             </div>
           </div>
@@ -826,8 +885,6 @@ const goToProfile = () => {
   color: #86909c;
   line-height: 1.5;
 }
-
-
 
 .avatar-dialog {
   :deep(.el-dialog__body) {

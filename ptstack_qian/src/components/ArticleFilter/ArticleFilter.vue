@@ -1,49 +1,85 @@
 <script setup>
-// 文章筛选组件 - 提供分类选择和搜索功能
+/**
+ * 文章筛选组件
+ * 提供分类选择和搜索功能
+ */
 import { Search } from '@element-plus/icons-vue' // 导入搜索图标
 
-// 定义组件接收的属性
+/**
+ * 组件属性
+ */
 const props = defineProps({
-  // 是否显示分类选择器，默认显示
+  /**
+   * 是否显示分类选择器
+   * @type {boolean}
+   * @default true
+   */
   showCategory: {
-    type: Boolean, // 属性类型为布尔值
-    default: true // 默认值为true
+    type: Boolean,
+    default: true,
   },
-  // 分类列表数据
+  /**
+   * 分类列表数据
+   * @type {Array<{id: number, name: string}>
+   * @default []
+   */
   categories: {
-    type: Array, // 属性类型为数组
-    default: () => [] // 默认值为空数组
+    type: Array,
+    default: () => [],
   },
-  // 筛选值对象，包含分类和搜索关键词，支持v-model双向绑定
+  /**
+   * 筛选值对象，包含分类和搜索关键词，支持v-model双向绑定
+   * @type {object}
+   * @property {string|number} category - 分类ID
+   * @property {string} search - 搜索关键词
+   * @default { category: '', search: '' }
+   */
   modelValue: {
-    type: Object, // 属性类型为对象
-    default: () => ({ category: '', search: '' }) // 默认值对象
+    type: Object,
+    default: () => ({ category: '', search: '' }),
   },
-  // 搜索框的占位符文本
+  /**
+   * 搜索框的占位符文本
+   * @type {string}
+   * @default '搜索文章标题或内容...'
+   */
   searchPlaceholder: {
-    type: String, // 属性类型为字符串
-    default: '搜索文章标题或内容...' // 默认占位符文本
-  }
+    type: String,
+    default: '搜索文章标题或内容...',
+  },
 })
 
-// 定义组件触发的事件
-const emit = defineEmits(['update:modelValue', 'search']) // 双向更新事件和搜索事件
+/**
+ * 组件事件
+ */
+const emit = defineEmits([
+  'update:modelValue', // 双向更新事件
+  'search', // 搜索事件
+])
 
-// 处理分类选择变化
+/**
+ * 处理分类选择变化
+ * @param {string|number} value - 选中的分类ID
+ */
 const handleCategoryChange = (value) => {
   // 触发更新事件，保持原有搜索值，更新分类值
   emit('update:modelValue', { ...props.modelValue, category: value })
   emit('search') // 触发搜索事件
 }
 
-// 处理搜索输入变化
+/**
+ * 处理搜索输入变化
+ * @param {string} value - 搜索关键词
+ */
 const handleSearchInput = (value) => {
   // 触发更新事件，保持原有分类值，更新搜索值
   emit('update:modelValue', { ...props.modelValue, search: value })
   emit('search') // 触发搜索事件
 }
 
-// 处理搜索框清空
+/**
+ * 处理搜索框清空
+ */
 const handleSearchClear = () => {
   // 触发更新事件，保持原有分类值，清空搜索值
   emit('update:modelValue', { ...props.modelValue, search: '' })
@@ -61,12 +97,7 @@ const handleSearchClear = () => {
       @change="handleCategoryChange"
       class="category-select"
     >
-      <el-option
-        v-for="cat in categories"
-        :key="cat.id"
-        :label="cat.name"
-        :value="cat.id"
-      />
+      <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
     </el-select>
     <div class="search-box">
       <el-input

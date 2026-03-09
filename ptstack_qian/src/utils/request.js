@@ -1,37 +1,55 @@
+/**
+ * API请求工具
+ * 封装axios实例，处理请求/响应拦截、token刷新等
+ */
+
 import axios from 'axios' // 导入axios库
 import { ElMessage } from 'element-plus' // 导入Element Plus的消息提示组件
 import router from '@/router' // 导入路由实例
 import { useUserStore } from '@/stores/user' // 导入用户状态管理
 
+/**
+ * API基础URL
+ */
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
-// 创建axios实例
+/**
+ * 创建axios实例
+ */
 const request = axios.create({
   baseURL: API_BASE_URL, // 后端API基础地址
   timeout: 60000, // 请求超时时间，单位毫秒（增加到60秒）
   headers: {
-    'Content-Type': 'application/json' // 默认请求头，设置内容类型为JSON
-  }
+    'Content-Type': 'application/json', // 默认请求头，设置内容类型为JSON
+  },
 })
 
-
-
-// Token刷新相关状态
+/**
+ * Token刷新相关状态
+ */
 let isRefreshing = false // 标记是否正在刷新token，防止多个请求同时刷新
 let refreshSubscribers = [] // 等待刷新的请求队列
 
-// 订阅刷新完成的回调
+/**
+ * 订阅刷新完成的回调
+ * @param {Function} callback - 刷新完成后的回调函数
+ */
 const subscribeTokenRefresh = (callback) => {
   refreshSubscribers.push(callback) // 将回调加入队列
 }
 
-// 通知所有等待刷新的请求
+/**
+ * 通知所有等待刷新的请求
+ * @param {string} newToken - 新的Access Token
+ */
 const onTokenRefreshed = (newToken) => {
-  refreshSubscribers.forEach(callback => callback(newToken)) // 执行所有等待的回调
+  refreshSubscribers.forEach((callback) => callback(newToken)) // 执行所有等待的回调
   refreshSubscribers = [] // 清空队列
 }
 
-// 请求拦截器：发送请求前执行
+/**
+ * 请求拦截器：发送请求前执行
+ */
 request.interceptors.request.use(
   (config) => {
     const userStore = useUserStore() // 获取用户状态仓库
@@ -45,10 +63,12 @@ request.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error) // 请求错误，拒绝Promise
-  }
+  },
 )
 
-// 响应拦截器：收到响应后执行
+/**
+ * 响应拦截器：收到响应后执行
+ */
 request.interceptors.response.use(
   (response) => {
     return response.data // 成功响应，直接返回响应数据
@@ -56,13 +76,19 @@ request.interceptors.response.use(
   async (error) => {
     const userStore = useUserStore() // 获取用户状态仓库
     const originalRequest = error.config // 保存原始请求配置
-    const isAuthPage = router.currentRoute.value.path === '/login' || router.currentRoute.value.path === '/register'
+    const isAuthPage =
+      router.currentRoute.value.path === '/login' || router.currentRoute.value.path === '/register'
 
     // 如果是401错误且未重试过 - 排除登录和注册请求
     const isLoginRequest = originalRequest.url?.includes('/auth/login')
     const isRegisterRequest = originalRequest.url?.includes('/auth/register')
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest && !isRegisterRequest) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isLoginRequest &&
+      !isRegisterRequest
+    ) {
       // 如果正在刷新token
       if (isRefreshing) {
         return new Promise((resolve) => {
@@ -81,7 +107,7 @@ request.interceptors.response.use(
         if (userStore.refreshToken) {
           // 请求刷新token
           const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken: userStore.refreshToken
+            refreshToken: userStore.refreshToken,
           })
 
           const newAccessToken = response.data.accessToken // 获取新的Access Token
@@ -90,7 +116,7 @@ request.interceptors.response.use(
 
           const headers = {
             ...originalRequest.headers,
-            Authorization: `Bearer ${newAccessToken}` // 设置新token
+            Authorization: `Bearer ${newAccessToken}`, // 设置新token
           }
 
           // 重新发起原始请求
@@ -98,7 +124,7 @@ request.interceptors.response.use(
             method: originalRequest.method,
             url: API_BASE_URL + originalRequest.url,
             headers: headers,
-            data: originalRequest.data
+            data: originalRequest.data,
           })
 
           return retryResponse.data // 返回重试后的响应数据
@@ -137,7 +163,7 @@ request.interceptors.response.use(
       }
     }
     return Promise.reject(error) // 拒绝Promise
-  }
+  },
 )
 
 export default request // 导出axios实例

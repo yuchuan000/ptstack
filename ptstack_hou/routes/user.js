@@ -1,3 +1,7 @@
+/**
+ * 用户管理路由
+ * 处理用户资料的获取和更新
+ */
 import { execute } from '../config/db.js'
 import { authenticateToken } from '../middlewares/auth.js'
 import express from 'express'

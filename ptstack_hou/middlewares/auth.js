@@ -1,5 +1,17 @@
+/**
+ * 认证中间件
+ * 处理用户认证相关的中间件函数
+ */
 import { verifyToken } from '../config/jwt.js'
 
+/**
+ * 认证中间件
+ * 验证请求中的JWT令牌，确保用户已登录
+ * @param {object} req - Express请求对象
+ * @param {object} res - Express响应对象
+ * @param {function} next - Express下一个中间件函数
+ * @returns {void}
+ */
 export const auth = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
@@ -24,9 +36,24 @@ export const auth = (req, res, next) => {
   }
 }
 
+/**
+ * 认证中间件（别名）
+ */
 export const authMiddleware = auth
+
+/**
+ * 认证中间件（别名）
+ */
 export const authenticateToken = auth
 
+/**
+ * 可选认证中间件
+ * 尝试验证请求中的JWT令牌，但不强制要求登录
+ * @param {object} req - Express请求对象
+ * @param {object} res - Express响应对象
+ * @param {function} next - Express下一个中间件函数
+ * @returns {void}
+ */
 export const optionalAuthMiddleware = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization

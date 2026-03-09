@@ -14,7 +14,7 @@ import {
   RefreshLeft,
   ZoomIn,
   ZoomOut,
-  Lock
+  Lock,
 } from '@element-plus/icons-vue'
 import { updateProfile, uploadAvatar, sendEmailVerification, verifyEmailCode } from '@/api/auth'
 import { getFullUrl } from '@/utils/url'
@@ -32,12 +32,12 @@ const editingEmail = ref(false)
 const profileForm = reactive({
   nickname: '',
   email: '',
-  avatar: ''
+  avatar: '',
 })
 
 const tempForm = reactive({
   nickname: '',
-  email: ''
+  email: '',
 })
 
 // 邮箱验证相关
@@ -49,7 +49,7 @@ const emailVerification = reactive({
   newEmailSending: false,
   oldEmailCountdown: 0,
   newEmailCountdown: 0,
-  step: 1 // 1: 验证旧邮箱, 2: 输入新邮箱并验证
+  step: 1, // 1: 验证旧邮箱, 2: 输入新邮箱并验证
 })
 
 // 头像裁剪相关
@@ -340,10 +340,14 @@ const getCroppedFile = () => {
       return
     }
 
-    canvasRef.value.toBlob((blob) => {
-      const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
-      resolve(croppedFile)
-    }, 'image/jpeg', 0.9)
+    canvasRef.value.toBlob(
+      (blob) => {
+        const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+        resolve(croppedFile)
+      },
+      'image/jpeg',
+      0.9,
+    )
   })
 }
 
@@ -404,9 +408,13 @@ onMounted(() => {
                           :src="getFullUrl(profileForm.avatar)"
                           alt="avatar"
                           class="avatar-img"
-                        >
+                        />
                         <div v-else class="avatar-placeholder">
-                          {{ (profileForm.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}
+                          {{
+                            (profileForm.nickname || userStore.userInfo?.username)
+                              ?.charAt(0)
+                              .toUpperCase() || 'U'
+                          }}
                         </div>
                       </div>
                       <div class="avatar-overlay">
@@ -441,7 +449,12 @@ onMounted(() => {
                         <el-button size="small" @click="cancelEditNickname">
                           <el-icon><Close /></el-icon>
                         </el-button>
-                        <el-button type="primary" size="small" @click="saveNickname" :loading="loading">
+                        <el-button
+                          type="primary"
+                          size="small"
+                          @click="saveNickname"
+                          :loading="loading"
+                        >
                           <el-icon><Check /></el-icon>
                         </el-button>
                       </div>
@@ -483,7 +496,11 @@ onMounted(() => {
                                   :loading="emailVerification.oldEmailSending"
                                   :disabled="emailVerification.oldEmailCountdown > 0"
                                 >
-                                  {{ emailVerification.oldEmailCountdown > 0 ? `${emailVerification.oldEmailCountdown}s` : '获取验证码' }}
+                                  {{
+                                    emailVerification.oldEmailCountdown > 0
+                                      ? `${emailVerification.oldEmailCountdown}s`
+                                      : '获取验证码'
+                                  }}
                                 </el-button>
                               </template>
                             </el-input>
@@ -524,7 +541,11 @@ onMounted(() => {
                                   :loading="emailVerification.newEmailSending"
                                   :disabled="emailVerification.newEmailCountdown > 0"
                                 >
-                                  {{ emailVerification.newEmailCountdown > 0 ? `${emailVerification.newEmailCountdown}s` : '获取验证码' }}
+                                  {{
+                                    emailVerification.newEmailCountdown > 0
+                                      ? `${emailVerification.newEmailCountdown}s`
+                                      : '获取验证码'
+                                  }}
                                 </el-button>
                               </template>
                             </el-input>

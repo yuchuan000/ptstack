@@ -26,7 +26,11 @@
         @click="selectUser(user)"
         @mouseenter="activeIndex = index"
       >
-        <img :src="getFullUrl(user.avatar) || '/default-avatar.png'" :alt="user.nickname || user.username" class="mention-avatar" />
+        <img
+          :src="getFullUrl(user.avatar) || '/default-avatar.png'"
+          :alt="user.nickname || user.username"
+          class="mention-avatar"
+        />
         <div class="mention-user-info">
           <div class="mention-username">{{ user.nickname || user.username }}</div>
         </div>
@@ -36,62 +40,106 @@
 </template>
 
 <script setup>
+/**
+ * 提及输入组件
+ * 支持@用户提及功能，在输入@时显示用户建议列表
+ */
 import { ref, computed, watch, onMounted } from 'vue'
-import { useUserStore } from '@/stores/user'
-import { getUserFollowing } from '@/api/subscriptions'
-import { getFullUrl } from '@/utils/url'
+import { useUserStore } from '@/stores/user' // 用户状态管理
+import { getUserFollowing } from '@/api/subscriptions' // 获取关注用户列表
+import { getFullUrl } from '@/utils/url' // 工具函数，用于获取完整的图片URL
 
+/**
+ * 组件属性
+ */
 const props = defineProps({
+  /**
+   * 输入值，支持v-model双向绑定
+   * @type {string}
+   * @default ''
+   */
   modelValue: {
     type: String,
-    default: ''
+    default: '',
   },
+  /**
+   * 占位符文本
+   * @type {string}
+   * @default '请输入内容...'
+   */
   placeholder: {
     type: String,
-    default: '请输入内容...'
+    default: '请输入内容...',
   },
+  /**
+   * 文本域行数
+   * @type {number}
+   * @default 3
+   */
   rows: {
     type: Number,
-    default: 3
-  }
+    default: 3,
+  },
 })
 
-const emit = defineEmits(['update:modelValue', 'mentions'])
+/**
+ * 组件事件
+ */
+const emit = defineEmits([
+  'update:modelValue', // 双向更新事件
+  'mentions', // 提及用户事件
+])
 
-const userStore = useUserStore()
-const textareaRef = ref(null)
-const internalValue = ref(props.modelValue)
-const showSuggestions = ref(false)
-const searchText = ref('')
-const activeIndex = ref(0)
-const mentionStartPos = ref(0)
-const followingUsers = ref([])
-const selectedMentions = ref([])
-const isClickingSuggestion = ref(false)
+// 状态管理
+const userStore = useUserStore() // 用户状态
+const textareaRef = ref(null) // 文本域引用
+const internalValue = ref(props.modelValue) // 内部输入值
+const showSuggestions = ref(false) // 是否显示建议列表
+const searchText = ref('') // 搜索文本
+const activeIndex = ref(0) // 活动建议索引
+const mentionStartPos = ref(0) // 提及开始位置
+const followingUsers = ref([]) // 关注用户列表
+const selectedMentions = ref([]) // 选中的提及用户
+const isClickingSuggestion = ref(false) // 是否正在点击建议列表
 
-const ZERO_WIDTH_SPACE = '\u200B'
-const ZERO_WIDTH_NON_JOINER = '\u200C'
+// 特殊字符
+const ZERO_WIDTH_SPACE = '\u200B' // 零宽空格
+const ZERO_WIDTH_NON_JOINER = '\u200C' // 零宽不连字符
 
+/**
+ * 生成校验和
+ * @param {string} str - 输入字符串
+ * @returns {string} 校验和
+ */
 const generateChecksum = (str) => {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
+    hash = (hash << 5) - hash + char
     hash = hash & hash
   }
-  return Math.abs(hash % 1000).toString().padStart(3, '0')
+  return Math.abs(hash % 1000)
+    .toString()
+    .padStart(3, '0')
 }
 
+/**
+ * 过滤用户列表
+ * @type {Array}
+ */
 const filteredUsers = computed(() => {
   if (!searchText.value) return followingUsers.value
   const search = searchText.value.toLowerCase()
-  return followingUsers.value.filter(user => {
+  return followingUsers.value.filter((user) => {
     const nickname = (user.nickname || '').toLowerCase()
     const username = (user.username || '').toLowerCase()
     return nickname.includes(search) || username.includes(search)
   })
 })
 
+/**
+ * 加载关注用户列表
+ */
 const loadFollowingUsers = async () => {
   if (!userStore.userInfo?.id) return
   try {
@@ -102,6 +150,9 @@ const loadFollowingUsers = async () => {
   }
 }
 
+/**
+ * 处理输入事件
+ */
 const handleInput = () => {
   emit('update:modelValue', internalValue.value)
   const textarea = textareaRef.value
@@ -124,6 +175,10 @@ const handleInput = () => {
   searchText.value = ''
 }
 
+/**
+ * 处理键盘事件
+ * @param {KeyboardEvent} e - 键盘事件对象
+ */
 const handleKeydown = (e) => {
   if (!showSuggestions.value) return
   switch (e.key) {
@@ -133,7 +188,8 @@ const handleKeydown = (e) => {
       break
     case 'ArrowUp':
       e.preventDefault()
-      activeIndex.value = (activeIndex.value - 1 + filteredUsers.value.length) % filteredUsers.value.length
+      activeIndex.value =
+        (activeIndex.value - 1 + filteredUsers.value.length) % filteredUsers.value.length
       break
     case 'Enter':
     case 'Tab':
@@ -148,6 +204,9 @@ const handleKeydown = (e) => {
   }
 }
 
+/**
+ * 处理失去焦点事件
+ */
 const handleBlur = () => {
   // 检查是否正在点击建议列表
   if (!isClickingSuggestion.value) {
@@ -157,12 +216,19 @@ const handleBlur = () => {
   }
 }
 
+/**
+ * 处理获得焦点事件
+ */
 const handleFocus = () => {
   if (searchText.value) {
     showSuggestions.value = true
   }
 }
 
+/**
+ * 处理包装器点击事件
+ * @param {MouseEvent} e - 鼠标事件对象
+ */
 const handleWrapperClick = (e) => {
   // 点击包装器时，确保textarea获得焦点
   const textarea = textareaRef.value
@@ -171,6 +237,10 @@ const handleWrapperClick = (e) => {
   }
 }
 
+/**
+ * 选择用户
+ * @param {object} user - 用户对象
+ */
 const selectUser = (user) => {
   const textarea = textareaRef.value
   if (!textarea) return
@@ -182,7 +252,7 @@ const selectUser = (user) => {
   internalValue.value = textBefore + mentionText + textAfter
   selectedMentions.value.push({
     userId: user.id,
-    username: displayName
+    username: displayName,
   })
   emit('update:modelValue', internalValue.value)
   emit('mentions', [...selectedMentions.value])
@@ -195,10 +265,19 @@ const selectUser = (user) => {
   textarea.focus()
 }
 
-watch(() => props.modelValue, (newValue) => {
-  internalValue.value = newValue
-})
+/**
+ * 监听modelValue变化
+ */
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    internalValue.value = newValue
+  },
+)
 
+/**
+ * 组件挂载时加载关注用户列表
+ */
 onMounted(() => {
   loadFollowingUsers()
 })

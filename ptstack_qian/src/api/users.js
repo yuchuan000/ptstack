@@ -2,6 +2,19 @@
 import request from '@/utils/request'
 
 /**
+ * 获取所有用户列表（用于管理）
+ * @param {Object} params - 查询参数
+ * @returns {Promise}
+ */
+export function getUsers(params) {
+  return request({
+    url: '/users/admin/all',
+    method: 'get',
+    params
+  })
+}
+
+/**
  * 获取用户公开信息
  * @param {number|string} userId - 用户ID
  * @returns {Promise<{user: {id: number, username: string, bio: string, website: string, follower_count: number, following_count: number, isSubscribed: boolean, isOwn: boolean}}>}
@@ -161,7 +174,7 @@ export function getUserAdmin(id) {
  * @param {string} data.email - 邮箱
  * @param {string} data.avatar - 头像
  * @param {string} data.bio - 个人简介
- * @param {boolean} data.is_admin - 是否为管理员
+
  * @returns {Promise<{message: string, user: object}>}
  */
 export function updateUserAdmin(id, data) {
@@ -181,5 +194,24 @@ export function deleteUserAdmin(id) {
   return request({
     url: `/users/admin/${id}`,
     method: 'delete'
+  })
+}
+
+/**
+ * 管理员创建用户
+ * @param {object} data - 用户数据
+ * @param {string} data.username - 用户名
+ * @param {string} data.nickname - 昵称
+ * @param {string} data.password - 密码
+ * @param {string} data.email - 邮箱
+ * @param {string} data.bio - 个人简介
+
+ * @returns {Promise<{message: string, user: object}>}
+ */
+export function createUserAdmin(data) {
+  return request({
+    url: '/users/admin',
+    method: 'post',
+    data
   })
 }

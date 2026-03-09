@@ -65,7 +65,9 @@ ptstack_qian/
 │   └── favicon.ico             # 网站图标
 ├── src/                        # 源代码目录
 │   ├── api/                    # API 接口层
+│   │   ├── about.js           # 关于我们接口
 │   │   ├── ai.js              # AI 相关接口
+│   │   ├── aiConfig.js        # AI配置接口
 │   │   ├── announcements.js    # 公告接口
 │   │   ├── articles.js        # 文章接口
 │   │   ├── auth.js            # 认证接口
@@ -104,6 +106,10 @@ ptstack_qian/
 │   │   ├── request.js         # HTTP 请求封装
 │   │   └── url.js             # URL 处理工具
 │   ├── views/                  # 页面组件
+│   │   ├── AboutConfigPage/    # 客户端配置页
+│   │   │   └── AboutConfigPage.vue
+│   │   ├── AiConfigPage/       # AI配置页
+│   │   │   └── AiConfigPage.vue
 │   │   ├── AnnouncementDetailPage/    # 公告详情页
 │   │   │   └── AnnouncementDetailPage.vue
 │   │   ├── AnnouncementEditPage/      # 公告编辑页
@@ -171,27 +177,3 @@ ptstack_qian/
 ├── vite.config.js              # Vite 配置
 └── README.md                   # 本文档
 ```
-
-## 版本历史
-
-### v0.6 - 路由系统优化
-- 🔧 拆分导航守卫逻辑，提取权限检查函数（checkIsAdmin、checkIsAuthenticated、checkNeedsProfileCompletion）
-- 🔧 创建独立的 guards.js 文件并迁移导航守卫逻辑
-- 🔧 修正 Vite 配置中的 manualChunks，使用函数式写法优化代码拆分
-- 🔧 提取路由路径常量（ROUTE_PATHS、ROUTE_NAMES、ROUTE_META、VIEW_TYPES），减少魔法字符串
-- 🔧 添加静态资源哈希命名配置（assetFileNames、chunkFileNames、entryFileNames），支持长期缓存
-- 🔧 路由配置模块化，拆分为 admin.js、client.js、public.js 三个独立模块
-- 🔧 添加必要注释并重写变量命名，遵循小驼峰规范和布尔前缀统一规则
-
-### v0.5 - 客户端页面重构
-- ✨ 新增客户端首页（ClientHomePage）- 现代化首页设计，包含动态文字轮播和数字动画
-- ✨ 新增客户端文章中心（ClientArticleCenterPage）- 分类侧边栏和文章列表展示
-- ✨ 新增客户端个人主页（ClientProfilePage）- 用户资料、文章、评论、关注者展示
-- ✨ 新增客户端布局（ClientLayout）- 响应式顶部导航栏，支持滚动隐藏/显示
-- ✨ 新增客户端关于我们（ClientAboutPage）- 团队成员展示和作品集
-- 🔧 新增环境变量配置文件
-
-### v0.4 - 纯净版
-- ✨ 为所有Vue文件添加了功能注释
-- 🔧 修改头像上传功能，上传新头像时自动删除旧头像文件
-- 🗄️ 整理项目结构，保持代码简洁

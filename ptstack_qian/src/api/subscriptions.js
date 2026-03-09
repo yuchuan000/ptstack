@@ -9,7 +9,7 @@ import request from '@/utils/request'
 export function toggleSubscription(followingId) {
   return request({
     url: `/subscriptions/${followingId}`,
-    method: 'post'
+    method: 'post',
   })
 }
 
@@ -21,7 +21,7 @@ export function toggleSubscription(followingId) {
 export function checkSubscription(followingId) {
   return request({
     url: `/subscriptions/check/${followingId}`,
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -38,7 +38,7 @@ export function getUserFollowers(userId, params) {
   return request({
     url: `/subscriptions/followers/${userId}`,
     method: 'get',
-    params
+    params,
   })
 }
 
@@ -55,6 +55,6 @@ export function getUserFollowing(userId, params) {
   return request({
     url: `/subscriptions/following/${userId}`,
     method: 'get',
-    params
+    params,
   })
 }

@@ -3,12 +3,23 @@
 // 功能：展示文章内容、评论、点赞、分享等互动功能
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getArticleById, getComments, createComment, deleteComment, toggleLike, checkLike, toggleCommentLike, checkCommentLikes, shareArticle } from '@/api/articles'
+import {
+  getArticleById,
+  getComments,
+  createComment,
+  deleteComment,
+  toggleLike,
+  checkLike,
+  toggleCommentLike,
+  checkCommentLikes,
+  shareArticle,
+} from '@/api/articles'
 import { checkSubscription } from '@/api/subscriptions'
 import { useUserStore } from '@/stores/user'
 import { ElLoading } from 'element-plus'
 import {
   ArrowLeft,
+  ArrowUp,
   Edit,
   View,
   Star,
@@ -23,7 +34,7 @@ import {
   ChatLineRound,
   Warning,
   More,
-  Loading
+  Loading,
 } from '@element-plus/icons-vue'
 import { getFullUrl } from '@/utils/url'
 import QRCode from 'qrcode'
@@ -31,10 +42,18 @@ import html2canvas from 'html2canvas'
 import { MdPreview } from 'md-editor-v3'
 import MentionText from '@/components/MentionText/MentionText.vue'
 import MentionInput from '@/components/MentionInput/MentionInput.vue'
+import { decodeMarkdownCodeBlocks } from '@/utils/markdownCodeBlock'
+import { computed } from 'vue'
+import UserAvatar from '@/components/Common/UserAvatar.vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+
+const decodedContent = computed(() => {
+  if (!article.value?.content) return ''
+  return decodeMarkdownCodeBlocks(article.value.content)
+})
 
 const loading = ref(false)
 const article = ref(null)
@@ -50,7 +69,7 @@ const submittingReply = ref(false)
 const commentsPagination = ref({
   page: 1,
   pageSize: 10,
-  total: 0
+  total: 0,
 })
 const sortBy = ref('created_at')
 const order = ref('desc')
@@ -65,6 +84,7 @@ const posterRef = ref(null)
 const expandedReplies = ref({})
 const commentMentions = ref([])
 const replyMentions = ref([])
+const scrollTop = ref(0)
 
 const fetchArticle = async () => {
   try {
@@ -91,7 +111,7 @@ const fetchComments = async (isLoadMore = false) => {
       page: commentsPagination.value.page,
       pageSize: commentsPagination.value.pageSize,
       sortBy: sortBy.value,
-      order: order.value
+      order: order.value,
     })
     if (isLoadMore) {
       comments.value = [...comments.value, ...res.comments]
@@ -129,13 +149,22 @@ const handleScroll = () => {
   const topLevelTotal = commentsPagination.value.topLevelTotal || commentsPagination.value.total
   if (comments.value.length >= topLevelTotal) return
 
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+  const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop
+  scrollTop.value = currentScrollTop
+
   const scrollHeight = document.documentElement.scrollHeight
   const clientHeight = document.documentElement.clientHeight
 
-  if (scrollTop + clientHeight >= scrollHeight - 300) {
+  if (currentScrollTop + clientHeight >= scrollHeight - 300) {
     handleLoadMore()
   }
+}
+
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  })
 }
 
 const fetchCommentLikes = async () => {
@@ -193,7 +222,6 @@ const handleToggleLike = async () => {
   }
 }
 
-
 const handleSubmitComment = async () => {
   if (!userStore.userInfo) {
     ElMessage.warning('请先登录')
@@ -207,7 +235,7 @@ const handleSubmitComment = async () => {
     submittingComment.value = true
     await createComment(route.params.id, {
       content: commentInput.value,
-      mentions: commentMentions.value
+      mentions: commentMentions.value,
     })
     ElMessage.success('评论成功')
     commentInput.value = ''
@@ -318,7 +346,7 @@ const getTopLevelCommentId = (comment) => {
   let topLevelId = comment.id
   let tempComment = comment
   while (tempComment.parent_id) {
-    let parentComment = comments.value.find(c => c.id === tempComment.parent_id)
+    let parentComment = comments.value.find((c) => c.id === tempComment.parent_id)
     if (parentComment) {
       topLevelId = parentComment.id
       tempComment = parentComment
@@ -326,7 +354,7 @@ const getTopLevelCommentId = (comment) => {
       let foundInReplies = false
       for (let c of comments.value) {
         if (c.replies) {
-          parentComment = c.replies.find(r => r.id === tempComment.parent_id)
+          parentComment = c.replies.find((r) => r.id === tempComment.parent_id)
           if (parentComment) {
             topLevelId = c.id
             tempComment = c
@@ -380,7 +408,7 @@ const handleSubmitReply = async () => {
       parentId: targetParentId,
       replyToUserId: replyingTo.value.user_id,
       replyToCommentId: replyingTo.value.id,
-      mentions: replyMentions.value
+      mentions: replyMentions.value,
     })
     ElMessage.success('回复成功')
     replyingTo.value = null
@@ -425,6 +453,14 @@ const formatPosterTime = () => {
   return `${year}年${month}月${day}日`
 }
 
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
 const savePoster = async () => {
   if (!posterRef.value) {
     ElMessage.error('生成海报失败')
@@ -434,7 +470,7 @@ const savePoster = async () => {
   const loading = ElLoading.service({
     lock: true,
     text: '正在生成海报...',
-    background: 'rgba(0, 0, 0, 0.7)'
+    background: 'rgba(0, 0, 0, 0.7)',
   })
 
   try {
@@ -442,7 +478,7 @@ const savePoster = async () => {
       scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
-      logging: false
+      logging: false,
     })
 
     const link = document.createElement('a')
@@ -470,7 +506,7 @@ const handleShare = async (platform) => {
         break
       case 'poster':
         wechatQrcodeUrl.value = await QRCode.toDataURL(url)
-        await new Promise(resolve => setTimeout(resolve, 300))
+        await new Promise((resolve) => setTimeout(resolve, 300))
         await savePoster()
         break
     }
@@ -539,16 +575,54 @@ onUnmounted(() => {
           <h1 class="article-title">{{ article.title }}</h1>
 
           <div class="article-stats">
-            <span><el-icon><View /></el-icon> {{ article.view_count }} 阅读</span>
-            <span><el-icon><Star /></el-icon> {{ article.like_count }} 点赞</span>
-            <span><el-icon><ChatDotRound /></el-icon> {{ commentsPagination.total }} 评论</span>
-            <span v-if="article.tags?.length"><el-icon><PriceTag /></el-icon> {{ article.tags.join(', ') }}</span>
+            <span
+              ><el-icon><View /></el-icon> {{ article.view_count }} 阅读</span
+            >
+            <span
+              ><el-icon><Star /></el-icon> {{ article.like_count }} 点赞</span
+            >
+            <span
+              ><el-icon><ChatDotRound /></el-icon> {{ commentsPagination.total }} 评论</span
+            >
+            <span v-if="article.tags?.length"
+              ><el-icon><PriceTag /></el-icon> {{ article.tags.join(', ') }}</span
+            >
           </div>
 
           <div class="article-body">
             <p v-if="article.summary" class="article-summary">{{ article.summary }}</p>
             <div class="article-text">
-              <MdPreview :modelValue="article.content" />
+              <MdPreview :modelValue="decodedContent" />
+            </div>
+          </div>
+        </div>
+
+        <!-- 附件展示卡片 -->
+        <div
+          v-if="article.attachments && article.attachments.length > 0"
+          class="attachments-section"
+        >
+          <div class="attachments-header">
+            <h3 class="attachments-title">
+              <el-icon><Download /></el-icon>
+              附件下载
+            </h3>
+          </div>
+          <div class="attachments-list">
+            <div
+              v-for="attachment in article.attachments"
+              :key="attachment.id"
+              class="attachment-item"
+            >
+              <div class="attachment-info">
+                <el-icon class="attachment-icon"><Download /></el-icon>
+                <span class="attachment-name">{{ attachment.originalName }}</span>
+                <span class="attachment-size">{{ formatFileSize(attachment.size) }}</span>
+              </div>
+              <a :href="attachment.url" target="_blank" class="download-btn">
+                <el-icon><Download /></el-icon>
+                下载
+              </a>
             </div>
           </div>
         </div>
@@ -564,17 +638,14 @@ onUnmounted(() => {
             <span class="action-text">{{ isLiked ? '已点赞' : '点赞' }}</span>
             <span class="action-count" v-if="article.like_count > 0">{{ article.like_count }}</span>
           </el-button>
-          <el-popover
-            placement="bottom"
-            :width="200"
-            trigger="click"
-            popper-class="share-popover"
-          >
+          <el-popover placement="bottom" :width="200" trigger="click" popper-class="share-popover">
             <template #reference>
               <el-button size="large" class="action-btn share-btn">
                 <el-icon><Share /></el-icon>
                 <span class="action-text">分享</span>
-                <span class="action-count" v-if="article?.share_count > 0">{{ article.share_count }}</span>
+                <span class="action-count" v-if="article?.share_count > 0">{{
+                  article.share_count
+                }}</span>
               </el-button>
             </template>
             <div class="share-options">
@@ -592,19 +663,32 @@ onUnmounted(() => {
 
         <div class="author-info-section" @click="router.push(`/profile/${article.author_id}`)">
           <div class="author-avatar-wrapper">
-            <el-avatar
-              :size="48"
-              class="author-avatar"
-              :src="article.author_avatar ? getFullUrl(article.author_avatar) : ''"
-            >
-              {{ (article.author_nickname || article.author_name)?.charAt(0)?.toUpperCase() || 'U' }}
-            </el-avatar>
-            <span v-if="article.author_is_admin === 1" class="avatar-admin-badge">管</span>
+            <UserAvatar
+              :user="{
+                id: article.author_id,
+                nickname: article.author_nickname,
+                username: article.author_name,
+                avatar: article.author_avatar,
+                show_avatar_badge:
+                  article.author_show_avatar_badge === 1 &&
+                  article.author_avatar_badge &&
+                  article.author_avatar_badge_bg_color &&
+                  article.author_avatar_badge_text_color,
+                avatar_badge: article.author_avatar_badge,
+                avatar_badge_bg_color: article.author_avatar_badge_bg_color,
+                avatar_badge_text_color: article.author_avatar_badge_text_color,
+              }"
+              size="default"
+            />
           </div>
           <div class="author-details">
-            <div class="author-name">{{ article.author_nickname || article.author_name || '匿名用户' }}</div>
+            <div class="author-name">
+              {{ article.author_nickname || article.author_name || '匿名用户' }}
+            </div>
             <div class="author-meta">
-              <span class="publish-time">发布于 {{ new Date(article.created_at).toLocaleString('zh-CN') }}</span>
+              <span class="publish-time"
+                >发布于 {{ new Date(article.created_at).toLocaleString('zh-CN') }}</span
+              >
             </div>
           </div>
         </div>
@@ -653,23 +737,28 @@ onUnmounted(() => {
           </div>
 
           <div class="comments-list" v-loading="commentsLoading">
-            <div
-              v-for="comment in comments"
-              :key="comment.id"
-              class="comment-item"
-            >
+            <div v-for="comment in comments" :key="comment.id" class="comment-item">
               <div class="comment-header">
                 <div class="comment-author">
                   <div class="author-avatar-wrapper">
-                    <el-avatar
-                      :size="40"
-                      class="author-avatar"
-                      :src="comment.user_avatar ? getFullUrl(comment.user_avatar) : ''"
+                    <UserAvatar
+                      :user="{
+                        id: comment.user_id,
+                        nickname: comment.user_nickname,
+                        username: comment.user_name,
+                        avatar: comment.user_avatar,
+                        show_avatar_badge:
+                          comment.user_show_avatar_badge === 1 &&
+                          comment.user_avatar_badge &&
+                          comment.user_avatar_badge_bg_color &&
+                          comment.user_avatar_badge_text_color,
+                        avatar_badge: comment.user_avatar_badge,
+                        avatar_badge_bg_color: comment.user_avatar_badge_bg_color,
+                        avatar_badge_text_color: comment.user_avatar_badge_text_color,
+                      }"
+                      size="small"
                       @click.stop="router.push(`/profile/${comment.user_id}`)"
-                    >
-                      {{ (comment.user_nickname || comment.user_name)?.charAt(0)?.toUpperCase() || 'U' }}
-                    </el-avatar>
-                    <span v-if="comment.user_is_admin === 1" class="avatar-admin-badge">管</span>
+                    />
                   </div>
                   <div class="author-info">
                     <span
@@ -678,11 +767,16 @@ onUnmounted(() => {
                     >
                       {{ comment.user_nickname || comment.user_name || '匿名用户' }}
                     </span>
-                    <span class="comment-time">{{ new Date(comment.created_at).toLocaleString('zh-CN') }}</span>
+                    <span class="comment-time">{{
+                      new Date(comment.created_at).toLocaleString('zh-CN')
+                    }}</span>
                   </div>
                 </div>
                 <div class="comment-actions">
-                  <el-dropdown trigger="click" @command="(cmd) => handleCommentAction(cmd, comment)">
+                  <el-dropdown
+                    trigger="click"
+                    @command="(cmd) => handleCommentAction(cmd, comment)"
+                  >
                     <el-button link class="more-btn">
                       <el-icon><More /></el-icon>
                     </el-button>
@@ -692,11 +786,21 @@ onUnmounted(() => {
                           <el-icon><ChatLineRound /></el-icon>
                           回复
                         </el-dropdown-item>
-                        <el-dropdown-item command="like" :type="likedComments.includes(comment.id) ? 'primary' : ''">
-                          <el-icon><StarFilled v-if="likedComments.includes(comment.id)" /><Star v-else /></el-icon>
-                          {{ likedComments.includes(comment.id) ? '已点赞' : '点赞' }} {{ comment.like_count }}
+                        <el-dropdown-item
+                          command="like"
+                          :type="likedComments.includes(comment.id) ? 'primary' : ''"
+                        >
+                          <el-icon
+                            ><StarFilled v-if="likedComments.includes(comment.id)" /><Star v-else
+                          /></el-icon>
+                          {{ likedComments.includes(comment.id) ? '已点赞' : '点赞' }}
+                          {{ comment.like_count }}
                         </el-dropdown-item>
-                        <el-dropdown-item v-if="userStore.userInfo?.id === comment.user_id" command="delete" type="danger">
+                        <el-dropdown-item
+                          v-if="userStore.userInfo?.id === comment.user_id"
+                          command="delete"
+                          type="danger"
+                        >
                           <el-icon><Delete /></el-icon>
                           删除
                         </el-dropdown-item>
@@ -711,7 +815,10 @@ onUnmounted(() => {
 
               <div v-if="replyingTo?.id === comment.id" class="reply-input-section">
                 <div class="reply-info">
-                  <span>回复 {{ replyingTo.user_nickname || replyingTo.user_name || '匿名用户' }}：</span>
+                  <span
+                    >回复
+                    {{ replyingTo.user_nickname || replyingTo.user_name || '匿名用户' }}：</span
+                  >
                   <el-button link @click="handleCancelReply">取消</el-button>
                 </div>
                 <MentionInput
@@ -733,23 +840,28 @@ onUnmounted(() => {
               </div>
 
               <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
-                <div
-                  v-for="reply in getVisibleReplies(comment)"
-                  :key="reply.id"
-                  class="reply-item"
-                >
+                <div v-for="reply in getVisibleReplies(comment)" :key="reply.id" class="reply-item">
                   <div class="reply-header">
                     <div class="reply-author">
                       <div class="reply-avatar-wrapper">
-                        <el-avatar
-                          :size="32"
-                          class="reply-avatar"
-                          :src="reply.user_avatar ? getFullUrl(reply.user_avatar) : ''"
+                        <UserAvatar
+                          :user="{
+                            id: reply.user_id,
+                            nickname: reply.user_nickname,
+                            username: reply.user_name,
+                            avatar: reply.user_avatar,
+                            show_avatar_badge:
+                              reply.user_show_avatar_badge === 1 &&
+                              reply.user_avatar_badge &&
+                              reply.user_avatar_badge_bg_color &&
+                              reply.user_avatar_badge_text_color,
+                            avatar_badge: reply.user_avatar_badge,
+                            avatar_badge_bg_color: reply.user_avatar_badge_bg_color,
+                            avatar_badge_text_color: reply.user_avatar_badge_text_color,
+                          }"
+                          size="tiny"
                           @click.stop="router.push(`/profile/${reply.user_id}`)"
-                        >
-                          {{ (reply.user_nickname || reply.user_name)?.charAt(0)?.toUpperCase() || 'U' }}
-                        </el-avatar>
-                        <span v-if="reply.user_is_admin === 1" class="avatar-admin-badge">管</span>
+                        />
                       </div>
                       <div class="reply-author-info">
                         <span
@@ -758,11 +870,16 @@ onUnmounted(() => {
                         >
                           {{ reply.user_nickname || reply.user_name || '匿名用户' }}
                         </span>
-                        <span class="reply-time">{{ new Date(reply.created_at).toLocaleString('zh-CN') }}</span>
+                        <span class="reply-time">{{
+                          new Date(reply.created_at).toLocaleString('zh-CN')
+                        }}</span>
                       </div>
                     </div>
                     <div class="reply-actions">
-                      <el-dropdown trigger="click" @command="(cmd) => handleCommentAction(cmd, reply)">
+                      <el-dropdown
+                        trigger="click"
+                        @command="(cmd) => handleCommentAction(cmd, reply)"
+                      >
                         <el-button link class="more-btn">
                           <el-icon><More /></el-icon>
                         </el-button>
@@ -772,11 +889,21 @@ onUnmounted(() => {
                               <el-icon><ChatLineRound /></el-icon>
                               回复
                             </el-dropdown-item>
-                            <el-dropdown-item command="like" :type="likedComments.includes(reply.id) ? 'primary' : ''">
-                              <el-icon><StarFilled v-if="likedComments.includes(reply.id)" /><Star v-else /></el-icon>
-                              {{ likedComments.includes(reply.id) ? '已点赞' : '点赞' }} {{ reply.like_count }}
+                            <el-dropdown-item
+                              command="like"
+                              :type="likedComments.includes(reply.id) ? 'primary' : ''"
+                            >
+                              <el-icon
+                                ><StarFilled v-if="likedComments.includes(reply.id)" /><Star v-else
+                              /></el-icon>
+                              {{ likedComments.includes(reply.id) ? '已点赞' : '点赞' }}
+                              {{ reply.like_count }}
                             </el-dropdown-item>
-                            <el-dropdown-item v-if="userStore.userInfo?.id === reply.user_id" command="delete" type="danger">
+                            <el-dropdown-item
+                              v-if="userStore.userInfo?.id === reply.user_id"
+                              command="delete"
+                              type="danger"
+                            >
                               <el-icon><Delete /></el-icon>
                               删除
                             </el-dropdown-item>
@@ -786,13 +913,34 @@ onUnmounted(() => {
                     </div>
                   </div>
                   <div class="reply-content">
-                    <div v-if="reply.reply_to_comment_id && reply.reply_to_comment_id !== comment.id" class="reply-quote">
+                    <div
+                      v-if="reply.reply_to_comment_id && reply.reply_to_comment_id !== comment.id"
+                      class="reply-quote"
+                    >
                       <span class="reply-to">
-                        @{{ findCommentById(reply.reply_to_comment_id)?.user_nickname || findCommentById(reply.reply_to_comment_id)?.user_name || reply.reply_to_user_nickname || reply.reply_to_user_name || '匿名用户' }}
-                        于 {{ findCommentById(reply.reply_to_comment_id) ? new Date(findCommentById(reply.reply_to_comment_id).created_at).toLocaleString('zh-CN') : '' }}
+                        @{{
+                          findCommentById(reply.reply_to_comment_id)?.user_nickname ||
+                          findCommentById(reply.reply_to_comment_id)?.user_name ||
+                          reply.reply_to_user_nickname ||
+                          reply.reply_to_user_name ||
+                          '匿名用户'
+                        }}
+                        于
+                        {{
+                          findCommentById(reply.reply_to_comment_id)
+                            ? new Date(
+                                findCommentById(reply.reply_to_comment_id).created_at,
+                              ).toLocaleString('zh-CN')
+                            : ''
+                        }}
                       </span>
                       <div v-if="findCommentById(reply.reply_to_comment_id)" class="quote-content">
-                        {{ findCommentById(reply.reply_to_comment_id).content.length > 50 ? findCommentById(reply.reply_to_comment_id).content.substring(0, 50) + '...' : findCommentById(reply.reply_to_comment_id).content }}
+                        {{
+                          findCommentById(reply.reply_to_comment_id).content.length > 50
+                            ? findCommentById(reply.reply_to_comment_id).content.substring(0, 50) +
+                              '...'
+                            : findCommentById(reply.reply_to_comment_id).content
+                        }}
                       </div>
                     </div>
                     <MentionText :content="reply.content" />
@@ -800,7 +948,10 @@ onUnmounted(() => {
 
                   <div v-if="replyingTo?.id === reply.id" class="reply-input-section">
                     <div class="reply-info">
-                      <span>回复 {{ replyingTo.user_nickname || replyingTo.user_name || '匿名用户' }}：</span>
+                      <span
+                        >回复
+                        {{ replyingTo.user_nickname || replyingTo.user_name || '匿名用户' }}：</span
+                      >
                       <el-button link @click="handleCancelReply">取消</el-button>
                     </div>
                     <MentionInput
@@ -830,7 +981,9 @@ onUnmounted(() => {
             </div>
 
             <div
-              v-if="comments.length < (commentsPagination.topLevelTotal || commentsPagination.total)"
+              v-if="
+                comments.length < (commentsPagination.topLevelTotal || commentsPagination.total)
+              "
               class="load-more-section"
             >
               <div v-if="loadingMoreComments" class="loading-more">
@@ -866,7 +1019,7 @@ onUnmounted(() => {
       </div>
     </el-dialog>
 
-    <div class="share-poster-container" style="position: fixed; left: -9999px; top: -9999px;">
+    <div class="share-poster-container" style="position: fixed; left: -9999px; top: -9999px">
       <div class="share-poster" ref="posterRef">
         <div class="poster-header">
           <div class="poster-logo">
@@ -882,9 +1035,15 @@ onUnmounted(() => {
         <div class="poster-divider"></div>
         <div class="poster-footer">
           <div class="poster-author">
-            <img :src="getFullUrl(article?.author_avatar || '')" :alt="article?.author_nickname || article?.author_name" class="poster-avatar" />
+            <img
+              :src="getFullUrl(article?.author_avatar || '')"
+              :alt="article?.author_nickname || article?.author_name"
+              class="poster-avatar"
+            />
             <div class="poster-author-info">
-              <div class="poster-author-name">{{ article?.author_nickname || article?.author_name || '匿名用户' }}</div>
+              <div class="poster-author-name">
+                {{ article?.author_nickname || article?.author_name || '匿名用户' }}
+              </div>
               <div class="poster-meta">
                 <span class="poster-time">{{ formatPosterTime() }}</span>
               </div>
@@ -897,6 +1056,10 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <div class="back-to-top" :class="{ show: scrollTop > 300 }" @click="scrollToTop">
+      <el-icon><ArrowUp /></el-icon>
+    </div>
   </div>
 </template>
 
@@ -906,6 +1069,40 @@ onUnmounted(() => {
   background: linear-gradient(180deg, #f7f8fa 0%, #ffffff 100%);
   padding-bottom: 60px;
   padding-top: 32px;
+}
+
+.back-to-top {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
+  transition: all 0.3s ease;
+  opacity: 0;
+  visibility: hidden;
+  z-index: 1000;
+
+  &.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(22, 93, 255, 0.4);
+  }
+
+  .el-icon {
+    font-size: 24px;
+  }
 }
 
 .article-container {
@@ -1054,6 +1251,108 @@ onUnmounted(() => {
     font-size: 16px;
     color: #1d2129;
     line-height: 1.9;
+  }
+}
+
+.attachments-section {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 40px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  margin-bottom: 32px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .attachments-header {
+    margin-bottom: 16px;
+  }
+
+  .attachments-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2129;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .attachments-list {
+    border-radius: 12px;
+    border: 1px solid #e5e6eb;
+    overflow: hidden;
+  }
+
+  .attachment-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f2f3f5;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: #f7f8fa;
+    }
+  }
+
+  .attachment-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .attachment-icon {
+    color: #165dff;
+    font-size: 20px;
+  }
+
+  .attachment-name {
+    flex: 1;
+    font-size: 15px;
+    color: #1d2129;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .attachment-size {
+    font-size: 13px;
+    color: #86909c;
+    white-space: nowrap;
+  }
+
+  .download-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-decoration: none;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
+      color: #ffffff;
+    }
+
+    .el-icon {
+      font-size: 16px;
+    }
   }
 }
 
@@ -1332,72 +1631,72 @@ onUnmounted(() => {
       margin-bottom: 12px;
 
       .comment-author {
-          display: flex;
-          align-items: center;
-          gap: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
 
-          .author-avatar-wrapper {
-            position: relative;
-            display: inline-flex;
+        .author-avatar-wrapper {
+          position: relative;
+          display: inline-flex;
 
-            .author-avatar {
-              background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-              cursor: pointer;
-              transition: transform 0.2s ease;
+          .author-avatar {
+            background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+            cursor: pointer;
+            transition: transform 0.2s ease;
 
-              &:hover {
-                transform: scale(1.05);
-              }
-
-              img {
-                border-radius: 50%;
-                object-fit: cover;
-              }
+            &:hover {
+              transform: scale(1.05);
             }
 
-            .avatar-admin-badge {
-              position: absolute;
-              bottom: -5px;
-              right: -5px;
-              width: 24px;
-              height: 24px;
-              background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
-              border: 2px solid white;
+            img {
               border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 11px;
-              font-weight: 700;
-              color: white;
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-              z-index: 1;
+              object-fit: cover;
             }
           }
 
-          .author-info {
+          .avatar-admin-badge {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
+            border: 2px solid white;
+            border-radius: 50%;
             display: flex;
-            flex-direction: column;
-            gap: 4px;
-
-            .author-name {
-              font-size: 15px;
-              font-weight: 600;
-              color: #1d2129;
-              cursor: pointer;
-              transition: color 0.2s ease;
-
-              &:hover {
-                color: #165dff;
-              }
-            }
-
-            .comment-time {
-              font-size: 13px;
-              color: #86909c;
-            }
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+            z-index: 1;
           }
         }
+
+        .author-info {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+
+          .author-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1d2129;
+            cursor: pointer;
+            transition: color 0.2s ease;
+
+            &:hover {
+              color: #165dff;
+            }
+          }
+
+          .comment-time {
+            font-size: 13px;
+            color: #86909c;
+          }
+        }
+      }
 
       .comment-actions {
         display: flex;
@@ -1763,7 +2062,8 @@ onUnmounted(() => {
   background: linear-gradient(180deg, #f7f8fa 0%, #ffffff 100%);
   padding: 48px;
   box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   display: flex;
   flex-direction: column;
   border-radius: 20px;

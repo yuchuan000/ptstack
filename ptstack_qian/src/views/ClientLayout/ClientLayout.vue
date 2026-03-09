@@ -6,7 +6,11 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { House, Document, InfoFilled, Switch, User, ArrowDown, ArrowUp, Setting } from '@element-plus/icons-vue'
-import { getFullUrl } from '@/utils/url'
+
+import { getFooterItems } from '@/api/about'
+import UserAvatar from '@/components/Common/UserAvatar.vue'
+
+
 
 const router = useRouter()
 const route = useRoute()
@@ -17,6 +21,10 @@ const userDropdownVisible = ref(false)
 const scrollTop = ref(0)
 const lastScrollTop = ref(0)
 const isHeaderVisible = ref(true)
+
+// 底部信息
+const footerItems = ref([])
+const footerLoading = ref(false)
 
 // 窗口大小改变时的处理函数
 const handleResize = () => {
@@ -43,6 +51,7 @@ const handleScroll = () => {
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   window.addEventListener('scroll', handleScroll)
+  fetchFooterItems()
 })
 
 // 组件卸载时移除窗口大小监听和滚动监听
@@ -87,6 +96,12 @@ const shouldApplyTransparent = computed(() => {
 
 // 判断是否已登录
 const isLoggedIn = computed(() => userStore.isLoggedIn)
+
+// 判断是否可以访问管理后台（一级和二级用户）
+const canAccessAdmin = computed(() => {
+  const level = userStore.userInfo?.level
+  return level === 1 || level === 2
+})
 
 // 处理导航点击
 const handleNavClick = (path) => {
@@ -138,6 +153,38 @@ const handleLogout = () => {
     router.push('/')
   }).catch(() => {})
 }
+
+// 获取底部信息
+const fetchFooterItems = async () => {
+  footerLoading.value = true
+  try {
+    const res = await getFooterItems()
+    footerItems.value = res.items || []
+  } catch (error) {
+    console.error('获取底部信息失败:', error)
+  } finally {
+    footerLoading.value = false
+  }
+}
+
+// 按行数ID分组的底部信息
+const groupedFooterItems = computed(() => {
+  const groups = {}
+  footerItems.value.forEach(item => {
+    // 根据当前设备类型过滤显示项
+    const shouldShow = isMobile.value ? item.showOnMobile : item.showOnPc
+    if (shouldShow) {
+      // 根据当前设备类型选择对应的行数ID
+      const rowId = isMobile.value ? item.mobileRowId : item.pcRowId
+      if (!groups[rowId]) {
+        groups[rowId] = []
+      }
+      groups[rowId].push(item)
+    }
+  })
+  // 按行数ID排序
+  return Object.entries(groups).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+})
 </script>
 
 <template>
@@ -173,18 +220,16 @@ const handleLogout = () => {
               placement="bottom-end"
             >
               <div class="user-info">
-                <div class="user-avatar">
-                  <img
-                    v-if="userStore.userInfo?.avatar"
-                    :src="getFullUrl(userStore.userInfo.avatar)"
-                    alt="avatar"
-                    class="avatar-img"
-                  >
-                  <span v-else class="avatar-text">
-                    {{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}
-                  </span>
-                  <span v-if="userStore.userInfo?.isAdmin" class="avatar-badge">管</span>
-                </div>
+                <UserAvatar :user="{
+                  id: userStore.userInfo?.id,
+                  nickname: userStore.userInfo?.nickname,
+                  username: userStore.userInfo?.username,
+                  avatar: userStore.userInfo?.avatar,
+                  showAvatarBadge: userStore.userInfo?.showAvatarBadge && userStore.userInfo?.avatarBadge && userStore.userInfo?.avatarBadgeBgColor && userStore.userInfo?.avatarBadgeTextColor,
+                  avatarBadge: userStore.userInfo?.avatarBadge,
+                  avatarBadgeBgColor: userStore.userInfo?.avatarBadgeBgColor,
+                  avatarBadgeTextColor: userStore.userInfo?.avatarBadgeTextColor
+                }" size="small" />
                 <span class="user-name" v-if="!isMobile">
                   {{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}
                 </span>
@@ -196,7 +241,7 @@ const handleLogout = () => {
                     <el-icon><User /></el-icon>
                     个人信息
                   </el-dropdown-item>
-                  <el-dropdown-item v-if="userStore.userInfo?.isAdmin" @click="goToAdmin">
+                  <el-dropdown-item v-if="canAccessAdmin" @click="goToAdmin">
                     <el-icon><Setting /></el-icon>
                     管理后台
                   </el-dropdown-item>
@@ -231,7 +276,18 @@ const handleLogout = () => {
     <!-- 底部版权 -->
     <footer class="client-footer">
       <div class="footer-container">
-        <p class="copyright">© 2024 PTStack. All rights reserved.</p>
+        <!-- 动态底部信息 -->
+        <div v-if="groupedFooterItems.length > 0" class="footer-content">
+          <div v-for="[rowId, items] in groupedFooterItems" :key="rowId" class="footer-row">
+            <template v-for="(item, index) in items" :key="item.id">
+              <span v-if="index > 0" class="footer-separator">|</span>
+              <a v-if="item.link" :href="item.link" target="_blank" rel="noopener noreferrer" class="footer-link">
+                {{ item.display }}
+              </a>
+              <span v-else class="footer-text">{{ item.display }}</span>
+            </template>
+          </div>
+        </div>
       </div>
     </footer>
   </div>
@@ -522,23 +578,71 @@ const handleLogout = () => {
 
 /* 底部版权 */
 .client-footer {
-  height: 60px;
   background: #fff;
   border-top: 1px solid #e5e6eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 20px 0;
+  margin-top: auto;
 }
 
 .footer-container {
   max-width: 1400px;
+  margin: 0 auto;
   padding: 0 24px;
+  text-align: center;
+}
+
+.footer-content {
+  margin-bottom: 16px;
+}
+
+.footer-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.footer-item {
+  font-size: 13px;
+}
+
+.footer-link {
+  color: #86909c;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #165dff;
+    text-decoration: underline;
+  }
+}
+
+.footer-text {
+  color: #86909c;
+}
+
+.footer-separator {
+  color: #86909c;
 }
 
 .copyright {
   font-size: 14px;
   color: #86909c;
   margin: 0;
+}
+
+.beian-link {
+  color: #86909c;
+  text-decoration: none;
+  transition: color 0.2s;
+  margin-left: 4px;
+
+  &:hover {
+    color: #165dff;
+    text-decoration: underline;
+  }
 }
 
 /* 移动端适配 */

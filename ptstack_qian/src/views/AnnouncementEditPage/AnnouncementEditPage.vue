@@ -5,11 +5,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Check, Setting, MagicStick } from '@element-plus/icons-vue'
-import {
-  getAnnouncementById,
-  createAnnouncement,
-  updateAnnouncement
-} from '@/api/announcements'
+import { getAnnouncementById, createAnnouncement, updateAnnouncement } from '@/api/announcements'
 import { generateSummary } from '@/api/ai'
 import { MdEditor, NormalToolbar } from 'md-editor-v3'
 
@@ -22,7 +18,37 @@ const generatingSummary = ref(false)
 const isEdit = ref(!!route.params.id)
 const targetUserIdsInput = ref('')
 const editorRef = ref(null)
-const toolbars = ['bold', 'underline', 'italic', '-', 'title', 'strikeThrough', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task', '-', 'codeRow', 'code', 'link', 'image', 'table', '-', 0, '-', 'revoke', 'next', '=', 'pageFullscreen', 'fullscreen', 'preview', 'htmlPreview', 'catalog']
+const toolbars = [
+  'bold',
+  'underline',
+  'italic',
+  '-',
+  'title',
+  'strikeThrough',
+  'sub',
+  'sup',
+  'quote',
+  'unorderedList',
+  'orderedList',
+  'task',
+  '-',
+  'codeRow',
+  'code',
+  'link',
+  'image',
+  'table',
+  '-',
+  0,
+  '-',
+  'revoke',
+  'next',
+  '=',
+  'pageFullscreen',
+  'fullscreen',
+  'preview',
+  'htmlPreview',
+  'catalog',
+]
 
 const insertIndent = () => {
   form.value.content += '&emsp;'
@@ -37,7 +63,7 @@ const handleGenerateSummary = async () => {
     generatingSummary.value = true
     const res = await generateSummary({
       title: form.value.title,
-      content: form.value.content
+      content: form.value.content,
     })
     form.value.summary = res.summary
     ElMessage.success('概述生成成功')
@@ -58,7 +84,7 @@ const form = ref({
   target_user_ids: [],
   delivery_methods: [],
   start_time: null,
-  end_time: null
+  end_time: null,
 })
 
 const fetchAnnouncement = async () => {
@@ -67,7 +93,9 @@ const fetchAnnouncement = async () => {
     loading.value = true
     const res = await getAnnouncementById(route.params.id)
     const announcement = res.announcement
-    const targetUserIds = announcement.target_user_ids ? JSON.parse(announcement.target_user_ids) : []
+    const targetUserIds = announcement.target_user_ids
+      ? JSON.parse(announcement.target_user_ids)
+      : []
     targetUserIdsInput.value = targetUserIds.join(',')
     form.value = {
       title: announcement.title,
@@ -77,9 +105,11 @@ const fetchAnnouncement = async () => {
       is_marquee: announcement.is_marquee || false,
       target_type: announcement.target_type || 'all',
       target_user_ids: targetUserIds,
-      delivery_methods: announcement.delivery_methods ? JSON.parse(announcement.delivery_methods) : [],
+      delivery_methods: announcement.delivery_methods
+        ? JSON.parse(announcement.delivery_methods)
+        : [],
       start_time: announcement.start_time,
-      end_time: announcement.end_time
+      end_time: announcement.end_time,
     }
   } catch (error) {
     console.error('获取公告失败:', error)
@@ -108,8 +138,8 @@ const validateForm = () => {
 const handleTargetUserIdsChange = () => {
   form.value.target_user_ids = targetUserIdsInput.value
     .split(',')
-    .map(id => id.trim())
-    .filter(id => id)
+    .map((id) => id.trim())
+    .filter((id) => id)
 }
 
 const handleSubmit = async () => {
@@ -121,7 +151,7 @@ const handleSubmit = async () => {
 
     const data = {
       ...form.value,
-      target_user_ids: form.value.target_type === 'specific' ? form.value.target_user_ids : []
+      target_user_ids: form.value.target_type === 'specific' ? form.value.target_user_ids : [],
     }
 
     if (isEdit.value) {
@@ -184,9 +214,7 @@ onMounted(() => {
               style="height: 500px"
             >
               <template #defToolbars>
-                <NormalToolbar title="插入缩进" @onClick="insertIndent">
-                  ↦
-                </NormalToolbar>
+                <NormalToolbar title="插入缩进" @onClick="insertIndent"> ↦ </NormalToolbar>
               </template>
             </MdEditor>
           </div>
@@ -194,7 +222,12 @@ onMounted(() => {
           <div class="form-section">
             <div class="form-label-row">
               <label class="form-label">公告概述</label>
-              <el-button type="primary" size="small" :loading="generatingSummary" @click="handleGenerateSummary">
+              <el-button
+                type="primary"
+                size="small"
+                :loading="generatingSummary"
+                @click="handleGenerateSummary"
+              >
                 <el-icon><MagicStick /></el-icon> AI生成
               </el-button>
             </div>
@@ -284,9 +317,7 @@ onMounted(() => {
           </div>
 
           <div class="action-buttons">
-            <el-button size="large" @click="goBack" class="cancel-btn">
-              取消
-            </el-button>
+            <el-button size="large" @click="goBack" class="cancel-btn"> 取消 </el-button>
             <el-button
               type="primary"
               size="large"

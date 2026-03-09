@@ -12,7 +12,7 @@ export const getProfile = async (req, res) => {
     const userId = req.user.id
 
     const users = await execute(
-      'SELECT id, public_id, username, nickname, email, avatar, profile_completed, bio, created_at, follower_count, following_count, is_admin FROM users WHERE id = ?',
+      'SELECT id, public_id, username, nickname, email, avatar, avatar_badge, avatar_badge_bg_color, avatar_badge_text_color, show_avatar_badge, profile_completed, bio, created_at, follower_count, following_count, level FROM users WHERE id = ?',
       [userId],
     )
 
@@ -35,6 +35,11 @@ export const getProfile = async (req, res) => {
       [userId],
     )
 
+    // 获取用户权限
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+
     res.status(200).json({
       message: '获取用户信息成功',
       user: {
@@ -43,6 +48,10 @@ export const getProfile = async (req, res) => {
         nickname: users[0].nickname,
         email: users[0].email,
         avatar: users[0].avatar,
+        avatarBadge: users[0].avatar_badge,
+        avatarBadgeBgColor: users[0].avatar_badge_bg_color,
+        avatarBadgeTextColor: users[0].avatar_badge_text_color,
+        showAvatarBadge: users[0].show_avatar_badge === 1,
         profileCompleted: users[0].profile_completed === 1,
         bio: users[0].bio,
         createdAt: users[0].created_at,
@@ -51,7 +60,9 @@ export const getProfile = async (req, res) => {
         following_count: users[0].following_count,
         total_views: totalViews.total,
         comment_count: commentCount.count,
-        isAdmin: users[0].is_admin === 1,
+
+        level: users[0].level,
+        permissions: permissions.map((p) => p.permission),
       },
     })
   } catch (error) {
@@ -67,8 +78,8 @@ export const getUserPublicProfile = async (req, res) => {
 
     const [user] = await execute(
       `
-      SELECT id, public_id, username, nickname, email, avatar, bio, follower_count, following_count,
-             created_at, is_admin, show_followers, show_following, show_articles, show_comments
+      SELECT id, public_id, username, nickname, email, avatar, avatar_badge, avatar_badge_bg_color, avatar_badge_text_color, show_avatar_badge, bio, follower_count, following_count,
+             created_at, level, show_followers, show_following, show_articles, show_comments
       FROM users
       WHERE public_id = ?
     `,
@@ -103,6 +114,11 @@ export const getUserPublicProfile = async (req, res) => {
       [user.id],
     )
 
+    // 获取用户权限
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      user.id,
+    ])
+
     // 根据隐私设置控制返回的数据
     const isOwnProfile = currentUserId === user.id
     const publicUser = {
@@ -110,16 +126,22 @@ export const getUserPublicProfile = async (req, res) => {
       username: user.username,
       nickname: user.nickname,
       avatar: user.avatar,
+      avatarBadge: user.avatar_badge,
+      avatarBadgeBgColor: user.avatar_badge_bg_color,
+      avatarBadgeTextColor: user.avatar_badge_text_color,
+      showAvatarBadge: user.show_avatar_badge === 1,
       bio: user.bio,
-      follower_count: (isOwnProfile || user.show_followers) ? user.follower_count : 0,
-      following_count: (isOwnProfile || user.show_following) ? user.following_count : 0,
+      follower_count: isOwnProfile || user.show_followers ? user.follower_count : 0,
+      following_count: isOwnProfile || user.show_following ? user.following_count : 0,
       created_at: user.created_at,
       isSubscribed,
       isOwn: isOwnProfile,
-      article_count: (isOwnProfile || user.show_articles) ? articleCount.count : 0,
-      total_views: (isOwnProfile || user.show_articles) ? totalViews.total : 0,
-      comment_count: (isOwnProfile || user.show_comments) ? commentCount.count : 0,
-      isAdmin: user.is_admin === 1,
+      article_count: isOwnProfile || user.show_articles ? articleCount.count : 0,
+      total_views: isOwnProfile || user.show_articles ? totalViews.total : 0,
+      comment_count: isOwnProfile || user.show_comments ? commentCount.count : 0,
+
+      level: user.level,
+      permissions: permissions.map((p) => p.permission),
       // 返回隐私设置（仅对自己可见）
       ...(isOwnProfile && {
         show_followers: user.show_followers === 1,
@@ -139,7 +161,19 @@ export const getUserPublicProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id
-    const { nickname, avatar, bio, show_followers, show_following, show_articles, show_comments } = req.body
+    const {
+      nickname,
+      avatar,
+      avatarBadge,
+      avatarBadgeBgColor,
+      avatarBadgeTextColor,
+      showAvatarBadge,
+      bio,
+      show_followers,
+      show_following,
+      show_articles,
+      show_comments,
+    } = req.body
 
     // 如果要更新头像，先获取旧头像URL
     let oldAvatar = null
@@ -164,6 +198,26 @@ export const updateProfile = async (req, res) => {
     if (avatar !== undefined) {
       updateFields.push('avatar = ?')
       updateValues.push(avatar)
+    }
+
+    if (avatarBadge !== undefined) {
+      updateFields.push('avatar_badge = ?')
+      updateValues.push(avatarBadge || null)
+    }
+
+    if (avatarBadgeBgColor !== undefined) {
+      updateFields.push('avatar_badge_bg_color = ?')
+      updateValues.push(avatarBadgeBgColor || null)
+    }
+
+    if (avatarBadgeTextColor !== undefined) {
+      updateFields.push('avatar_badge_text_color = ?')
+      updateValues.push(avatarBadgeTextColor || null)
+    }
+
+    if (showAvatarBadge !== undefined) {
+      updateFields.push('show_avatar_badge = ?')
+      updateValues.push(showAvatarBadge ? 1 : 0)
     }
 
     if (bio !== undefined) {
@@ -210,7 +264,7 @@ export const updateProfile = async (req, res) => {
     }
 
     const users = await execute(
-      'SELECT id, public_id, username, nickname, email, avatar, profile_completed, bio, show_followers, show_following, show_articles, show_comments FROM users WHERE id = ?',
+      'SELECT id, public_id, username, nickname, email, avatar, avatar_badge, avatar_badge_bg_color, avatar_badge_text_color, show_avatar_badge, profile_completed, bio, show_followers, show_following, show_articles, show_comments FROM users WHERE id = ?',
       [userId],
     )
 
@@ -222,6 +276,10 @@ export const updateProfile = async (req, res) => {
         nickname: users[0].nickname,
         email: users[0].email,
         avatar: users[0].avatar,
+        avatarBadge: users[0].avatar_badge,
+        avatarBadgeBgColor: users[0].avatar_badge_bg_color,
+        avatarBadgeTextColor: users[0].avatar_badge_text_color,
+        showAvatarBadge: users[0].show_avatar_badge === 1,
         profileCompleted: users[0].profile_completed === 1,
         bio: users[0].bio,
         show_followers: users[0].show_followers === 1,
@@ -254,7 +312,9 @@ export const getUserArticles = async (req, res) => {
     const sortField = validSortFields.includes(sort) ? sort : 'created_at'
     const order = validOrder.includes(sortOrder) ? sortOrder : 'desc'
 
-    const [user] = await execute('SELECT id, show_articles FROM users WHERE public_id = ?', [userId])
+    const [user] = await execute('SELECT id, show_articles FROM users WHERE public_id = ?', [
+      userId,
+    ])
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
@@ -345,7 +405,9 @@ export const getUserComments = async (req, res) => {
     const sortField = validSortFields.includes(sort) ? sort : 'created_at'
     const order = validOrder.includes(sortOrder) ? sortOrder : 'desc'
 
-    const [user] = await execute('SELECT id, show_comments FROM users WHERE public_id = ?', [userId])
+    const [user] = await execute('SELECT id, show_comments FROM users WHERE public_id = ?', [
+      userId,
+    ])
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
@@ -416,7 +478,7 @@ export const getRecommendedUsers = async (req, res) => {
 
     let query = `
       SELECT u.id, u.public_id, u.username, u.nickname, u.avatar, u.bio, 
-             u.follower_count, u.following_count, u.is_admin
+             u.follower_count, u.following_count
       FROM users u
     `
     let params = []
@@ -467,7 +529,7 @@ export const getFeed = async (req, res) => {
 
     const articles = await execute(
       `
-      SELECT a.*, u.public_id as author_id, u.username, u.nickname, u.avatar, u.is_admin
+      SELECT a.*, u.public_id as author_id, u.username, u.nickname, u.avatar, u.show_avatar_badge, u.avatar_badge, u.avatar_badge_bg_color, u.avatar_badge_text_color
       FROM articles a
       JOIN users u ON a.author_id = u.id
       WHERE a.author_id IN (
@@ -578,26 +640,48 @@ export const getUnreadCount = async (req, res) => {
 
 export const getAllUsersAdmin = async (req, res) => {
   try {
-    if (req.user.is_admin !== 1) {
-      return res.status(403).json({ message: '只有管理员可以查看所有用户' })
+    const currentUserLevel = req.user?.level
+
+    // 检查用户等级是否有效
+    if (currentUserLevel === undefined || currentUserLevel === null) {
+      return res.status(403).json({ message: '无法获取用户等级信息' })
+    }
+
+    // 检查用户权限
+    let hasPermission = false
+    if (currentUserLevel === 1) {
+      hasPermission = true
+    } else {
+      const permissions = await execute(
+        'SELECT permission FROM user_permissions WHERE user_id = ?',
+        [req.user.id],
+      )
+      const permissionSet = new Set(permissions.map((p) => p.permission))
+      hasPermission = permissionSet.has('user_manage')
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({ message: '没有权限查看用户管理' })
     }
 
     const { page = 1, pageSize = 20, search = '' } = req.query
     const offset = (page - 1) * pageSize
 
-    let whereClause = ''
-    let params = []
+    // 使用参数化查询防止SQL注入
+    let whereClause = 'WHERE level > ?'
+    let params = [currentUserLevel]
 
     if (search) {
-      whereClause = 'WHERE username LIKE ? OR nickname LIKE ? OR email LIKE ?'
+      whereClause += ' AND (username LIKE ? OR nickname LIKE ? OR email LIKE ?)'
       const searchPattern = `%${search}%`
-      params = [searchPattern, searchPattern, searchPattern]
+      params.push(searchPattern, searchPattern, searchPattern)
     }
 
     const users = await execute(
       `
       SELECT id, public_id, username, nickname, email, avatar, bio, 
-             profile_completed, follower_count, following_count, is_admin, created_at
+             profile_completed, follower_count, following_count, level, created_at,
+             avatar_badge, avatar_badge_bg_color, avatar_badge_text_color, show_avatar_badge
       FROM users
       ${whereClause}
       ORDER BY created_at DESC
@@ -606,16 +690,32 @@ export const getAllUsersAdmin = async (req, res) => {
       [...params, parseInt(pageSize), offset],
     )
 
+    // 查询总数时需要去掉LIMIT和OFFSET参数
+    const countParams = search ? params.slice(0, -3) : [currentUserLevel]
     const [countResult] = await execute(
       `SELECT COUNT(*) as total FROM users ${whereClause}`,
-      params,
+      countParams,
     )
 
-    const processedUsers = users.map((user) => ({
-      ...user,
-      id: user.public_id,
-      isAdmin: user.is_admin === 1,
-    }))
+    // 获取每个用户的权限
+    const processedUsers = await Promise.all(
+      users.map(async (user) => {
+        const permissions = await execute(
+          'SELECT permission FROM user_permissions WHERE user_id = ?',
+          [user.id],
+        )
+        return {
+          ...user,
+          id: user.public_id,
+
+          permissions: permissions.map((p) => p.permission),
+          avatarBadge: user.avatar_badge,
+          avatarBadgeBgColor: user.avatar_badge_bg_color,
+          avatarBadgeTextColor: user.avatar_badge_text_color,
+          showAvatarBadge: user.show_avatar_badge === 1,
+        }
+      }),
+    )
 
     res.status(200).json({
       users: processedUsers,
@@ -631,8 +731,23 @@ export const getAllUsersAdmin = async (req, res) => {
 
 export const getUserAdmin = async (req, res) => {
   try {
-    if (req.user.is_admin !== 1) {
-      return res.status(403).json({ message: '只有管理员可以查看用户详情' })
+    const currentUserLevel = req.user.level
+
+    // 检查用户权限
+    let hasPermission = false
+    if (currentUserLevel === 1) {
+      hasPermission = true
+    } else {
+      const permissions = await execute(
+        'SELECT permission FROM user_permissions WHERE user_id = ?',
+        [req.user.id],
+      )
+      const permissionSet = new Set(permissions.map((p) => p.permission))
+      hasPermission = permissionSet.has('user_manage')
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({ message: '没有权限查看用户管理' })
     }
 
     const { id } = req.params
@@ -640,7 +755,7 @@ export const getUserAdmin = async (req, res) => {
     const users = await execute(
       `
       SELECT id, public_id, username, nickname, email, avatar, bio,
-             profile_completed, follower_count, following_count, is_admin, created_at, updated_at
+             profile_completed, follower_count, following_count, level, created_at, updated_at
       FROM users
       WHERE public_id = ?
     `,
@@ -653,11 +768,22 @@ export const getUserAdmin = async (req, res) => {
 
     const user = users[0]
 
+    // 确保只能查看比自己等级低的用户
+    if (user.level <= currentUserLevel) {
+      return res.status(403).json({ message: '没有权限查看此用户' })
+    }
+
+    // 获取用户权限
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      user.id,
+    ])
+
     res.status(200).json({
       user: {
         ...user,
         id: user.public_id,
-        isAdmin: user.is_admin === 1,
+
+        permissions: permissions.map((p) => p.permission),
       },
     })
   } catch (error) {
@@ -668,19 +794,52 @@ export const getUserAdmin = async (req, res) => {
 
 export const updateUserAdmin = async (req, res) => {
   try {
-    if (req.user.is_admin !== 1) {
-      return res.status(403).json({ message: '只有管理员可以更新用户信息' })
+    const currentUserLevel = req.user.level
+
+    // 检查用户权限
+    let hasPermission = false
+    if (currentUserLevel === 1) {
+      hasPermission = true
+    } else {
+      const permissions = await execute(
+        'SELECT permission FROM user_permissions WHERE user_id = ?',
+        [req.user.id],
+      )
+      const permissionSet = new Set(permissions.map((p) => p.permission))
+      hasPermission = permissionSet.has('user_manage')
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({ message: '没有权限更新用户信息' })
     }
 
     const { id } = req.params
-    const { username, nickname, password, email, avatar, bio, is_admin } = req.body
+    const {
+      username,
+      nickname,
+      password,
+      email,
+      avatar,
+      bio,
+      level,
+      avatarBadge,
+      avatarBadgeBgColor,
+      avatarBadgeTextColor,
+      showAvatarBadge,
+      permissions,
+    } = req.body
 
-    const [existingUser] = await execute('SELECT id FROM users WHERE public_id = ?', [id])
+    const [existingUser] = await execute('SELECT id, level FROM users WHERE public_id = ?', [id])
     if (!existingUser) {
       return res.status(404).json({ message: '用户不存在' })
     }
 
     const internalId = existingUser.id
+
+    // 确保只能更新比自己等级低的用户
+    if (existingUser.level <= currentUserLevel) {
+      return res.status(403).json({ message: '没有权限更新此用户' })
+    }
 
     const updates = []
     const params = []
@@ -693,7 +852,7 @@ export const updateUserAdmin = async (req, res) => {
         username,
         internalId,
       ])
-      if (existing.length > 0) {
+      if (existing) {
         return res.status(400).json({ message: '用户名已存在' })
       }
       updates.push('username = ?')
@@ -726,7 +885,7 @@ export const updateUserAdmin = async (req, res) => {
         email,
         internalId,
       ])
-      if (existing.length > 0) {
+      if (existing) {
         return res.status(400).json({ message: '邮箱已存在' })
       }
       updates.push('email = ?')
@@ -743,26 +902,73 @@ export const updateUserAdmin = async (req, res) => {
       params.push(bio || null)
     }
 
-    if (is_admin !== undefined) {
-      updates.push('is_admin = ?')
-      params.push(is_admin ? 1 : 0)
+    if (level !== undefined) {
+      // 确保等级只能设置为比当前用户等级低的等级
+      if (level <= currentUserLevel) {
+        return res.status(400).json({ message: '不能设置等级高于或等于自己的用户' })
+      }
+      updates.push('level = ?')
+      params.push(level)
     }
 
-    if (updates.length === 0) {
-      return res.status(400).json({ message: '没有提供更新字段' })
+    if (avatarBadge !== undefined) {
+      updates.push('avatar_badge = ?')
+      params.push(avatarBadge || null)
     }
 
-    params.push(internalId)
+    if (avatarBadgeBgColor !== undefined) {
+      updates.push('avatar_badge_bg_color = ?')
+      params.push(avatarBadgeBgColor || null)
+    }
 
-    await execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params)
+    if (avatarBadgeTextColor !== undefined) {
+      updates.push('avatar_badge_text_color = ?')
+      params.push(avatarBadgeTextColor || null)
+    }
+
+    if (showAvatarBadge !== undefined) {
+      updates.push('show_avatar_badge = ?')
+      params.push(showAvatarBadge ? 1 : 0)
+    }
+
+    if (updates.length > 0) {
+      params.push(internalId)
+      await execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params)
+    }
+
+    // 更新用户权限
+    if (permissions !== undefined) {
+      // 删除旧权限
+      await execute('DELETE FROM user_permissions WHERE user_id = ?', [internalId])
+      // 添加新权限
+      if (permissions && permissions.length > 0) {
+        for (const permission of permissions) {
+          await execute('INSERT INTO user_permissions (user_id, permission) VALUES (?, ?)', [
+            internalId,
+            permission,
+          ])
+        }
+        // 如果用户有任何权限，将等级设置为2
+        await execute('UPDATE users SET level = 2 WHERE id = ?', [internalId])
+      } else {
+        // 如果用户没有权限，将等级设置为3
+        await execute('UPDATE users SET level = 3 WHERE id = ?', [internalId])
+      }
+    }
 
     const [updatedUser] = await execute(
       `
       SELECT id, public_id, username, nickname, email, avatar, bio,
-             profile_completed, follower_count, following_count, is_admin, created_at, updated_at
+             profile_completed, follower_count, following_count, level, avatar_badge, avatar_badge_bg_color, avatar_badge_text_color, show_avatar_badge, created_at, updated_at
       FROM users
       WHERE id = ?
     `,
+      [internalId],
+    )
+
+    // 获取用户权限
+    const userPermissions = await execute(
+      'SELECT permission FROM user_permissions WHERE user_id = ?',
       [internalId],
     )
 
@@ -771,7 +977,12 @@ export const updateUserAdmin = async (req, res) => {
       user: {
         ...updatedUser,
         id: updatedUser.public_id,
-        isAdmin: updatedUser.is_admin === 1,
+
+        avatarBadge: updatedUser.avatar_badge,
+        avatarBadgeBgColor: updatedUser.avatar_badge_bg_color,
+        avatarBadgeTextColor: updatedUser.avatar_badge_text_color,
+        showAvatarBadge: updatedUser.show_avatar_badge === 1,
+        permissions: userPermissions.map((p) => p.permission),
       },
     })
   } catch (error) {
@@ -782,13 +993,28 @@ export const updateUserAdmin = async (req, res) => {
 
 export const deleteUserAdmin = async (req, res) => {
   try {
-    if (req.user.is_admin !== 1) {
-      return res.status(403).json({ message: '只有管理员可以删除用户' })
+    const currentUserLevel = req.user.level
+
+    // 检查用户权限
+    let hasPermission = false
+    if (currentUserLevel === 1) {
+      hasPermission = true
+    } else {
+      const permissions = await execute(
+        'SELECT permission FROM user_permissions WHERE user_id = ?',
+        [req.user.id],
+      )
+      const permissionSet = new Set(permissions.map((p) => p.permission))
+      hasPermission = permissionSet.has('user_manage')
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({ message: '没有权限删除用户' })
     }
 
     const { id } = req.params
 
-    const [existingUser] = await execute('SELECT id FROM users WHERE public_id = ?', [id])
+    const [existingUser] = await execute('SELECT id, level FROM users WHERE public_id = ?', [id])
     if (!existingUser) {
       return res.status(404).json({ message: '用户不存在' })
     }
@@ -797,11 +1023,162 @@ export const deleteUserAdmin = async (req, res) => {
       return res.status(400).json({ message: '不能删除自己的账号' })
     }
 
+    // 确保只能删除比自己等级低的用户
+    if (existingUser.level <= currentUserLevel) {
+      return res.status(403).json({ message: '没有权限删除此用户' })
+    }
+
     await execute('DELETE FROM users WHERE public_id = ?', [id])
 
     res.status(200).json({ message: '用户删除成功' })
   } catch (error) {
     console.error('删除用户失败:', error.message)
+    res.status(500).json({ message: '服务器内部错误' })
+  }
+}
+
+export const createUserAdmin = async (req, res) => {
+  try {
+    const currentUserLevel = req.user.level
+
+    // 检查用户权限
+    let hasPermission = false
+    if (currentUserLevel === 1) {
+      hasPermission = true
+    } else {
+      const permissions = await execute(
+        'SELECT permission FROM user_permissions WHERE user_id = ?',
+        [req.user.id],
+      )
+      const permissionSet = new Set(permissions.map((p) => p.permission))
+      hasPermission = permissionSet.has('user_manage')
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({ message: '没有权限创建用户' })
+    }
+
+    const {
+      username,
+      nickname,
+      password,
+      email,
+      bio,
+      level,
+      avatarBadge,
+      avatarBadgeBgColor,
+      avatarBadgeTextColor,
+      showAvatarBadge,
+      permissions,
+    } = req.body
+
+    // 验证必填字段
+    if (!username || !nickname || !password || !email) {
+      return res.status(400).json({ message: '用户名、昵称、密码和邮箱为必填项' })
+    }
+
+    // 验证昵称长度
+    if (nickname.length < 2 || nickname.length > 20) {
+      return res.status(400).json({ message: '昵称长度应在2-20个字符之间' })
+    }
+
+    // 验证用户名格式
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      return res.status(400).json({ message: '用户名只能包含英文、数字和下划线，长度3-20个字符' })
+    }
+
+    // 验证密码长度
+    if (password.length < 6) {
+      return res.status(400).json({ message: '密码长度不能少于6个字符' })
+    }
+
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: '请输入有效的邮箱地址' })
+    }
+
+    // 验证用户等级
+    if (level && level <= currentUserLevel) {
+      return res.status(400).json({ message: '不能创建等级高于或等于自己的用户' })
+    }
+
+    // 检查用户名是否已存在
+    const [existingUsername] = await execute('SELECT id FROM users WHERE username = ?', [username])
+    if (existingUsername) {
+      return res.status(400).json({ message: '用户名已被使用' })
+    }
+
+    // 检查邮箱是否已存在
+    const [existingEmail] = await execute('SELECT id FROM users WHERE email = ?', [email])
+    if (existingEmail) {
+      return res.status(400).json({ message: '邮箱已被使用' })
+    }
+
+    // 生成用户ID
+    const publicId = generateUserId()
+
+    // 加密密码
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    // 创建用户
+    const [result] = await execute(
+      'INSERT INTO users (public_id, username, nickname, password, email, bio, level, avatar_badge, avatar_badge_bg_color, avatar_badge_text_color, show_avatar_badge) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        publicId,
+        username,
+        nickname,
+        hashedPassword,
+        email,
+        bio || '',
+        level || 3,
+        avatarBadge || null,
+        avatarBadgeBgColor || null,
+        avatarBadgeTextColor || null,
+        showAvatarBadge ? 1 : 0,
+      ],
+    )
+
+    const userId = result.insertId
+
+    // 添加用户权限
+    if (permissions && permissions.length > 0) {
+      for (const permission of permissions) {
+        await execute('INSERT INTO user_permissions (user_id, permission) VALUES (?, ?)', [
+          userId,
+          permission,
+        ])
+      }
+      // 如果用户有任何权限，将等级设置为2
+      await execute('UPDATE users SET level = 2 WHERE id = ?', [userId])
+    }
+
+    // 获取新创建的用户信息
+    const [newUser] = await execute(
+      'SELECT public_id as id, username, nickname, email, bio, level, avatar_badge, avatar_badge_bg_color, avatar_badge_text_color, show_avatar_badge, created_at FROM users WHERE public_id = ?',
+      [publicId],
+    )
+
+    // 获取用户权限
+    const userPermissions = await execute(
+      'SELECT permission FROM user_permissions WHERE user_id = ?',
+      [userId],
+    )
+
+    res.status(201).json({
+      message: '用户创建成功',
+      user: {
+        ...newUser,
+
+        avatarBadge: newUser.avatar_badge,
+        avatarBadgeBgColor: newUser.avatar_badge_bg_color,
+        avatarBadgeTextColor: newUser.avatar_badge_text_color,
+        showAvatarBadge: newUser.show_avatar_badge === 1,
+        permissions: userPermissions.map((p) => p.permission),
+      },
+    })
+  } catch (error) {
+    console.error('创建用户失败:', error.message)
     res.status(500).json({ message: '服务器内部错误' })
   }
 }

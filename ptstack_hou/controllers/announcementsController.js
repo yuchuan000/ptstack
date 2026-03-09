@@ -1,7 +1,17 @@
+/**
+ * 公告控制器
+ * 处理公告的创建、获取、更新、删除和标记已读等功能
+ */
 import { execute } from '../config/db.js'
-import { sendAnnouncementEmail } from '../services/emailService.js'
 import { generateAnnouncementId } from '../utils/idGenerator.js'
 
+/**
+ * 获取用户可见的公告列表
+ * @param {Object} req - Express请求对象
+ * @param {Object} req.user - 用户信息，包含id
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回公告列表
+ */
 export const getAnnouncements = async (req, res) => {
   try {
     const userId = req.user.id
@@ -53,6 +63,12 @@ export const getAnnouncements = async (req, res) => {
   }
 }
 
+/**
+ * 获取首页顶部滚动公告
+ * @param {Object} req - Express请求对象
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回滚动公告列表
+ */
 export const getMarqueeAnnouncements = async (req, res) => {
   try {
     console.log('开始获取首页顶部通告...')
@@ -89,6 +105,14 @@ export const getMarqueeAnnouncements = async (req, res) => {
   }
 }
 
+/**
+ * 创建公告
+ * @param {Object} req - Express请求对象
+ * @param {Object} req.user - 用户信息，包含id和level
+ * @param {Object} req.body - 请求体，包含title, content, summary, priority, is_marquee, target_type, target_user_ids, delivery_methods, start_time, end_time
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回创建结果
+ */
 export const createAnnouncement = async (req, res) => {
   try {
     const {
@@ -109,7 +133,17 @@ export const createAnnouncement = async (req, res) => {
       return res.status(400).json({ message: '标题和内容不能为空' })
     }
 
-    if (req.user.is_admin !== 1) {
+    // 检查用户权限
+    const userId = req.user.id
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有announcement_manage权限的用户可以操作公告
+    const canManageAnnouncements = req.user.level === 1 || permissionSet.has('announcement_manage')
+
+    if (!canManageAnnouncements) {
       return res.status(403).json({ message: '只有管理员可以创建公告' })
     }
 
@@ -141,43 +175,9 @@ export const createAnnouncement = async (req, res) => {
     console.log('目标类型:', target_type)
     console.log('目标用户ID:', target_user_ids)
 
+    // 由于邮件服务已移除，不再发送邮件通知
     if (Array.isArray(delivery_methods) && delivery_methods.includes('email')) {
-      console.log('准备发送邮件...')
-      let users = []
-
-      if (target_type === 'all') {
-        console.log('目标：全部用户')
-        users = await execute(
-          'SELECT id, email, nickname, username FROM users WHERE id != ? AND email IS NOT NULL AND email != ""',
-          [createdBy],
-        )
-        console.log('找到用户数量:', users.length)
-      } else if (target_type === 'specific' && target_user_ids && target_user_ids.length > 0) {
-        console.log('目标：指定用户')
-        const placeholders = target_user_ids.map(() => '?').join(',')
-        users = await execute(
-          `SELECT id, email, nickname, username FROM users WHERE id IN (${placeholders}) AND id != ? AND email IS NOT NULL AND email != ""`,
-          [...target_user_ids, createdBy],
-        )
-        console.log('找到用户数量:', users.length)
-      }
-
-      if (users.length > 0) {
-        console.log('开始发送邮件...')
-        for (const user of users) {
-          try {
-            console.log(`正在给用户 ${user.id} (${user.email}) 发送邮件...`)
-            await sendAnnouncementEmail(user.email, user.nickname || user.username, title, content)
-            console.log(`用户 ${user.id} 邮件发送成功`)
-          } catch (emailError) {
-            console.error(`给用户 ${user.id} 发送邮件失败:`, emailError.message)
-          }
-        }
-      } else {
-        console.log('没有找到需要发送邮件的用户')
-      }
-    } else {
-      console.log('不发送邮件，delivery_methods不包含email')
+      console.log('邮件服务已移除，无法发送邮件通知')
     }
 
     res.status(201).json({
@@ -190,6 +190,15 @@ export const createAnnouncement = async (req, res) => {
   }
 }
 
+/**
+ * 更新公告
+ * @param {Object} req - Express请求对象
+ * @param {Object} req.user - 用户信息，包含is_admin
+ * @param {Object} req.params - 路径参数，包含id
+ * @param {Object} req.body - 请求体，包含需要更新的字段
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回更新结果
+ */
 export const updateAnnouncement = async (req, res) => {
   try {
     const { id } = req.params
@@ -207,7 +216,17 @@ export const updateAnnouncement = async (req, res) => {
       end_time,
     } = req.body
 
-    if (req.user.is_admin !== 1) {
+    // 检查用户权限
+    const userId = req.user.id
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有announcement_manage权限的用户可以操作公告
+    const canManageAnnouncements = req.user.level === 1 || permissionSet.has('announcement_manage')
+
+    if (!canManageAnnouncements) {
       return res.status(403).json({ message: '只有管理员可以更新公告' })
     }
 
@@ -274,11 +293,29 @@ export const updateAnnouncement = async (req, res) => {
   }
 }
 
+/**
+ * 删除公告
+ * @param {Object} req - Express请求对象
+ * @param {Object} req.user - 用户信息，包含is_admin
+ * @param {Object} req.params - 路径参数，包含id
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回删除结果
+ */
 export const deleteAnnouncement = async (req, res) => {
   try {
     const { id } = req.params
 
-    if (req.user.is_admin !== 1) {
+    // 检查用户权限
+    const userId = req.user.id
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有announcement_manage权限的用户可以操作公告
+    const canManageAnnouncements = req.user.level === 1 || permissionSet.has('announcement_manage')
+
+    if (!canManageAnnouncements) {
       return res.status(403).json({ message: '只有管理员可以删除公告' })
     }
 
@@ -291,6 +328,14 @@ export const deleteAnnouncement = async (req, res) => {
   }
 }
 
+/**
+ * 标记公告为已读
+ * @param {Object} req - Express请求对象
+ * @param {Object} req.user - 用户信息，包含id
+ * @param {Object} req.params - 路径参数，包含id
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回标记结果
+ */
 export const markAnnouncementRead = async (req, res) => {
   try {
     const { id } = req.params
@@ -315,6 +360,13 @@ export const markAnnouncementRead = async (req, res) => {
   }
 }
 
+/**
+ * 获取未读弹窗公告
+ * @param {Object} req - Express请求对象
+ * @param {Object} req.user - 用户信息，包含id
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回未读弹窗公告列表
+ */
 export const getUnreadPopupAnnouncements = async (req, res) => {
   try {
     const userId = req.user.id
@@ -355,9 +407,26 @@ export const getUnreadPopupAnnouncements = async (req, res) => {
   }
 }
 
+/**
+ * 管理员获取所有公告
+ * @param {Object} req - Express请求对象
+ * @param {Object} req.user - 用户信息，包含is_admin
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回所有公告列表
+ */
 export const getAllAnnouncementsAdmin = async (req, res) => {
   try {
-    if (req.user.is_admin !== 1) {
+    // 检查用户权限
+    const userId = req.user.id
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有announcement_manage权限的用户可以操作公告
+    const canManageAnnouncements = req.user.level === 1 || permissionSet.has('announcement_manage')
+
+    if (!canManageAnnouncements) {
       return res.status(403).json({ message: '只有管理员可以查看所有公告' })
     }
 
@@ -386,6 +455,14 @@ export const getAllAnnouncementsAdmin = async (req, res) => {
   }
 }
 
+/**
+ * 获取公告详情
+ * @param {Object} req - Express请求对象
+ * @param {Object} req.user - 用户信息，包含id
+ * @param {Object} req.params - 路径参数，包含id
+ * @param {Object} res - Express响应对象
+ * @returns {Promise<void>} - 返回公告详情
+ */
 export const getAnnouncementById = async (req, res) => {
   try {
     const { id } = req.params

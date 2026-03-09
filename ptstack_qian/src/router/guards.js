@@ -3,16 +3,6 @@ import { ElMessage } from 'element-plus'
 import { ROUTE_PATHS } from './constants'
 
 /**
- * 校验用户是否具备管理员权限
- * 兼容布尔值和数字类型（true/1 均视为管理员）
- * @param {Object} userInfo - 用户信息对象
- * @returns {boolean} 是否具备管理员权限
- */
-const checkIsAdmin = (userInfo) => {
-  return userInfo?.isAdmin === true || userInfo?.isAdmin === 1
-}
-
-/**
  * 校验用户登录状态
  * @param {Object} userStore - 用户状态存储
  * @returns {boolean} 是否已登录
@@ -31,8 +21,29 @@ const checkNeedsProfileCompletion = (userStore) => {
 }
 
 /**
+ * 检查用户是否具有指定等级或更高等级的权限
+ * @param {Object} userInfo - 用户信息对象
+ * @param {number} requiredLevel - 所需的最低用户等级
+ * @returns {boolean} 是否具有权限
+ */
+const checkUserLevel = (userInfo, requiredLevel) => {
+  return userInfo?.level <= requiredLevel
+}
+
+/**
+ * 检查用户是否具有指定权限
+ * @param {Object} userInfo - 用户信息对象
+ * @param {string} permission - 权限名称
+ * @returns {boolean} 是否具有权限
+ */
+const checkUserPermission = (userInfo, permission) => {
+  if (checkUserLevel(userInfo, 1)) return true // 一级用户拥有所有权限
+  return userInfo?.permissions?.includes(permission)
+}
+
+/**
  * 处理需要认证的路由访问
- * 执行登录状态、管理员权限、资料完善度等校验
+ * 执行登录状态、用户等级、权限、资料完善度等校验
  * @param {Object} userStore - 用户状态存储
  * @param {Object} to - 目标路由对象
  * @param {Function} next - 路由跳转函数
@@ -44,7 +55,17 @@ const handleAuthenticatedRoute = (userStore, to, next) => {
     return false
   }
 
-  if (to.meta.requiresAdmin && !checkIsAdmin(userStore.userInfo)) {
+  const userInfo = userStore.userInfo
+
+  // 检查用户等级权限
+  if (to.meta.requiredLevel && !checkUserLevel(userInfo, to.meta.requiredLevel)) {
+    ElMessage.warning('您没有权限访问此页面')
+    next(ROUTE_PATHS.ROOT)
+    return false
+  }
+
+  // 检查用户具体权限
+  if (to.meta.requiredPermission && !checkUserPermission(userInfo, to.meta.requiredPermission)) {
     ElMessage.warning('您没有权限访问此页面')
     next(ROUTE_PATHS.ROOT)
     return false
@@ -71,7 +92,7 @@ const handleAuthPageForLoggedInUser = (userStore, to, next) => {
     return
   }
 
-  next(checkIsAdmin(userStore.userInfo) ? ROUTE_PATHS.ADMIN : ROUTE_PATHS.ROOT)
+  next(userStore.userInfo?.level <= 2 ? ROUTE_PATHS.ADMIN : ROUTE_PATHS.ROOT)
 }
 
 /**
@@ -81,7 +102,7 @@ const handleAuthPageForLoggedInUser = (userStore, to, next) => {
  * @param {Function} next - 路由跳转函数
  */
 const handleCompletedProfileAccess = (userStore, next) => {
-  next(checkIsAdmin(userStore.userInfo) ? ROUTE_PATHS.ADMIN : ROUTE_PATHS.ROOT)
+  next(userStore.userInfo?.level <= 2 ? ROUTE_PATHS.ADMIN : ROUTE_PATHS.ROOT)
 }
 
 /**
@@ -97,9 +118,16 @@ export const setupNavigationGuards = (router) => {
       if (handleAuthenticatedRoute(userStore, to, next)) {
         next()
       }
-    } else if ((to.path === ROUTE_PATHS.LOGIN || to.path === ROUTE_PATHS.REGISTER) && userStore.isLoggedIn) {
+    } else if (
+      (to.path === ROUTE_PATHS.LOGIN || to.path === ROUTE_PATHS.REGISTER) &&
+      userStore.isLoggedIn
+    ) {
       handleAuthPageForLoggedInUser(userStore, to, next)
-    } else if (to.path === ROUTE_PATHS.COMPLETE_PROFILE && userStore.userInfo && userStore.userInfo.profileCompleted) {
+    } else if (
+      to.path === ROUTE_PATHS.COMPLETE_PROFILE &&
+      userStore.userInfo &&
+      userStore.userInfo.profileCompleted
+    ) {
       handleCompletedProfileAccess(userStore, next)
     } else {
       next()

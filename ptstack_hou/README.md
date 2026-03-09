@@ -20,7 +20,9 @@ ptstack_hou/
 │   ├── routes.js              # 路由配置
 │   └── swagger.js             # Swagger API 文档配置
 ├── controllers/                # 控制器层
+│   ├── aiConfigController.js  # AI配置控制器
 │   ├── aiController.js        # AI 控制器
+│   ├── aboutController.js     # 关于我们控制器
 │   ├── announcementsController.js  # 公告控制器
 │   ├── articlesController.js  # 文章控制器
 │   ├── authController.js      # 认证控制器
@@ -39,13 +41,14 @@ ptstack_hou/
 │   └── stylesheets/
 │       └── style.css          # 样式文件
 ├── routes/                     # 路由层
+│   ├── about.js               # 关于我们路由
 │   ├── ai.js                  # AI 路由
+│   ├── aiConfig.js            # AI配置路由
 │   ├── announcements.js       # 公告路由
 │   ├── articles.js            # 文章路由
 │   ├── auth.js                # 认证路由
 │   ├── commentLikes.js        # 评论点赞路由
 │   ├── comments.js            # 评论路由
-│   ├── emailVerification.js   # 邮箱验证路由
 │   ├── index.js               # 首页路由
 │   ├── likes.js               # 点赞路由
 │   ├── notifications.js       # 通知路由
@@ -79,7 +82,6 @@ ptstack_hou/
 │       ├── migrate-verification-to-code.js
 │       └── sync-comment-count.js
 ├── services/                   # 服务层
-│   └── emailService.js        # 邮件服务
 ├── utils/                      # 工具函数
 │   └── idGenerator.js         # ID 生成器
 ├── views/                      # 视图模板
@@ -136,12 +138,6 @@ NODE_ENV=development
 # 文件上传配置
 UPLOAD_DIR=./uploads
 MAX_FILE_SIZE=10485760
-
-# 邮件配置（可选）
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your_email@example.com
-SMTP_PASS=your_email_password
 ```
 
 ### 4. 初始化数据库

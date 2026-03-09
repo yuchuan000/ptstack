@@ -13,18 +13,34 @@
 </template>
 
 <script setup>
+/**
+ * 提及文本组件
+ * 用于显示包含@用户提及的文本，将提及部分转换为可点击的链接
+ */
 import { computed } from 'vue'
 
+/**
+ * 组件属性
+ */
 const props = defineProps({
+  /**
+   * 包含提及的文本内容
+   * @type {string}
+   * @required
+   */
   content: {
     type: String,
     required: true
   }
 })
 
-const ZERO_WIDTH_SPACE = '\u200B'
-const ZERO_WIDTH_NON_JOINER = '\u200C'
 
+
+/**
+ * 生成校验和
+ * @param {string} str - 输入字符串
+ * @returns {string} 校验和
+ */
 const generateChecksum = (str) => {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -35,11 +51,15 @@ const generateChecksum = (str) => {
   return Math.abs(hash % 1000).toString().padStart(3, '0')
 }
 
+/**
+ * 解析内容，提取提及部分
+ * @type {Array<{type: string, text: string, userId?: string}>
+ */
 const parsedContent = computed(() => {
   if (!props.content) return [{ type: 'text', text: '' }]
 
   const parts = []
-  const regex = new RegExp(`@([^${ZERO_WIDTH_SPACE}]+)${ZERO_WIDTH_SPACE}([^${ZERO_WIDTH_SPACE}${ZERO_WIDTH_NON_JOINER}]+)${ZERO_WIDTH_NON_JOINER}(\\d{3})${ZERO_WIDTH_SPACE}`, 'g')
+  const regex = /@([^\u200B]+)\u200B([^\u200B\u200C]+)\u200C(\d{3})\u200B/g
   let lastIndex = 0
   let match
 

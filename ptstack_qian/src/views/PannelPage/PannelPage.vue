@@ -6,9 +6,9 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessageBox, ElMessage, ElDialog } from 'element-plus'
 import { Menu, CaretLeft, CaretRight, Switch, Bell, House } from '@element-plus/icons-vue'
-import { getFullUrl } from '@/utils/url'
 import { getUnreadPopupAnnouncements, markAnnouncementRead } from '@/api/announcements'
 import { MdPreview } from 'md-editor-v3'
+import UserAvatar from '@/components/Common/UserAvatar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -60,15 +60,37 @@ const menuList = computed(() => {
       name: child.meta.menuName,
       icon: child.meta.menuIcon,
       path: child.path === '' ? '/admin' : `/admin/${child.path}`,
-      requiresAdmin: child.meta.requiresAdmin || false
+      requiresAdmin: child.meta.requiresAdmin || false,
+      requiredLevel: child.meta.requiredLevel,
+      requiredPermission: child.meta.requiredPermission
     }))
+})
+
+// 获取用户权限列表
+const userPermissions = computed(() => {
+  return userStore.userInfo?.permissions || []
+})
+
+// 获取用户等级
+const userLevel = computed(() => {
+  return userStore.userInfo?.level || 3
 })
 
 // 过滤菜单，只显示有权限的菜单项 - 缓存结果避免重复计算
 const filteredMenuList = computed(() => {
+  // 1级用户（站长）显示所有菜单项
+  if (userLevel.value === 1) {
+    return menuList.value
+  }
+
   return menuList.value.filter(item => {
-    if (item.requiresAdmin) {
-      return userStore.userInfo?.isAdmin === true || userStore.userInfo?.isAdmin === 1
+    // 检查等级要求
+    if (item.requiredLevel && userLevel.value > item.requiredLevel) {
+      return false
+    }
+    // 检查权限要求
+    if (item.requiredPermission) {
+      return userPermissions.value.includes(item.requiredPermission)
     }
     return true
   })
@@ -188,11 +210,7 @@ const goToClientHome = () => {
 
           <div class="user-section">
             <div class="user-info" @click="goToProfile">
-              <div class="avatar">
-                <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="avatar-img">
-                <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
-                <span v-if="userStore.userInfo?.isAdmin" class="avatar-admin-badge">管</span>
-              </div>
+              <UserAvatar :user="userStore.userInfo" :show-avatar-badge="userStore.userInfo?.show_avatar_badge" :avatar-badge="userStore.userInfo?.avatar_badge" :avatar-badge-bg-color="userStore.userInfo?.avatar_badge_bg_color" :avatar-badge-text-color="userStore.userInfo?.avatar_badge_text_color" />
               <div v-if="!isCollapse" class="user-details">
                 <div class="username">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}</div>
                 <div class="email">{{ userStore.userInfo?.email || 'user@example.com' }}</div>
@@ -286,16 +304,12 @@ const goToClientHome = () => {
 
         <div class="user-section">
           <div class="user-info" @click="goToProfile">
-            <div class="avatar">
-              <img v-if="userStore.userInfo?.avatar" :src="getFullUrl(userStore.userInfo.avatar)" alt="avatar" class="avatar-img">
-              <span v-else>{{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}</span>
-              <span v-if="userStore.userInfo?.isAdmin" class="avatar-admin-badge">管</span>
+              <UserAvatar :user="userStore.userInfo" :show-avatar-badge="userStore.userInfo?.show_avatar_badge" :avatar-badge="userStore.userInfo?.avatar_badge" :avatar-badge-bg-color="userStore.userInfo?.avatar_badge_bg_color" :avatar-badge-text-color="userStore.userInfo?.avatar_badge_text_color" />
+              <div class="user-details">
+                <div class="username">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}</div>
+                <div class="email">{{ userStore.userInfo?.email || 'user@example.com' }}</div>
+              </div>
             </div>
-            <div class="user-details">
-              <div class="username">{{ userStore.userInfo?.nickname || userStore.userInfo?.username || '用户' }}</div>
-              <div class="email">{{ userStore.userInfo?.email || 'user@example.com' }}</div>
-            </div>
-          </div>
           <div class="logout-section">
             <el-button
               type="primary"

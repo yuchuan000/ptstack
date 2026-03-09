@@ -1,31 +1,53 @@
 <script setup>
-// 政策条款页面组件 - 用于展示用户协议、隐私政策等内容
+/**
+ * 政策条款页面组件
+ * 用于展示用户协议、隐私政策等内容
+ */
+
 import { useRouter } from 'vue-router' // 导入路由钩子
 import { ArrowLeft } from '@element-plus/icons-vue' // 导入左箭头图标
 
-// 定义组件接收的属性
+/**
+ * 组件属性
+ */
 defineProps({
-  // 政策标题，必填
+  /**
+   * 政策标题
+   * @type {string}
+   * @required
+   */
   title: {
-    type: String, // 属性类型为字符串
-    required: true // 必填属性
+    type: String,
+    required: true,
   },
-  // 更新日期，必填
+  /**
+   * 更新日期
+   * @type {string}
+   * @required
+   */
   updateDate: {
-    type: String, // 属性类型为字符串
-    required: true // 必填属性
+    type: String,
+    required: true,
   },
-  // 生效日期，必填
+  /**
+   * 生效日期
+   * @type {string}
+   * @required
+   */
   effectiveDate: {
-    type: String, // 属性类型为字符串
-    required: true // 必填属性
-  }
+    type: String,
+    required: true,
+  },
 })
 
-// 获取路由实例
+/**
+ * 路由实例
+ */
 const router = useRouter()
 
-// 返回上一页的函数
+/**
+ * 返回上一页的函数
+ */
 const goBack = () => {
   router.back() // 调用路由的back方法返回上一页
 }

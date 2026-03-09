@@ -1,6 +1,12 @@
-import { execute } from '../config/db.js'
+import { execute, pool } from '../config/db.js'
 import { generateArticleId } from '../utils/idGenerator.js'
-import { sendCategoryApplicationEmail, sendCategoryReviewEmail } from '../services/emailService.js'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const uploadsDir = path.join(__dirname, '../public/uploads')
 
 const ensureShareCountField = async () => {
   try {
@@ -64,7 +70,7 @@ export const getArticles = async (req, res) => {
 
     const articles = await execute(
       `
-      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.show_avatar_badge as author_show_avatar_badge, u.avatar_badge as author_avatar_badge, u.avatar_badge_bg_color as author_avatar_badge_bg_color, u.avatar_badge_text_color as author_avatar_badge_text_color, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id
@@ -113,7 +119,7 @@ export const getArticleById = async (req, res) => {
 
     const articles = await execute(
       `
-      SELECT a.*, a.author_id as original_author_id, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.bio as author_bio, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, a.author_id as original_author_id, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.bio as author_bio, u.show_avatar_badge as author_show_avatar_badge, u.avatar_badge as author_avatar_badge, u.avatar_badge_bg_color as author_avatar_badge_bg_color, u.avatar_badge_text_color as author_avatar_badge_text_color, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id
@@ -150,6 +156,16 @@ export const getArticleById = async (req, res) => {
       [article.id],
     )
 
+    const attachments = await execute(
+      `
+      SELECT *
+      FROM article_attachments
+      WHERE article_id = ?
+      ORDER BY created_at DESC
+    `,
+      [article.id],
+    )
+
     const resultArticle = {
       ...article,
       id: article.public_id,
@@ -159,6 +175,14 @@ export const getArticleById = async (req, res) => {
     res.json({
       ...resultArticle,
       tags: tags.map((t) => t.name),
+      attachments: attachments.map((attach) => ({
+        id: attach.id,
+        filename: attach.filename,
+        originalName: attach.original_name,
+        url: attach.url,
+        size: attach.size,
+        createdAt: attach.created_at,
+      })),
     })
   } catch (error) {
     console.error('获取文章详情失败:', error)
@@ -285,6 +309,30 @@ export const deleteArticle = async (req, res) => {
 
     const article = existingArticles[0]
 
+    // 获取文章的附件列表
+    const attachments = await execute('SELECT * FROM article_attachments WHERE article_id = ?', [
+      article.id,
+    ])
+
+    // 删除附件文件
+    for (const attachment of attachments) {
+      if (attachment.filename) {
+        const filePath = path.join(uploadsDir, attachment.filename)
+        try {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath)
+            console.log(`删除附件文件: ${attachment.filename}`)
+          }
+        } catch (error) {
+          console.error(`删除附件文件失败: ${attachment.filename}`, error.message)
+        }
+      }
+    }
+
+    // 删除数据库中的附件记录
+    await execute('DELETE FROM article_attachments WHERE article_id = ?', [article.id])
+
+    // 删除文章
     await execute('DELETE FROM articles WHERE public_id = ?', [id])
 
     res.json({ message: '文章删除成功' })
@@ -379,13 +427,9 @@ export const getMyArticles = async (req, res) => {
 
 export const getCategories = async (req, res) => {
   try {
-    const categories = await execute(`
-      SELECT c.*, COUNT(a.id) as article_count 
-      FROM categories c 
-      LEFT JOIN articles a ON c.id = a.category_id AND a.status = 1 
-      GROUP BY c.id 
-      ORDER BY c.id
-    `)
+    const categories = await execute(
+      'SELECT c.*, COUNT(a.id) as article_count FROM categories c LEFT JOIN articles a ON c.id = a.category_id AND a.status = 1 GROUP BY c.id ORDER BY c.`order`, c.id',
+    )
     res.json(categories)
   } catch (error) {
     console.error('获取分类失败:', error)
@@ -411,9 +455,17 @@ export const createCategory = async (req, res) => {
   try {
     const { name, description } = req.body
     const userId = req.user.id
-    const isAdmin = req.user.is_admin === 1
 
-    if (!isAdmin) {
+    // 检查用户权限
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有category_manage权限的用户可以创建分类
+    const canCreateCategory = req.user.level === 1 || permissionSet.has('category_manage')
+
+    if (!canCreateCategory) {
       return res.status(403).json({ message: '无权创建分类，请提交申请' })
     }
 
@@ -475,7 +527,7 @@ export const applyCategory = async (req, res) => {
     const applicantName = applicant[0]?.nickname || applicant[0]?.username || '用户'
 
     const admins = await execute(
-      'SELECT id, email, nickname, username FROM users WHERE is_admin = 1 AND email IS NOT NULL AND email != ""',
+      'SELECT id, email, nickname, username FROM users WHERE level <= 2 AND email IS NOT NULL AND email != ""',
     )
 
     for (const admin of admins) {
@@ -493,18 +545,6 @@ export const applyCategory = async (req, res) => {
       } catch (notificationError) {
         console.error('给管理员发送通知失败:', notificationError.message)
       }
-
-      try {
-        await sendCategoryApplicationEmail(
-          admin.email,
-          admin.nickname || admin.username,
-          name,
-          description,
-          applicantName,
-        )
-      } catch (emailError) {
-        console.error('给管理员发送邮件失败:', emailError.message)
-      }
     }
 
     res.status(201).json({
@@ -518,15 +558,23 @@ export const applyCategory = async (req, res) => {
 }
 
 export const getCategoryApplications = async (req, res) => {
-  // 获取分类申请列表（仅管理员
+  // 获取分类申请列表（仅管理员）
   try {
-    const isAdmin = req.user.is_admin === 1
     const userId = req.user.id
 
+    // 检查用户权限
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有category_manage权限的用户可以查看所有申请
+    const canViewAllApplications = req.user.level === 1 || permissionSet.has('category_manage')
+
     let applications
-    if (isAdmin) {
+    if (canViewAllApplications) {
       applications = await execute(`
-        SELECT ca.*, u.public_id, u.username, u.nickname, u.avatar, u.is_admin 
+        SELECT ca.*, u.public_id, u.username, u.nickname, u.avatar, u.show_avatar_badge, u.avatar_badge, u.avatar_badge_bg_color, u.avatar_badge_text_color 
         FROM category_applications ca 
         LEFT JOIN users u ON ca.user_id = u.id 
         ORDER BY ca.status ASC, ca.created_at DESC
@@ -556,9 +604,17 @@ export const reviewCategoryApplication = async (req, res) => {
     const { id } = req.params
     const { action, review_comment } = req.body
     const adminId = req.user.id
-    const isAdmin = req.user.is_admin === 1
 
-    if (!isAdmin) {
+    // 检查用户权限
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      adminId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有category_manage权限的用户可以审核申请
+    const canReviewApplications = req.user.level === 1 || permissionSet.has('category_manage')
+
+    if (!canReviewApplications) {
       return res.status(403).json({ message: '无权审核' })
     }
 
@@ -613,20 +669,6 @@ export const reviewCategoryApplication = async (req, res) => {
         } catch (notificationError) {
           console.error('给申请者发送通知失败:', notificationError.message)
         }
-
-        if (user.email) {
-          try {
-            await sendCategoryReviewEmail(
-              user.email,
-              user.nickname || user.username,
-              application.name,
-              'approve',
-              review_comment,
-            )
-          } catch (emailError) {
-            console.error('给申请者发送邮件失败:', emailError.message)
-          }
-        }
       }
 
       res.json({ message: '审核通过，分类已创建', categoryId: categoryResult.insertId })
@@ -656,20 +698,6 @@ export const reviewCategoryApplication = async (req, res) => {
         } catch (notificationError) {
           console.error('给申请者发送通知失败:', notificationError.message)
         }
-
-        if (user.email) {
-          try {
-            await sendCategoryReviewEmail(
-              user.email,
-              user.nickname || user.username,
-              application.name,
-              'reject',
-              review_comment,
-            )
-          } catch (emailError) {
-            console.error('给申请者发送邮件失败:', emailError.message)
-          }
-        }
       }
 
       res.json({ message: '审核拒绝' })
@@ -685,9 +713,18 @@ export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params
     const { name, description } = req.body
-    const isAdmin = req.user.is_admin === 1
+    const userId = req.user.id
 
-    if (!isAdmin) {
+    // 检查用户权限
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有category_manage权限的用户可以更新分类
+    const canUpdateCategory = req.user.level === 1 || permissionSet.has('category_manage')
+
+    if (!canUpdateCategory) {
       return res.status(403).json({ message: '无权更新分类' })
     }
 
@@ -725,9 +762,18 @@ export const deleteCategory = async (req, res) => {
   // 删除分类（仅管理员，该分类下不能有文章）
   try {
     const { id } = req.params
-    const isAdmin = req.user.is_admin === 1
+    const userId = req.user.id
 
-    if (!isAdmin) {
+    // 检查用户权限
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有category_manage权限的用户可以删除分类
+    const canDeleteCategory = req.user.level === 1 || permissionSet.has('category_manage')
+
+    if (!canDeleteCategory) {
       return res.status(403).json({ message: '无权删除分类' })
     }
 
@@ -750,6 +796,77 @@ export const deleteCategory = async (req, res) => {
   } catch (error) {
     console.error('删除分类失败:', error)
     res.status(500).json({ message: '服务器内部错误' })
+  }
+}
+
+export const updateCategoryOrder = async (req, res) => {
+  // 更新分类排序（仅管理员）
+  try {
+    const { categoryIds } = req.body
+
+    console.log('收到排序请求:', { categoryIds, user: req.user })
+
+    // 检查是否有用户信息
+    if (!req.user) {
+      console.log('错误: 未登录')
+      return res.status(401).json({ message: '未登录' })
+    }
+
+    // 检查用户权限
+    const userId = req.user.id
+    const permissions = await execute('SELECT permission FROM user_permissions WHERE user_id = ?', [
+      userId,
+    ])
+    const permissionSet = new Set(permissions.map((p) => p.permission))
+
+    // 一级用户或有category_manage权限的用户可以更新分类排序
+    const canUpdateCategoryOrder = req.user.level === 1 || permissionSet.has('category_manage')
+
+    if (!canUpdateCategoryOrder) {
+      console.log(
+        '错误: 无权更新分类排序, level:',
+        req.user.level,
+        'permissions:',
+        Array.from(permissionSet),
+      )
+      return res.status(403).json({ message: '无权更新分类排序' })
+    }
+
+    if (!Array.isArray(categoryIds)) {
+      console.log('错误: 分类ID列表必须是数组, 实际类型:', typeof categoryIds)
+      return res.status(400).json({ message: '分类ID列表必须是数组' })
+    }
+
+    if (categoryIds.length === 0) {
+      console.log('错误: 分类ID列表不能为空')
+      return res.status(400).json({ message: '分类ID列表不能为空' })
+    }
+
+    // 开启事务
+    const connection = await pool.getConnection()
+    await connection.beginTransaction()
+
+    try {
+      for (let i = 0; i < categoryIds.length; i++) {
+        console.log(`更新分类 ${categoryIds[i]} 的排序为 ${i}`)
+        await connection.execute('UPDATE categories SET `order` = ? WHERE id = ?', [
+          i,
+          categoryIds[i],
+        ])
+      }
+      await connection.commit()
+      console.log('分类排序更新成功')
+      res.json({ message: '分类排序更新成功' })
+    } catch (error) {
+      await connection.rollback()
+      console.error('事务执行失败:', error)
+      throw error
+    } finally {
+      connection.release()
+    }
+  } catch (error) {
+    console.error('更新分类排序失败:', error)
+    res.status(500).json({ message: '服务器内部错误: ' + error.message })
   }
 }
 
@@ -805,7 +922,7 @@ export const getUserHotArticles = async (req, res) => {
 
     const articles = await execute(
       `
-      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.show_avatar_badge as author_show_avatar_badge, u.avatar_badge as author_avatar_badge, u.avatar_badge_bg_color as author_avatar_badge_bg_color, u.avatar_badge_text_color as author_avatar_badge_text_color, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id
@@ -866,7 +983,7 @@ export const getUserLatestArticles = async (req, res) => {
 
     const articles = await execute(
       `
-      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.is_admin as author_is_admin, c.name as category_name
+      SELECT a.*, u.public_id as author_id, u.username as author_name, u.nickname as author_nickname, u.avatar as author_avatar, u.show_avatar_badge as author_show_avatar_badge, u.avatar_badge as author_avatar_badge, u.avatar_badge_bg_color as author_avatar_badge_bg_color, u.avatar_badge_text_color as author_avatar_badge_text_color, c.name as category_name
       FROM articles a
       LEFT JOIN users u ON a.author_id = u.id
       LEFT JOIN categories c ON a.category_id = c.id

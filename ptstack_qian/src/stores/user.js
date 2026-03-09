@@ -1,35 +1,62 @@
+/**
+ * 用户状态管理仓库
+ * 管理用户认证状态、token和用户信息
+ */
+
 import { defineStore } from 'pinia' // 导入Pinia的defineStore方法
 import { ref, computed } from 'vue' // 导入Vue的响应式API
 import { jwtDecode } from 'jwt-decode' // 导入JWT解码库
 
-const STORAGE_KEY = 'ptstack_user' // 本地存储的key名称
+/**
+ * 本地存储的key名称
+ */
+const STORAGE_KEY = 'ptstack_user'
 
-// 定义用户状态管理仓库
+/**
+ * 从localStorage读取持久化数据的函数
+ * @returns {Object|null} 存储的用户数据或null
+ */
+const loadFromStorage = () => {
+  const savedData = localStorage.getItem(STORAGE_KEY) // 获取存储的数据
+  if (savedData) {
+    try {
+      return JSON.parse(savedData) // 解析JSON数据
+    } catch {
+      localStorage.removeItem(STORAGE_KEY) // 解析失败则删除无效数据
+    }
+  }
+  return null // 没有数据返回null
+}
+
+/**
+ * 用户状态管理仓库
+ */
 export const useUserStore = defineStore('user', () => {
   // ==================== State（状态）====================
 
-  // 从localStorage读取持久化数据的函数
-  const loadFromStorage = () => {
-    const savedData = localStorage.getItem(STORAGE_KEY) // 获取存储的数据
-    if (savedData) {
-      try {
-        return JSON.parse(savedData) // 解析JSON数据
-      } catch {
-        localStorage.removeItem(STORAGE_KEY) // 解析失败则删除无效数据
-      }
-    }
-    return null // 没有数据返回null
-  }
-
   const initialData = loadFromStorage() // 获取初始数据
 
-  const accessToken = ref(initialData?.accessToken || '') // Access Token，用于API认证
-  const refreshToken = ref(initialData?.refreshToken || '') // Refresh Token，用于刷新Access Token
-  const userInfo = ref(initialData?.userInfo || null) // 用户信息状态
+  /**
+   * Access Token，用于API认证
+   */
+  const accessToken = ref(initialData?.accessToken || '')
+
+  /**
+   * Refresh Token，用于刷新Access Token
+   */
+  const refreshToken = ref(initialData?.refreshToken || '')
+
+  /**
+   * 用户信息状态
+   */
+  const userInfo = ref(initialData?.userInfo || null)
 
   // ==================== Getters（计算属性）====================
 
-  // 检查用户是否已登录，同时验证Access Token是否过期
+  /**
+   * 检查用户是否已登录，同时验证Access Token是否过期
+   * @returns {boolean} 是否已登录
+   */
   const isLoggedIn = computed(() => {
     if (!accessToken.value) return false // 没有token直接返回未登录
     try {
@@ -46,7 +73,12 @@ export const useUserStore = defineStore('user', () => {
 
   // ==================== Actions（方法）====================
 
-  // 登录方法：保存token
+  /**
+   * 登录方法：保存token
+   * @param {string} newAccessToken - 新的Access Token
+   * @param {string} [newRefreshToken=''] - 新的Refresh Token
+   * @param {boolean} [remember=false] - 是否持久化存储
+   */
   const login = (newAccessToken, newRefreshToken = '', remember = false) => {
     accessToken.value = newAccessToken // 更新Access Token
     refreshToken.value = newRefreshToken // 更新Refresh Token
@@ -55,7 +87,10 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 更新Access Token（刷新时使用）
+  /**
+   * 更新Access Token（刷新时使用）
+   * @param {string} newAccessToken - 新的Access Token
+   */
   const updateAccessToken = (newAccessToken) => {
     accessToken.value = newAccessToken // 更新Access Token
     if (refreshToken.value) {
@@ -63,7 +98,9 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 登出方法：清除所有状态和localStorage
+  /**
+   * 登出方法：清除所有状态和localStorage
+   */
   const logout = () => {
     accessToken.value = '' // 清空Access Token
     refreshToken.value = '' // 清空Refresh Token
@@ -71,7 +108,10 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem(STORAGE_KEY) // 移除本地存储
   }
 
-  // 设置用户信息
+  /**
+   * 设置用户信息
+   * @param {Object} info - 用户信息对象
+   */
   const setUserInfo = (info) => {
     userInfo.value = info // 更新用户信息
     if (accessToken.value) {
@@ -79,7 +119,10 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 更新用户信息（增量更新）
+  /**
+   * 更新用户信息（增量更新）
+   * @param {Object} info - 要更新的用户信息
+   */
   const updateUserInfo = (info) => {
     userInfo.value = { ...userInfo.value, ...info } // 合并新旧用户信息
     if (accessToken.value) {
@@ -87,7 +130,9 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 持久化存储：将当前状态保存到localStorage
+  /**
+   * 持久化存储：将当前状态保存到localStorage
+   */
   const persist = () => {
     const data = {
       accessToken: accessToken.value, // Access Token

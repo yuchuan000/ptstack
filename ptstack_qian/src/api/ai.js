@@ -11,6 +11,22 @@ export const generateSummary = (data) => {
   return request({
     url: '/ai/generate-summary',
     method: 'post',
-    data
+    data,
+  })
+}
+
+/**
+ * 生成文章封面
+ * @param {object} data - 请求数据
+ * @param {string} data.title - 文章标题
+ * @param {string} data.content - 文章内容
+ * @param {string} data.size - 图片尺寸，默认2048x2048
+ * @returns {Promise<{imageUrl: string}>}
+ */
+export const generateCover = (data) => {
+  return request({
+    url: '/ai/generate-cover',
+    method: 'post',
+    data,
   })
 }

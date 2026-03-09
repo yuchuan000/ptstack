@@ -52,7 +52,7 @@ export const getComments = async (req, res) => {
 
     const topComments = await execute(
       `
-      SELECT c.*, u.public_id as user_id, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar, u.is_admin as user_is_admin
+      SELECT c.*, u.public_id as user_id, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar, u.show_avatar_badge as user_show_avatar_badge, u.avatar_badge as user_avatar_badge, u.avatar_badge_bg_color as user_avatar_badge_bg_color, u.avatar_badge_text_color as user_avatar_badge_text_color
       FROM comments c
       LEFT JOIN users u ON c.user_id = u.id
       WHERE c.article_id = ? AND (c.parent_id IS NULL OR c.parent_id = 0)
@@ -69,7 +69,7 @@ export const getComments = async (req, res) => {
       const placeholders = commentIds.map(() => '?').join(',')
       replies = await execute(
         `
-        SELECT c.*, u.public_id as user_id, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar, u.is_admin as user_is_admin, ru.public_id as reply_to_user_id, ru.username as reply_to_user_name, ru.nickname as reply_to_user_nickname
+        SELECT c.*, u.public_id as user_id, u.username as user_name, u.nickname as user_nickname, u.avatar as user_avatar, u.show_avatar_badge as user_show_avatar_badge, u.avatar_badge as user_avatar_badge, u.avatar_badge_bg_color as user_avatar_badge_bg_color, u.avatar_badge_text_color as user_avatar_badge_text_color, ru.public_id as reply_to_user_id, ru.username as reply_to_user_name, ru.nickname as reply_to_user_nickname
         FROM comments c
         LEFT JOIN users u ON c.user_id = u.id
         LEFT JOIN users ru ON c.reply_to_user_id = ru.id

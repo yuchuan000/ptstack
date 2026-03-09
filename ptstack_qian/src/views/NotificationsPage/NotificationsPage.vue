@@ -17,9 +17,14 @@ import {
   HomeFilled,
   FolderAdd,
   Check,
-  Finished
+  Finished,
 } from '@element-plus/icons-vue'
-import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from '@/api/notifications'
+import {
+  getNotifications,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+} from '@/api/notifications'
 import { getAnnouncements, markAnnouncementRead } from '@/api/announcements'
 
 const router = useRouter()
@@ -36,16 +41,16 @@ const hasMore = ref(true)
 
 const getAllItems = () => {
   if (currentType.value !== 'all') return []
-  const announcementItems = announcements.value.map(a => ({
+  const announcementItems = announcements.value.map((a) => ({
     ...a,
-    _type: 'announcement'
+    _type: 'announcement',
   }))
-  const notificationItems = notifications.value.map(n => ({
+  const notificationItems = notifications.value.map((n) => ({
     ...n,
-    _type: 'notification'
+    _type: 'notification',
   }))
-  return [...announcementItems, ...notificationItems].sort((a, b) =>
-    new Date(b.created_at) - new Date(a.created_at)
+  return [...announcementItems, ...notificationItems].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at),
   )
 }
 
@@ -57,7 +62,7 @@ const tabs = [
   { key: 'like', label: '点赞', icon: Star },
   { key: 'follow', label: '关注', icon: UserFilled },
   { key: 'category_application', label: '分类申请', icon: FolderAdd },
-  { key: 'category_review', label: '分类审核', icon: Check }
+  { key: 'category_review', label: '分类审核', icon: Check },
 ]
 
 const fetchNotifications = async () => {
@@ -65,7 +70,7 @@ const fetchNotifications = async () => {
   try {
     const params = {
       page: page.value,
-      pageSize: pageSize.value
+      pageSize: pageSize.value,
     }
 
     if (currentType.value !== 'all') {
@@ -112,7 +117,7 @@ const handleAnnouncementClick = async (announcement) => {
 }
 
 const getUnreadAnnouncementCount = () => {
-  return announcements.value.filter(a => !a.is_read).length
+  return announcements.value.filter((a) => !a.is_read).length
 }
 
 const handleTabChange = (type) => {
@@ -153,11 +158,11 @@ const handleDelete = async (notification) => {
     await ElMessageBox.confirm('确定要删除这条消息吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
     })
 
     await deleteNotification(notification.id)
-    notifications.value = notifications.value.filter(n => n.id !== notification.id)
+    notifications.value = notifications.value.filter((n) => n.id !== notification.id)
     if (!notification.is_read) {
       unreadCount.value--
     }
@@ -182,17 +187,21 @@ const handleMarkAllAsRead = async () => {
     await ElMessageBox.confirm('确定要将所有消息标记为已读吗？', '提示', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'info'
+      type: 'info',
     })
 
     await markAllAsRead()
 
     // 更新本地状态
     if (currentType.value === 'all' || currentType.value === 'announcement') {
-      announcements.value.forEach(a => { a.is_read = true })
+      announcements.value.forEach((a) => {
+        a.is_read = true
+      })
     }
     if (currentType.value !== 'announcement') {
-      notifications.value.forEach(n => { n.is_read = 1 })
+      notifications.value.forEach((n) => {
+        n.is_read = 1
+      })
     }
 
     // 更新未读计数
@@ -326,10 +335,7 @@ onMounted(() => {
         @click="handleTabChange(tab.key)"
       >
         <span class="tab-text">{{ tab.label }}</span>
-        <span
-          v-if="getTabUnreadCount(tab.key) > 0"
-          class="tab-badge"
-        >
+        <span v-if="getTabUnreadCount(tab.key) > 0" class="tab-badge">
           {{ getTabUnreadCount(tab.key) }}
         </span>
       </div>
@@ -343,9 +349,13 @@ onMounted(() => {
             :key="item._type + '-' + item.id"
             :class="[
               item._type === 'announcement' ? 'announcement-item' : 'notification-item',
-              { unread: !item.is_read }
+              { unread: !item.is_read },
             ]"
-            @click="item._type === 'announcement' ? handleAnnouncementClick(item) : handleNotificationClick(item)"
+            @click="
+              item._type === 'announcement'
+                ? handleAnnouncementClick(item)
+                : handleNotificationClick(item)
+            "
           >
             <template v-if="item._type === 'announcement'">
               <div class="announcement-icon">
@@ -353,7 +363,15 @@ onMounted(() => {
               </div>
               <div class="announcement-content">
                 <div class="announcement-title">{{ item.title }}</div>
-                <div class="announcement-text">{{ item.summary ? item.summary.replace(/[#*`~_]/g, '').substring(0, 100) + (item.summary.length > 100 ? '...' : '') : item.content.replace(/[#*`~_]/g, '').substring(0, 100) + (item.content.length > 100 ? '...' : '') }}</div>
+                <div class="announcement-text">
+                  {{
+                    item.summary
+                      ? item.summary.replace(/[#*`~_]/g, '').substring(0, 100) +
+                        (item.summary.length > 100 ? '...' : '')
+                      : item.content.replace(/[#*`~_]/g, '').substring(0, 100) +
+                        (item.content.length > 100 ? '...' : '')
+                  }}
+                </div>
                 <div class="announcement-time">
                   <el-icon><Clock /></el-icon>
                   {{ formatTime(item.created_at) }}
@@ -371,11 +389,7 @@ onMounted(() => {
                   {{ formatTime(item.created_at) }}
                 </div>
               </div>
-              <el-button
-                text
-                class="delete-btn"
-                @click.stop="handleDelete(item)"
-              >
+              <el-button text class="delete-btn" @click.stop="handleDelete(item)">
                 <el-icon><Delete /></el-icon>
               </el-button>
             </template>
@@ -385,10 +399,10 @@ onMounted(() => {
             <div class="empty-illustration">
               <svg viewBox="0 0 200 160" class="breathing-svg">
                 <g fill="none" stroke="#165dff" stroke-width="2">
-                  <circle cx="100" cy="70" r="40" fill="#f7f8fa"/>
-                  <path d="M80 60 L95 75 L120 55" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="100" cy="130" r="6" fill="#165dff" opacity="0.3"/>
-                  <circle cx="100" cy="130" r="10" fill="#165dff" opacity="0.15"/>
+                  <circle cx="100" cy="70" r="40" fill="#f7f8fa" />
+                  <path d="M80 60 L95 75 L120 55" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="100" cy="130" r="6" fill="#165dff" opacity="0.3" />
+                  <circle cx="100" cy="130" r="10" fill="#165dff" opacity="0.15" />
                 </g>
               </svg>
             </div>
@@ -411,7 +425,15 @@ onMounted(() => {
 
             <div class="announcement-content">
               <div class="announcement-title">{{ announcement.title }}</div>
-              <div class="announcement-text">{{ announcement.summary ? announcement.summary.replace(/[#*`~_]/g, '').substring(0, 100) + (announcement.summary.length > 100 ? '...' : '') : announcement.content.replace(/[#*`~_]/g, '').substring(0, 100) + (announcement.content.length > 100 ? '...' : '') }}</div>
+              <div class="announcement-text">
+                {{
+                  announcement.summary
+                    ? announcement.summary.replace(/[#*`~_]/g, '').substring(0, 100) +
+                      (announcement.summary.length > 100 ? '...' : '')
+                    : announcement.content.replace(/[#*`~_]/g, '').substring(0, 100) +
+                      (announcement.content.length > 100 ? '...' : '')
+                }}
+              </div>
               <div class="announcement-time">
                 <el-icon><Clock /></el-icon>
                 {{ formatTime(announcement.created_at) }}
@@ -423,11 +445,11 @@ onMounted(() => {
             <div class="empty-illustration">
               <svg viewBox="0 0 200 160" class="breathing-svg">
                 <g fill="none" stroke="#165dff" stroke-width="2">
-                  <rect x="40" y="40" width="120" height="80" rx="8" fill="#f7f8fa"/>
-                  <line x1="60" y1="65" x2="140" y2="65"/>
-                  <line x1="60" y1="85" x2="110" y2="85"/>
-                  <circle cx="90" cy="110" r="8" fill="#165dff" opacity="0.2"/>
-                  <circle cx="90" cy="110" r="12" fill="#165dff" opacity="0.1"/>
+                  <rect x="40" y="40" width="120" height="80" rx="8" fill="#f7f8fa" />
+                  <line x1="60" y1="65" x2="140" y2="65" />
+                  <line x1="60" y1="85" x2="110" y2="85" />
+                  <circle cx="90" cy="110" r="8" fill="#165dff" opacity="0.2" />
+                  <circle cx="90" cy="110" r="12" fill="#165dff" opacity="0.1" />
                 </g>
               </svg>
             </div>
@@ -460,11 +482,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <el-button
-              text
-              class="delete-btn"
-              @click.stop="handleDelete(notification)"
-            >
+            <el-button text class="delete-btn" @click.stop="handleDelete(notification)">
               <el-icon><Delete /></el-icon>
             </el-button>
           </div>
@@ -473,10 +491,10 @@ onMounted(() => {
             <div class="empty-illustration">
               <svg viewBox="0 0 200 160" class="breathing-svg">
                 <g fill="none" stroke="#165dff" stroke-width="2">
-                  <circle cx="100" cy="70" r="40" fill="#f7f8fa"/>
-                  <path d="M80 60 L95 75 L120 55" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="100" cy="130" r="6" fill="#165dff" opacity="0.3"/>
-                  <circle cx="100" cy="130" r="10" fill="#165dff" opacity="0.15"/>
+                  <circle cx="100" cy="70" r="40" fill="#f7f8fa" />
+                  <path d="M80 60 L95 75 L120 55" stroke-linecap="round" stroke-linejoin="round" />
+                  <circle cx="100" cy="130" r="6" fill="#165dff" opacity="0.3" />
+                  <circle cx="100" cy="130" r="10" fill="#165dff" opacity="0.15" />
                 </g>
               </svg>
             </div>
@@ -588,7 +606,8 @@ onMounted(() => {
 }
 
 @keyframes pulse-badge {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -816,7 +835,8 @@ onMounted(() => {
 }
 
 @keyframes breathing {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
     transform: scale(1);
   }

@@ -16,7 +16,7 @@ export function getArticles(params) {
   return request({
     url: '/articles',
     method: 'get',
-    params
+    params,
   })
 }
 
@@ -28,7 +28,7 @@ export function getArticles(params) {
 export function getArticleById(id) {
   return request({
     url: `/articles/${id}`,
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -48,7 +48,7 @@ export function createArticle(data) {
   return request({
     url: '/articles',
     method: 'post',
-    data
+    data,
   })
 }
 
@@ -69,7 +69,7 @@ export function updateArticle(id, data) {
   return request({
     url: `/articles/${id}`,
     method: 'put',
-    data
+    data,
   })
 }
 
@@ -81,7 +81,7 @@ export function updateArticle(id, data) {
 export function deleteArticle(id) {
   return request({
     url: `/articles/${id}`,
-    method: 'delete'
+    method: 'delete',
   })
 }
 
@@ -101,7 +101,7 @@ export function getMyArticles(params) {
   return request({
     url: '/articles/my',
     method: 'get',
-    params
+    params,
   })
 }
 
@@ -112,7 +112,7 @@ export function getMyArticles(params) {
 export function getCategories() {
   return request({
     url: '/articles/categories',
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -123,7 +123,7 @@ export function getCategories() {
 export function getTags() {
   return request({
     url: '/articles/tags',
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -138,7 +138,7 @@ export function createCategory(data) {
   return request({
     url: '/articles/categories',
     method: 'post',
-    data
+    data,
   })
 }
 
@@ -154,19 +154,32 @@ export function updateCategory(id, data) {
   return request({
     url: `/articles/categories/${id}`,
     method: 'put',
-    data
+    data,
   })
 }
 
 /**
- * 删除分类（该分类下不能有文章）
- * @param {number|string} id - 分类ID
+ * 删除分类
+ * @param {number} id - 分类ID
  * @returns {Promise<{message: string}>}
  */
 export function deleteCategory(id) {
   return request({
     url: `/articles/categories/${id}`,
-    method: 'delete'
+    method: 'delete',
+  })
+}
+
+/**
+ * 更新分类排序
+ * @param {Array<number>} categoryIds - 分类ID列表，按新的排序顺序
+ * @returns {Promise<{message: string}>}
+ */
+export function updateCategoryOrder(categoryIds) {
+  return request({
+    url: '/articles/categories/order',
+    method: 'put',
+    data: { categoryIds },
   })
 }
 
@@ -181,7 +194,7 @@ export function applyCategory(data) {
   return request({
     url: '/articles/categories/apply',
     method: 'post',
-    data
+    data,
   })
 }
 
@@ -192,7 +205,7 @@ export function applyCategory(data) {
 export function getCategoryApplications() {
   return request({
     url: '/articles/categories/applications',
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -208,7 +221,7 @@ export function reviewCategoryApplication(id, data) {
   return request({
     url: `/articles/categories/applications/${id}/review`,
     method: 'put',
-    data
+    data,
   })
 }
 
@@ -226,7 +239,7 @@ export function getComments(articleId, params) {
   return request({
     url: `/comments/${articleId}`,
     method: 'get',
-    params
+    params,
   })
 }
 
@@ -243,7 +256,7 @@ export function createComment(articleId, data) {
   return request({
     url: `/comments/${articleId}`,
     method: 'post',
-    data
+    data,
   })
 }
 
@@ -255,7 +268,7 @@ export function createComment(articleId, data) {
 export function deleteComment(id) {
   return request({
     url: `/comments/${id}`,
-    method: 'delete'
+    method: 'delete',
   })
 }
 
@@ -267,7 +280,7 @@ export function deleteComment(id) {
 export function toggleLike(articleId) {
   return request({
     url: `/likes/${articleId}/toggle`,
-    method: 'post'
+    method: 'post',
   })
 }
 
@@ -279,7 +292,7 @@ export function toggleLike(articleId) {
 export function checkLike(articleId) {
   return request({
     url: `/likes/${articleId}/check`,
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -291,7 +304,7 @@ export function checkLike(articleId) {
 export function toggleCommentLike(commentId) {
   return request({
     url: `/comment-likes/${commentId}/toggle`,
-    method: 'post'
+    method: 'post',
   })
 }
 
@@ -303,7 +316,7 @@ export function toggleCommentLike(commentId) {
 export function checkCommentLikes(articleId) {
   return request({
     url: `/comment-likes/article/${articleId}/check`,
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -315,7 +328,7 @@ export function checkCommentLikes(articleId) {
 export function shareArticle(articleId) {
   return request({
     url: `/articles/${articleId}/share`,
-    method: 'post'
+    method: 'post',
   })
 }
 
@@ -330,7 +343,7 @@ export function getUserHotArticles(userId, params) {
   return request({
     url: `/articles/user/${userId}/hot`,
     method: 'get',
-    params
+    params,
   })
 }
 
@@ -345,6 +358,6 @@ export function getUserLatestArticles(userId, params) {
   return request({
     url: `/articles/user/${userId}/latest`,
     method: 'get',
-    params
+    params,
   })
 }

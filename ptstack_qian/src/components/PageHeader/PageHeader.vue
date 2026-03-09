@@ -1,13 +1,31 @@
 <script setup>
+/**
+ * 页面头部组件
+ * 用于显示页面标题、副标题和操作按钮
+ */
+
+/**
+ * 组件属性
+ */
 defineProps({
+  /**
+   * 页面标题
+   * @type {string}
+   * @required
+   */
   title: {
     type: String,
-    required: true
+    required: true,
   },
+  /**
+   * 页面副标题
+   * @type {string}
+   * @default ''
+   */
   subtitle: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 })
 </script>
 

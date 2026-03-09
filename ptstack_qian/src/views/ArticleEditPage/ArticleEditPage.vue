@@ -3,11 +3,31 @@
 // 功能：创建和编辑文章，支持Markdown编辑和AI生成摘要
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getArticleById, createArticle, updateArticle, getCategories, getTags, applyCategory } from '@/api/articles'
-import { generateSummary } from '@/api/ai'
-import { Check, Setting, Plus, Document, DocumentAdd, ArrowLeft, MagicStick } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import {
+  getArticleById,
+  createArticle,
+  updateArticle,
+  getCategories,
+  getTags,
+  applyCategory,
+} from '@/api/articles'
+import { generateSummary, generateCover } from '@/api/ai'
+import {
+  Check,
+  Setting,
+  Plus,
+  Document,
+  DocumentAdd,
+  ArrowLeft,
+  MagicStick,
+  Upload,
+  Delete,
+  Download,
+} from '@element-plus/icons-vue'
+import { ElMessage, ElUpload } from 'element-plus'
 import { MdEditor, NormalToolbar } from 'md-editor-v3'
+import { encodeMarkdownCodeBlocks, decodeMarkdownCodeBlocks } from '@/utils/markdownCodeBlock'
+import request from '@/utils/request'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,7 +37,39 @@ const loading = ref(false)
 const saving = ref(false)
 const savingDraft = ref(false)
 const editorRef = ref(null)
-const toolbars = ['bold', 'underline', 'italic', '-', 'title', 'strikeThrough', 'sub', 'sup', 'quote', 'unorderedList', 'orderedList', 'task', '-', 'codeRow', 'code', 'link', 'image', 'table', 'mermaid', 'katex', '-', 0, '-', 'revoke', 'next', '=', 'pageFullscreen', 'fullscreen', 'preview', 'htmlPreview', 'catalog']
+const toolbars = [
+  'bold',
+  'underline',
+  'italic',
+  '-',
+  'title',
+  'strikeThrough',
+  'sub',
+  'sup',
+  'quote',
+  'unorderedList',
+  'orderedList',
+  'task',
+  '-',
+  'codeRow',
+  'code',
+  'link',
+  'image',
+  'table',
+  'mermaid',
+  'katex',
+  '-',
+  0,
+  '-',
+  'revoke',
+  'next',
+  '=',
+  'pageFullscreen',
+  'fullscreen',
+  'preview',
+  'htmlPreview',
+  'catalog',
+]
 
 const insertIndent = () => {
   formData.value.content += '&emsp;'
@@ -31,7 +83,7 @@ const formData = ref({
   summary: '',
   cover: '',
   status: 1,
-  visibility: 1
+  visibility: 1,
 })
 
 const categories = ref([])
@@ -41,7 +93,7 @@ const newTagInput = ref('')
 const applyDialogVisible = ref(false)
 const applyFormData = ref({
   name: '',
-  description: ''
+  description: '',
 })
 const applying = ref(false)
 
@@ -52,13 +104,24 @@ const fetchArticle = async () => {
     const res = await getArticleById(route.params.id)
     formData.value = {
       title: res.title || '',
-      content: res.content || '',
+      content: decodeMarkdownCodeBlocks(res.content || ''),
       category_id: res.category_id || '',
-      tags: (res.tags || []).map(tag => typeof tag === 'object' ? tag.name : tag),
+      tags: (res.tags || []).map((tag) => (typeof tag === 'object' ? tag.name : tag)),
       summary: res.summary || '',
       cover: res.cover || '',
       status: res.status !== undefined ? res.status : 1,
-      visibility: res.status === 2 ? 2 : 1
+      visibility: res.status === 2 ? 2 : 1,
+    }
+    // 保存原始封面URL，用于判断是否需要删除旧文件
+    originalCoverUrl.value = res.cover || ''
+    // 加载附件信息
+    if (res.attachments && Array.isArray(res.attachments)) {
+      attachments.value = res.attachments.map((attachment) => ({
+        id: attachment.id,
+        originalName: attachment.originalName,
+        url: attachment.url,
+        size: attachment.size,
+      }))
     }
   } catch (error) {
     console.error('获取文章失败:', error)
@@ -104,7 +167,7 @@ const removeTag = (tag) => {
 const openApplyDialog = () => {
   applyFormData.value = {
     name: '',
-    description: ''
+    description: '',
   }
   applyDialogVisible.value = true
 }
@@ -158,12 +221,69 @@ const handleSubmit = async (saveAsDraft = false) => {
       saving.value = true
     }
 
+    let articleId = route.params.id
+
+    // 如果是新建文章，先保存文章获取ID
+    if (!isEdit.value) {
+      const submitData = {
+        ...formData.value,
+        content: encodeMarkdownCodeBlocks(formData.value.content),
+      }
+      const res = await createArticle(submitData)
+      articleId = res.id
+    }
+
+    // 上传待上传的封面图片
+    let coverUrl = formData.value.cover
+    if (pendingCoverFile.value) {
+      const coverFormData = new FormData()
+      coverFormData.append('image', pendingCoverFile.value)
+      coverFormData.append('originalCoverUrl', originalCoverUrl.value) // 传递原始封面URL
+
+      const coverResponse = await request.post('/upload/cover', coverFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      coverUrl = coverResponse.url
+      pendingCoverFile.value = null
+      // 更新原始封面URL为新的URL
+      originalCoverUrl.value = coverUrl
+    }
+
+    // 上传待上传的附件
+    const pendingFiles = attachments.value.filter((attach) => attach.isPending)
+    for (const attach of pendingFiles) {
+      const formData = new FormData()
+      formData.append('attachment', attach.file)
+      formData.append('articleId', articleId)
+
+      const response = await request.post('/upload/article/attachment', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      // 更新附件信息
+      attach.url = response.url
+      attach.isPending = false
+      delete attach.file
+    }
+
+    // 保存或更新文章
+    const submitData = {
+      ...formData.value,
+      content: encodeMarkdownCodeBlocks(formData.value.content),
+      cover: coverUrl,
+    }
+
     if (isEdit.value) {
-      await updateArticle(route.params.id, formData.value)
+      await updateArticle(route.params.id, submitData)
       ElMessage.success(saveAsDraft ? '草稿保存成功' : '文章发布成功')
-    } else {
-      await createArticle(formData.value)
-      ElMessage.success(saveAsDraft ? '草稿保存成功' : '文章发布成功')
+    } else if (!saveAsDraft) {
+      // 新建文章已在上面保存
+      ElMessage.success('文章发布成功')
     }
 
     if (!saveAsDraft) {
@@ -184,6 +304,12 @@ const goBack = () => {
 
 const generatingSummary = ref(false)
 const lastGenerateTime = ref(0)
+const generatingCover = ref(false)
+const lastGenerateCoverTime = ref(0)
+const attachments = ref([])
+const uploading = ref(false)
+const attachmentLink = ref('')
+const uploadingCover = ref(false)
 const handleGenerateSummary = async () => {
   if (!formData.value.content || formData.value.content.trim().length === 0) {
     ElMessage.warning('请先输入文章内容')
@@ -203,7 +329,7 @@ const handleGenerateSummary = async () => {
     lastGenerateTime.value = now
     const res = await generateSummary({
       title: formData.value.title,
-      content: formData.value.content
+      content: encodeMarkdownCodeBlocks(formData.value.content),
     })
     formData.value.summary = res.summary
     ElMessage.success('摘要生成成功')
@@ -213,6 +339,106 @@ const handleGenerateSummary = async () => {
   } finally {
     generatingSummary.value = false
   }
+}
+
+const handleGenerateCover = async () => {
+  if (!formData.value.title || formData.value.title.trim().length === 0) {
+    ElMessage.warning('请先输入文章标题')
+    return
+  }
+
+  const now = Date.now()
+  const timeSinceLastGenerate = now - lastGenerateCoverTime.value
+  if (timeSinceLastGenerate < 60000) {
+    const remainingSeconds = Math.ceil((60000 - timeSinceLastGenerate) / 1000)
+    ElMessage.warning(`请稍候，${remainingSeconds}秒后可再次生成封面`)
+    return
+  }
+
+  try {
+    generatingCover.value = true
+    lastGenerateCoverTime.value = now
+    const res = await generateCover({
+      title: formData.value.title,
+      content: encodeMarkdownCodeBlocks(formData.value.content),
+      size: '2048x2048',
+    })
+    formData.value.cover = res.imageUrl
+    ElMessage.success('封面生成成功')
+  } catch (error) {
+    console.error('生成封面失败:', error)
+    ElMessage.error(error.response?.data?.message || '生成封面失败，请稍后重试')
+  } finally {
+    generatingCover.value = false
+  }
+}
+
+// 封面图片预上传 - 暂存文件，保存时才真正上传
+const pendingCoverFile = ref(null)
+const originalCoverUrl = ref('') // 保存原始封面URL，用于判断是否需要删除旧文件
+
+const handleUploadCover = async (file) => {
+  // 预上传：创建本地预览URL，暂存文件对象
+  const previewUrl = URL.createObjectURL(file)
+  formData.value.cover = previewUrl
+  pendingCoverFile.value = file
+  ElMessage.success('封面已添加到待上传列表，保存后生效')
+}
+
+const handleUploadAttachment = async (file) => {
+  if (attachments.value.length >= 5) {
+    ElMessage.warning('最多只能添加5个附件')
+    return false
+  }
+
+  // 预上传：将文件暂存，不立即上传到服务器
+  attachments.value.push({
+    id: Date.now(),
+    originalName: file.name,
+    size: file.size,
+    file: file, // 暂存文件对象
+    isPending: true, // 标记为待上传
+  })
+  ElMessage.success('附件已添加到待上传列表')
+  return true
+}
+
+const handleRemoveAttachment = (index) => {
+  attachments.value.splice(index, 1)
+}
+
+const handleAddAttachmentByLink = () => {
+  const link = attachmentLink.value.trim()
+  if (!link) {
+    ElMessage.warning('请输入附件链接')
+    return
+  }
+  if (attachments.value.length >= 5) {
+    ElMessage.warning('最多只能添加5个附件')
+    return
+  }
+  // 从链接中提取文件名
+  const url = new URL(link)
+  const pathname = url.pathname
+  const filename = pathname.substring(pathname.lastIndexOf('/') + 1) || '附件'
+  // 添加到附件列表
+  attachments.value.push({
+    id: Date.now(),
+    originalName: filename,
+    url: link,
+    size: 0, // 链接附件无法获取大小
+    isExternal: true, // 标记为外部链接
+  })
+  attachmentLink.value = ''
+  ElMessage.success('附件链接添加成功')
+}
+
+const getFileSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 onMounted(() => {
@@ -254,9 +480,7 @@ onMounted(() => {
               style="height: 600px"
             >
               <template #defToolbars>
-                <NormalToolbar title="插入缩进" @onClick="insertIndent">
-                  ↦
-                </NormalToolbar>
+                <NormalToolbar title="插入缩进" @onClick="insertIndent"> ↦ </NormalToolbar>
               </template>
             </MdEditor>
           </div>
@@ -283,6 +507,66 @@ onMounted(() => {
               class="summary-textarea"
             />
           </div>
+
+          <div class="form-section">
+            <div class="attachment-label-row">
+              <label class="form-label">文章附件</label>
+              <el-upload
+                class="attachment-upload"
+                :auto-upload="false"
+                :on-change="(file) => handleUploadAttachment(file.raw)"
+                :limit="5"
+                :disabled="!isEdit"
+                :show-file-list="false"
+              >
+                <el-button type="primary" size="small" :loading="uploading" class="upload-btn">
+                  <el-icon><Upload /></el-icon>
+                  上传附件
+                </el-button>
+              </el-upload>
+            </div>
+            <div class="attachment-actions">
+              <div class="attachment-link-input">
+                <el-input
+                  v-model="attachmentLink"
+                  placeholder="输入附件链接（支持第三方网盘链接）"
+                  size="large"
+                  @keyup.enter="handleAddAttachmentByLink"
+                >
+                  <template #append>
+                    <el-button @click="handleAddAttachmentByLink">
+                      <el-icon><Plus /></el-icon>
+                    </el-button>
+                  </template>
+                </el-input>
+              </div>
+            </div>
+            <div class="upload-tip">
+              支持上传
+              PDF、Word、Excel、PPT、图片、压缩包等文件，单个文件不超过20MB，最多上传5个附件
+            </div>
+            <div class="attachments-list" v-if="attachments.length > 0">
+              <div
+                v-for="(attachment, index) in attachments"
+                :key="attachment.id"
+                class="attachment-item"
+              >
+                <div class="attachment-info">
+                  <el-icon class="attachment-icon"><Download /></el-icon>
+                  <span class="attachment-name">{{ attachment.originalName }}</span>
+                  <span class="attachment-size">{{ getFileSize(attachment.size) }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  size="small"
+                  @click="handleRemoveAttachment(index)"
+                  class="remove-attachment-btn"
+                >
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -294,14 +578,9 @@ onMounted(() => {
           </div>
 
           <div class="form-section">
-            <label class="form-label">文章分类</label>
-            <div class="category-label-row">
-              <el-button
-                text
-                size="small"
-                @click="openApplyDialog"
-                class="apply-category-btn"
-              >
+            <div class="category-header-row">
+              <label class="form-label">文章分类</label>
+              <el-button text size="small" @click="openApplyDialog" class="apply-category-btn">
                 <el-icon><DocumentAdd /></el-icon>
                 申请新分类
               </el-button>
@@ -371,7 +650,7 @@ onMounted(() => {
               <p class="suggestion-title">推荐标签：</p>
               <div class="suggestion-tags">
                 <el-tag
-                  v-for="tag in allTags.filter(t => !formData.tags.includes(t.name)).slice(0, 10)"
+                  v-for="tag in allTags.filter((t) => !formData.tags.includes(t.name)).slice(0, 10)"
                   :key="tag.id"
                   size="small"
                   @click="formData.tags.push(tag.name)"
@@ -384,10 +663,41 @@ onMounted(() => {
           </div>
 
           <div class="form-section">
-            <label class="form-label">封面图片</label>
+            <div class="cover-label-row">
+              <label class="form-label">封面图片</label>
+              <div class="cover-actions">
+                <el-upload
+                  class="cover-upload"
+                  :auto-upload="false"
+                  :on-change="(file) => handleUploadCover(file.raw)"
+                  :show-file-list="false"
+                  accept="image/*"
+                >
+                  <el-button
+                    type="primary"
+                    size="small"
+                    :loading="uploadingCover"
+                    class="upload-cover-btn"
+                  >
+                    <el-icon><Upload /></el-icon>
+                    上传图片
+                  </el-button>
+                </el-upload>
+                <el-button
+                  type="primary"
+                  size="small"
+                  :loading="generatingCover"
+                  @click="handleGenerateCover"
+                  class="generate-cover-btn"
+                >
+                  <el-icon><MagicStick /></el-icon>
+                  AI生成
+                </el-button>
+              </div>
+            </div>
             <el-input
               v-model="formData.cover"
-              placeholder="输入图片URL（可选）"
+              placeholder="输入图片URL或上传图片（可选）"
               size="large"
               class="cover-input"
             />
@@ -397,14 +707,23 @@ onMounted(() => {
           </div>
 
           <div class="action-buttons">
-            <el-button @click="goBack" size="large" class="action-btn">
-              取消
-            </el-button>
-            <el-button size="large" @click="handleSubmit(true)" :loading="savingDraft" class="action-btn">
+            <el-button @click="goBack" size="large" class="action-btn"> 取消 </el-button>
+            <el-button
+              size="large"
+              @click="handleSubmit(true)"
+              :loading="savingDraft"
+              class="action-btn"
+            >
               <el-icon><Document /></el-icon>
               保存草稿
             </el-button>
-            <el-button type="primary" size="large" @click="handleSubmit(false)" :loading="saving" class="submit-btn">
+            <el-button
+              type="primary"
+              size="large"
+              @click="handleSubmit(false)"
+              :loading="saving"
+              class="submit-btn"
+            >
               <el-icon><Check /></el-icon>
               {{ isEdit ? '发布' : '发布文章' }}
             </el-button>
@@ -421,11 +740,7 @@ onMounted(() => {
     >
       <el-form :model="applyFormData" label-width="80px">
         <el-form-item label="分类名称">
-          <el-input
-            v-model="applyFormData.name"
-            placeholder="请输入分类名称"
-            size="large"
-          />
+          <el-input v-model="applyFormData.name" placeholder="请输入分类名称" size="large" />
         </el-form-item>
         <el-form-item label="分类描述">
           <el-input
@@ -439,9 +754,7 @@ onMounted(() => {
       </el-form>
       <template #footer>
         <el-button @click="applyDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleApply" :loading="applying">
-          提交申请
-        </el-button>
+        <el-button type="primary" @click="handleApply" :loading="applying"> 提交申请 </el-button>
       </template>
     </el-dialog>
   </div>
@@ -515,6 +828,64 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
+.cover-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cover-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cover-upload {
+  display: inline-block;
+}
+
+.upload-cover-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  border: none;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
+  }
+}
+
+.attachment-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.attachment-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.attachment-link-input {
+  :deep(.el-input__wrapper) {
+    border-radius: 8px;
+    padding: 10px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  :deep(.el-input-group__append) {
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: none;
+  }
+}
+
 .generate-summary-btn {
   display: flex;
   align-items: center;
@@ -528,7 +899,27 @@ onMounted(() => {
   }
 }
 
+.generate-cover-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  border: none;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
+  }
+}
+
 .category-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.category-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -699,6 +1090,91 @@ onMounted(() => {
     height: 180px;
     object-fit: cover;
   }
+}
+
+.attachment-upload {
+  margin-bottom: 0;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+  border: none;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
+  }
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #86909c;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.attachments-list {
+  margin-top: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e6eb;
+  overflow: hidden;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f2f3f5;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: #f7f8fa;
+  }
+}
+
+.attachment-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.attachment-icon {
+  color: #165dff;
+  font-size: 18px;
+}
+
+.attachment-name {
+  flex: 1;
+  font-size: 14px;
+  color: #1d2129;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-size {
+  font-size: 12px;
+  color: #86909c;
+  white-space: nowrap;
+  margin-right: 12px;
+}
+
+.remove-attachment-btn {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.remove-attachment-btn .el-icon {
+  font-size: 14px;
 }
 
 .action-buttons {

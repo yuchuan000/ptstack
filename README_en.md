@@ -73,6 +73,50 @@ Frontend application will start at http://localhost:5173
 
 ## 📋 Version History
 
+### v0.7 - Feature Enhancement
+- ✨ Added article cover AI generation feature based on Doubao Seedream 4.5 model
+- ✨ Added AI generate cover button in article edit page, supports automatic cover generation based on article title and content
+- 🔧 Added backend /ai/generate-cover endpoint, calls Doubao image generation API
+- 🔧 Environment variables added for Doubao image generation API configuration (DOUBAO_IMAGE_API_URL, DOUBAO_IMAGE_MODEL)
+- 🔧 Frontend API service added generateCover method, supports custom image size
+- 🔧 Added generation frequency limit, can only generate one cover within 60 seconds
+- 🔧 Code formatting to ensure compliance with project standards
+- ✨ Added AI management functionality, supporting online configuration of Doubao API parameters
+- ✨ Added AI configuration data table (ai_config), supporting key-value pair storage
+- ✨ Added AI configuration backend API interfaces (CRUD, batch update, initialize default configuration)
+- ✨ Backend AI controller updated to support reading configuration from database, prioritizing online configuration
+- ✨ Added AI management frontend page (AiConfigPage), providing visual configuration interface
+- ✨ Added AI management menu to frontend sidebar, using MagicStick icon
+- ✨ Supported encrypted storage of configuration to protect sensitive information (such as API keys)
+- ✨ Supported batch saving of configuration to improve configuration efficiency
+- 🔧 Database initialization script added ai_config table creation logic
+- 🔧 Route configuration added aiConfig route
+- 🔧 Frontend API service added aiConfig interface
+- 🔧 Frontend route constants added AI_CONFIG path and ADMIN_AI_CONFIG name
+- ✨ Refactored AI configuration data model from key-value pairs to structured AI provider management
+- ✨ Added AI provider table (ai_providers), each AI with independent configuration (API key, address, model ID)
+- ✨ Supported AI type classification: language model (chat) for generating summaries, image model (image) for generating covers
+- ✨ Supported multi-AI configuration management, multiple AIs of the same type can be configured to achieve load balancing and failover
+- ✨ Added priority mechanism, smaller numbers have higher priority, supporting AI call priority sorting
+- ✨ Added enable/disable switch for flexible control of AI provider usage status
+- ✨ Implemented automatic failover: when an AI has insufficient tokens, it automatically switches to other enabled AIs of the same type
+- ✨ Backend AI call logic refactoring, supporting AI list retrieval by purpose (summary/cover) and automatic switching
+- ✨ Frontend AI management page refactoring, card-based layout to display AI configurations, supporting filtering and quick operations
+- ✨ Added AI type and purpose filtering functionality for easy management of large numbers of AI configurations
+- 🔧 Database table structure refactoring: ai_config → ai_providers, added indexes to optimize query performance
+- 🔧 Backend API interface refactoring: RESTful-style AI provider management interface
+- 🔧 Frontend API service update to adapt to new data structure
+- ✨ Implemented daily automatic update mechanism for statistics charts, including user growth, article publishing, and comment trends
+- ✨ Added online user count line chart, displaying hourly online user count
+- ✨ Implemented correct handling of zero-value data to ensure chart trend continuity
+- ✨ Established historical data storage mechanism, supporting at least 30 days of historical data query
+- ✨ Implemented data caching mechanism to improve chart loading performance
+- 🔧 Added stats data table to store daily and hourly statistics
+- 🔧 Modified users table, added last_activity field for online user statistics
+- 🔧 Implemented scheduled task mechanism to automatically update statistics every hour
+- 🔧 Added online user statistics API endpoint
+- 🔧 Optimized frontend chart layout from 3 columns to 2 columns to accommodate the new online user chart
+
 ### v0.6 - Router System Optimization
 - 🔧 Split navigation guard logic, extracted permission check functions (checkIsAdmin, checkIsAuthenticated, checkNeedsProfileCompletion)
 - 🔧 Created independent guards.js file and migrated navigation guard logic

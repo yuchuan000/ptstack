@@ -1,9 +1,18 @@
+/**
+ * 全局样式文件
+ * 包含基础样式重置和主题配置
+ */
+
+/**
+ * 基础样式重置
+ * 设置HTML、body和#app的基础样式
+ */
 html,
 body,
 #app {
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
+  min-height: 100vh; /* 最小高度为视口高度 */
+  margin: 0; /* 清除默认边距 */
+  padding: 0; /* 清除默认内边距 */
 
   /* 隐藏当前容器的滚动条 */
   overflow-y: auto; /* 内容超出时可滚动，只是隐藏滚动条 */
@@ -20,13 +29,16 @@ body,
   scrollbar-width: none;
 }
 
-/* Element Plus 主题色配置 - 飞书蓝色 */
+/**
+ * Element Plus 主题色配置
+ * 使用飞书蓝色作为主题色
+ */
 :root {
-  --el-color-primary: #165dff;
-  --el-color-primary-light-3: #4080ff;
-  --el-color-primary-light-5: #6a9eff;
-  --el-color-primary-light-7: #94bfff;
-  --el-color-primary-light-8: #a9ccff;
-  --el-color-primary-light-9: #d7e8ff;
-  --el-color-primary-dark-2: #0e42d2;
+  --el-color-primary: #165dff; /* 主色 */
+  --el-color-primary-light-3: #4080ff; /* 主色浅色3 */
+  --el-color-primary-light-5: #6a9eff; /* 主色浅色5 */
+  --el-color-primary-light-7: #94bfff; /* 主色浅色7 */
+  --el-color-primary-light-8: #a9ccff; /* 主色浅色8 */
+  --el-color-primary-light-9: #d7e8ff; /* 主色浅色9 */
+  --el-color-primary-dark-2: #0e42d2; /* 主色深色2 */
 }

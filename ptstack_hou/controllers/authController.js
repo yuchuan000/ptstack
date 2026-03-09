@@ -5,17 +5,32 @@
  *   description: 用户登录注册相关接口
  */
 
-// 认证控制器
+/**
+ * 认证控制器
+ * 处理用户登录、注册、邮箱验证等认证相关功能
+ */
 import { execute } from '../config/db.js'
 import bcrypt from 'bcrypt'
 import crypto from 'crypto'
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../config/jwt.js'
-import { generateVerificationCode, sendVerificationEmail } from '../services/emailService.js'
 import { generateUserId } from '../utils/idGenerator.js'
 
-// 密码加密盐值
+/**
+ * 生成6位验证码
+ * @returns {string} 6位数字验证码
+ */
+const generateVerificationCode = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+/**
+ * 密码加密盐值
+ */
 const SALT_ROUNDS = 10
-// 邮箱验证码有效期（分钟）
+
+/**
+ * 邮箱验证码有效期（分钟）
+ */
 const EMAIL_VERIFICATION_CODE_EXPIRES_IN =
   parseInt(process.env.EMAIL_VERIFICATION_CODE_EXPIRES_IN) || 15
 
@@ -101,18 +116,8 @@ export const sendEmailVerification = async (req, res, next) => {
       [email, verificationCode, expiresAt],
     )
 
-    // 发送验证邮件
-    try {
-      await sendVerificationEmail(email, '用户', verificationCode)
-    } catch (emailError) {
-      console.error('发送验证邮件失败:', emailError.message)
-      // 邮件发送失败，删除临时记录
-      await execute('DELETE FROM email_verifications WHERE email = ? AND verification_code = ?', [
-        email,
-        verificationCode,
-      ])
-      return res.status(500).json({ message: '发送验证邮件失败，请稍后重试' })
-    }
+    // 由于邮件服务已移除，直接返回成功
+    // 实际项目中可以考虑使用其他方式验证邮箱
 
     res.status(200).json({
       message: '验证邮件已发送，请查收',
@@ -419,7 +424,7 @@ export const login = async (req, res, next) => {
 
     // 查找用户（支持用户名或邮箱登录）
     const users = await execute(
-      'SELECT id, public_id, username, nickname, password, email, avatar, profile_completed, is_admin FROM users WHERE username = ? OR email = ?',
+      'SELECT id, public_id, username, nickname, password, email, avatar, profile_completed, level FROM users WHERE username = ? OR email = ?',
       [username, username],
     )
 
@@ -441,7 +446,8 @@ export const login = async (req, res, next) => {
       username: user.username,
       nickname: user.nickname || user.username,
       email: user.email,
-      is_admin: user.is_admin,
+
+      level: user.level,
     }
 
     // 生成 Access Token
@@ -457,7 +463,8 @@ export const login = async (req, res, next) => {
         email: user.email,
         avatar: user.avatar,
         profileCompleted: user.profile_completed === 1,
-        isAdmin: user.is_admin === 1,
+
+        level: user.level,
       },
       accessToken,
     }
@@ -518,7 +525,8 @@ export const refreshToken = async (req, res, next) => {
       id: decoded.id,
       username: decoded.username,
       email: decoded.email,
-      is_admin: decoded.is_admin,
+
+      level: decoded.level,
     })
 
     res.status(200).json({

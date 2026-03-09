@@ -1,5 +1,14 @@
 import { markRaw } from 'vue'
-import { House, Tickets, Collection, Bell, User, Setting } from '@element-plus/icons-vue'
+import {
+  House,
+  Tickets,
+  Collection,
+  Bell,
+  User,
+  Setting,
+  InfoFilled,
+  MagicStick,
+} from '@element-plus/icons-vue'
 import { ROUTE_PATHS, ROUTE_NAMES } from '../constants'
 
 /**
@@ -10,7 +19,7 @@ export const adminRoutes = [
   {
     path: ROUTE_PATHS.ADMIN,
     component: () => import('@/views/PannelPage/PannelPage.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true },
+    meta: { requiresAuth: true },
     children: [
       {
         path: '',
@@ -19,8 +28,8 @@ export const adminRoutes = [
         meta: {
           requiresAuth: true,
           menuName: '首页',
-          menuIcon: markRaw(House)
-        }
+          menuIcon: markRaw(House),
+        },
       },
       {
         path: 'articles',
@@ -29,8 +38,8 @@ export const adminRoutes = [
         meta: {
           requiresAuth: true,
           menuName: '文章列表',
-          menuIcon: markRaw(Tickets)
-        }
+          menuIcon: markRaw(Tickets),
+        },
       },
       {
         path: 'categories',
@@ -38,10 +47,10 @@ export const adminRoutes = [
         component: () => import('@/views/CategoryManagePage/CategoryManagePage.vue'),
         meta: {
           requiresAuth: true,
-          requiresAdmin: true,
+          requiredPermission: 'category_manage',
           menuName: '分类管理',
-          menuIcon: markRaw(Collection)
-        }
+          menuIcon: markRaw(Collection),
+        },
       },
       {
         path: 'announcements',
@@ -49,10 +58,10 @@ export const adminRoutes = [
         component: () => import('@/views/AnnouncementManagePage/AnnouncementManagePage.vue'),
         meta: {
           requiresAuth: true,
-          requiresAdmin: true,
+          requiredPermission: 'announcement_manage',
           menuName: '公告管理',
-          menuIcon: markRaw(Bell)
-        }
+          menuIcon: markRaw(Bell),
+        },
       },
       {
         path: 'users',
@@ -60,10 +69,10 @@ export const adminRoutes = [
         component: () => import('@/views/UserManagePage/UserManagePage.vue'),
         meta: {
           requiresAuth: true,
-          requiresAdmin: true,
+          requiredPermission: 'user_manage',
           menuName: '用户管理',
-          menuIcon: markRaw(User)
-        }
+          menuIcon: markRaw(User),
+        },
       },
       {
         path: 'settings',
@@ -72,9 +81,32 @@ export const adminRoutes = [
         meta: {
           requiresAuth: true,
           menuName: '设置',
-          menuIcon: markRaw(Setting)
-        }
-      }
-    ]
-  }
+          menuIcon: markRaw(Setting),
+        },
+      },
+      {
+        path: 'about-config',
+        name: ROUTE_NAMES.ADMIN_ABOUT_CONFIG,
+        component: () => import('@/views/AboutConfigPage/AboutConfigPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiredLevel: 1,
+          menuName: '客户端配置',
+          menuIcon: markRaw(InfoFilled),
+        },
+      },
+      {
+        path: 'ai-config',
+        name: ROUTE_NAMES.ADMIN_AI_CONFIG,
+        component: () => import('@/views/AiConfigPage/AiConfigPage.vue'),
+        meta: {
+          requiresAuth: true,
+          requiredLevel: 1,
+          menuName: 'AI管理',
+          menuIcon: markRaw(MagicStick),
+        },
+      },
+
+    ],
+  },
 ]

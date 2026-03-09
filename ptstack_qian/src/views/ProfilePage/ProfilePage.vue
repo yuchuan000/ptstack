@@ -29,7 +29,7 @@ import { getUserPublicProfile, getUserArticles, getUserComments } from '@/api/us
 // 导入订阅相关的API函数
 import { toggleSubscription, getUserFollowers, getUserFollowing } from '@/api/subscriptions'
 // 导入URL处理工具函数
-import { getFullUrl } from '@/utils/url'
+import UserAvatar from '@/components/Common/UserAvatar.vue'
 
 // 创建路由实例，用于页面跳转
 const router = useRouter()
@@ -590,10 +590,17 @@ onMounted(async () => {
           <div class="header-section">
             <div class="header-left">
               <div class="avatar">
-                <img v-if="user.avatar" :src="getFullUrl(user.avatar)" alt="avatar" class="avatar-img">
-                <span v-else>{{ (user.nickname || user.username)?.charAt(0).toUpperCase() || 'U' }}</span>
-                <span v-if="user.isAdmin" class="avatar-admin-badge">管</span>
-              </div>
+                    <UserAvatar :user="{
+                      id: user.id,
+                      nickname: user.nickname,
+                      username: user.username,
+                      avatar: user.avatar,
+                      showAvatarBadge: user.showAvatarBadge && user.avatarBadge && user.avatarBadgeBgColor && user.avatarBadgeTextColor,
+                      avatarBadge: user.avatarBadge,
+                      avatarBadgeBgColor: user.avatarBadgeBgColor,
+                      avatarBadgeTextColor: user.avatarBadgeTextColor
+                    }" size="large" />
+                  </div>
               <div class="user-info">
                 <div class="user-name-row">
                   <h1 class="username">{{ user.nickname || user.username }}</h1>
@@ -860,9 +867,16 @@ onMounted(async () => {
                         class="user-card"
                       >
                         <div class="user-avatar" @click="goToProfile(follower.id)">
-                          <img v-if="follower.avatar" :src="getFullUrl(follower.avatar)" alt="avatar" class="user-avatar-img">
-                          <span v-else>{{ (follower.nickname || follower.username)?.charAt(0).toUpperCase() || 'U' }}</span>
-                          <span v-if="follower.is_admin === 1" class="avatar-admin-badge">管</span>
+                          <UserAvatar :user="{
+                            id: follower.id,
+                            nickname: follower.nickname,
+                            username: follower.username,
+                            avatar: follower.avatar,
+                            show_avatar_badge: follower.show_avatar_badge === 1 && follower.avatar_badge && follower.avatar_badge_bg_color && follower.avatar_badge_text_color,
+                            avatar_badge: follower.avatar_badge,
+                            avatar_badge_bg_color: follower.avatar_badge_bg_color,
+                            avatar_badge_text_color: follower.avatar_badge_text_color
+                          }" size="profile" />
                         </div>
                         <div class="user-info" @click="goToProfile(follower.id)">
                           <div class="user-name">{{ follower.nickname || follower.username }}</div>
@@ -938,9 +952,16 @@ onMounted(async () => {
                         class="user-card"
                       >
                         <div class="user-avatar" @click="goToProfile(followingUser.id)">
-                          <img v-if="followingUser.avatar" :src="getFullUrl(followingUser.avatar)" alt="avatar" class="user-avatar-img">
-                          <span v-else>{{ (followingUser.nickname || followingUser.username)?.charAt(0).toUpperCase() || 'U' }}</span>
-                          <span v-if="followingUser.is_admin === 1" class="avatar-admin-badge">管</span>
+                          <UserAvatar :user="{
+                            id: followingUser.id,
+                            nickname: followingUser.nickname,
+                            username: followingUser.username,
+                            avatar: followingUser.avatar,
+                            show_avatar_badge: followingUser.show_avatar_badge === 1 && followingUser.avatar_badge && followingUser.avatar_badge_bg_color && followingUser.avatar_badge_text_color,
+                            avatar_badge: followingUser.avatar_badge,
+                            avatar_badge_bg_color: followingUser.avatar_badge_bg_color,
+                            avatar_badge_text_color: followingUser.avatar_badge_text_color
+                          }" size="profile" />
                         </div>
                         <div class="user-info" @click="goToProfile(followingUser.id)">
                           <div class="user-name">{{ followingUser.nickname || followingUser.username }}</div>

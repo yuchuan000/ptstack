@@ -1,102 +1,91 @@
 <script setup>
 // 客户端关于我们页面 - 团队成员展示
 import { useRouter } from 'vue-router'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import {
   Document,
   Message,
-  Link,
   OfficeBuilding,
   ArrowUp,
   ArrowDown,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Phone,
+  ChatDotRound,
+  Connection,
+  Location,
+  Clock,
 } from '@element-plus/icons-vue'
+import { getTeamMembers, getContactItems } from '@/api/about'
+import { getFullUrl } from '@/utils/url'
 
 const router = useRouter()
 
-const teamMembers = [
+// 图标映射
+const iconMap = {
+  Message,
+  Link: LinkIcon,
+  OfficeBuilding,
+  Phone,
+  ChatDotRound,
+  Connection,
+  Location,
+  Clock,
+}
+
+// 数据状态
+const teamMembers = ref([])
+const contactItems = ref([
   {
     id: 1,
-    name: '张三',
-    role: '全栈开发工程师',
-    avatar: '',
-    bio: '专注于前端和后端技术，热爱开源，致力于打造高效、稳定的技术架构',
-    skills: ['JavaScript', 'Vue', 'Node.js', 'Python'],
-    portfolio: [
-      {
-        id: 101,
-        title: 'PTStack 内容平台',
-        description: '全栈开发的内容分享平台，支持文章发布、分类管理、用户系统等功能',
-        image: '',
-        website: '/articles',
-        github: 'https://github.com/zhangsan/ptstack'
-      },
-      {
-        id: 102,
-        title: '个人博客系统',
-        description: '基于 Vue 和 Express 开发的个人博客系统，支持 Markdown 编辑和主题切换',
-        image: '',
-        website: '#',
-        github: 'https://github.com/zhangsan/blog'
-      }
-    ]
+    icon: 'Message',
+    name: '电子邮件',
+    info: 'contact@ptstack.com',
+    link: 'mailto:contact@ptstack.com',
   },
   {
     id: 2,
-    name: '李四',
-    role: 'UI/UX 设计师',
-    avatar: '',
-    bio: '专注于用户体验设计，擅长交互设计和视觉设计，追求美观与实用的完美结合',
-    skills: ['Figma', 'Sketch', 'UI Design', 'UX Research'],
-    portfolio: [
-      {
-        id: 201,
-        title: 'PTStack 界面设计',
-        description: '为 PTStack 平台设计的用户界面，包括首页、文章页、个人中心等',
-        image: '',
-        website: '/',
-        github: 'https://github.com/lisi/ptstack-design'
-      },
-      {
-        id: 202,
-        title: '移动应用界面设计',
-        description: '为某移动应用设计的界面，注重用户体验和视觉效果',
-        image: '',
-        website: '#',
-        github: 'https://github.com/lisi/mobile-app-design'
-      }
-    ]
+    icon: 'Link',
+    name: '开源社区',
+    info: 'github.com/ptstack',
+    link: 'https://github.com/ptstack',
   },
   {
     id: 3,
-    name: '王五',
-    role: '内容运营专员',
-    avatar: '',
-    bio: '专注于内容策划和运营，擅长内容创作和社区管理，致力于打造优质的内容生态',
-    skills: ['Content Creation', 'Community Management', 'Marketing', 'Writing'],
-    portfolio: [
-      {
-        id: 301,
-        title: '技术博客系列',
-        description: '策划并发布的技术博客系列，涵盖前端、后端、人工智能等多个领域',
-        image: '',
-        website: '/articles',
-        github: 'https://github.com/wangwu/tech-blog'
-      },
-      {
-        id: 302,
-        title: '社区活动策划',
-        description: '组织的线上线下技术分享活动，促进技术交流和社区建设',
-        image: '',
-        website: '#',
-        github: 'https://github.com/wangwu/community-events'
-      }
-    ]
-  }
-]
+    icon: 'OfficeBuilding',
+    name: '官方网站',
+    info: 'www.ptstack.com',
+    link: 'https://www.ptstack.com',
+  },
+])
+const loading = ref(false)
 
 // 控制作品集展开/收起
 const expandedMember = ref(null)
+
+// 获取团队成员数据
+const fetchTeamMembers = async () => {
+  loading.value = true
+  try {
+    const response = await getTeamMembers()
+    teamMembers.value = response.members || []
+  } catch (error) {
+    console.error('获取团队成员失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 获取联系信息数据
+const fetchContactItems = async () => {
+  try {
+    const response = await getContactItems()
+    if (response.items && response.items.length > 0) {
+      contactItems.value = response.items.filter((item) => !item.is_hidden)
+    }
+  } catch (error) {
+    console.error('获取联系信息失败:', error)
+  }
+}
 
 const togglePortfolio = (memberId) => {
   if (expandedMember.value === memberId) {
@@ -121,6 +110,12 @@ const goToGithub = (url) => {
     window.open(url, '_blank')
   }
 }
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchTeamMembers()
+  fetchContactItems()
+})
 </script>
 
 <template>
@@ -133,12 +128,15 @@ const goToGithub = (url) => {
           <p class="section-subtitle">专业的团队，为您提供优质的服务</p>
         </div>
 
-        <div class="team-list">
-          <div v-for="member in teamMembers" :key="member.id" class="team-row">
+        <div v-loading="loading" class="team-list">
+          <div v-if="!loading && teamMembers.length === 0" class="empty-state">
+            <el-empty description="暂无团队成员信息" />
+          </div>
+          <div v-else v-for="member in teamMembers" :key="member.id" class="team-row">
             <!-- 成员信息 -->
             <div class="member-info">
               <div class="member-avatar">
-                <img v-if="member.avatar" :src="member.avatar" :alt="member.name">
+                <img v-if="member.avatar" :src="getFullUrl(member.avatar)" :alt="member.name" />
                 <div v-else class="avatar-placeholder">
                   {{ member.name.charAt(0) }}
                 </div>
@@ -154,6 +152,7 @@ const goToGithub = (url) => {
                 </div>
                 <div class="member-actions">
                   <el-button
+                    v-if="member.portfolio && member.portfolio.length > 0"
                     type="primary"
                     size="small"
                     @click="togglePortfolio(member.id)"
@@ -169,11 +168,14 @@ const goToGithub = (url) => {
             </div>
 
             <!-- 作品集展示 -->
-            <div v-if="expandedMember === member.id" class="portfolio-section">
+            <div
+              v-if="expandedMember === member.id && member.portfolio && member.portfolio.length > 0"
+              class="portfolio-section"
+            >
               <div class="portfolio-list">
                 <div v-for="item in member.portfolio" :key="item.id" class="portfolio-item">
                   <div class="portfolio-image">
-                    <img v-if="item.image" :src="item.image" :alt="item.title">
+                    <img v-if="item.image" :src="getFullUrl(item.image)" :alt="item.title" />
                     <div v-else class="portfolio-placeholder">
                       <el-icon :size="32"><Document /></el-icon>
                     </div>
@@ -191,10 +193,7 @@ const goToGithub = (url) => {
                         <el-icon><LinkIcon /></el-icon>
                         访问网站
                       </el-button>
-                      <el-button
-                        size="small"
-                        @click="goToGithub(item.github)"
-                      >
+                      <el-button size="small" @click="goToGithub(item.github)">
                         <el-icon><LinkIcon /></el-icon>
                         GitHub
                       </el-button>
@@ -216,30 +215,25 @@ const goToGithub = (url) => {
           <p class="section-subtitle">有任何问题或建议，欢迎随时与我们联系</p>
         </div>
 
-        <div class="contact-grid">
-          <div class="contact-card">
+        <div v-if="contactItems.length > 0" class="contact-grid">
+          <div
+            v-for="item in contactItems"
+            :key="item.id"
+            class="contact-card"
+            @click="item.link && goToWebsite(item.link)"
+            :style="{ cursor: item.link ? 'pointer' : 'default' }"
+          >
             <div class="contact-icon">
-              <el-icon :size="24"><Message /></el-icon>
+              <el-icon :size="24">
+                <component :is="iconMap[item.icon] || Message" />
+              </el-icon>
             </div>
-            <h3 class="contact-title">电子邮件</h3>
-            <p class="contact-info">contact@ptstack.com</p>
+            <h3 class="contact-title">{{ item.name }}</h3>
+            <p class="contact-info">{{ item.info }}</p>
           </div>
-
-          <div class="contact-card">
-            <div class="contact-icon">
-              <el-icon :size="24"><Link /></el-icon>
-            </div>
-            <h3 class="contact-title">开源社区</h3>
-            <p class="contact-info">github.com/ptstack</p>
-          </div>
-
-          <div class="contact-card">
-            <div class="contact-icon">
-              <el-icon :size="24"><OfficeBuilding /></el-icon>
-            </div>
-            <h3 class="contact-title">官方网站</h3>
-            <p class="contact-info">www.ptstack.com</p>
-          </div>
+        </div>
+        <div v-else class="empty-state">
+          <el-empty description="暂无联系信息" />
         </div>
       </div>
     </section>
@@ -382,6 +376,14 @@ const goToGithub = (url) => {
 .member-actions {
   display: flex;
   gap: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f7f8fa;
+  border: 1px solid #e5e6eb;
+  border-radius: 12px;
 }
 
 /* 作品集样式 */

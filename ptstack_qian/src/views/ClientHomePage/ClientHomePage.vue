@@ -14,6 +14,7 @@ import {
 } from '@element-plus/icons-vue'
 import { getArticles } from '@/api/articles'
 import { getFullUrl } from '@/utils/url'
+import UserAvatar from '@/components/Common/UserAvatar.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -242,8 +243,16 @@ onMounted(() => {
                       <div v-if="article.summary" class="article-summary">{{ truncateText(article.summary, 100) }}</div>
                       <div class="article-meta">
                         <span class="meta-item author">
-                          <img v-if="article.author_avatar" :src="getFullUrl(article.author_avatar)" class="author-avatar">
-                          <span v-else class="author-avatar">{{ (article.author_nickname || article.author_name)?.charAt(0).toUpperCase() }}</span>
+                          <UserAvatar :user="{
+                            id: article.author_id,
+                            nickname: article.author_nickname,
+                            username: article.author_name,
+                            avatar: article.author_avatar,
+                            show_avatar_badge: article.author_show_avatar_badge === 1 && article.author_avatar_badge && article.author_avatar_badge_bg_color && article.author_avatar_badge_text_color,
+                            avatar_badge: article.author_avatar_badge,
+                            avatar_badge_bg_color: article.author_avatar_badge_bg_color,
+                            avatar_badge_text_color: article.author_avatar_badge_text_color
+                          }" size="tiny" />
                           <span>{{ article.author_nickname || article.author_name }}</span>
                         </span>
                         <span class="meta-item">

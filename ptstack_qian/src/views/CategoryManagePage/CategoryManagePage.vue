@@ -3,11 +3,11 @@
 // 功能：创建、编辑、删除分类和审核分类申请
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCategories, createCategory, updateCategory, deleteCategory, getCategoryApplications, reviewCategoryApplication } from '@/api/articles'
-import { Plus, Edit, Delete, Tickets, FolderAdd } from '@element-plus/icons-vue'
+import { getCategories, createCategory, updateCategory, deleteCategory, getCategoryApplications, reviewCategoryApplication, updateCategoryOrder } from '@/api/articles'
+import { Plus, Edit, Delete, Tickets, FolderAdd, ArrowUp, ArrowDown, View, Hide } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader/PageHeader.vue'
+import UserAvatar from '@/components/Common/UserAvatar.vue'
 import { useRouter } from 'vue-router'
-import { getFullUrl } from '@/utils/url'
 
 const router = useRouter()
 
@@ -146,6 +146,51 @@ const handleDelete = (category) => {
   }).catch(() => {})
 }
 
+const moveCategoryUp = async (index) => {
+  if (index > 0) {
+    const temp = categories.value[index]
+    categories.value[index] = categories.value[index - 1]
+    categories.value[index - 1] = temp
+    // 保存排序到后端
+    try {
+      const categoryIds = categories.value.map(cat => cat.id)
+      await updateCategoryOrder(categoryIds)
+      ElMessage.success('分类已上移')
+    } catch (error) {
+      console.error('保存排序失败:', error)
+      ElMessage.error('保存排序失败，请稍后重试')
+      // 恢复原排序
+      categories.value[index - 1] = categories.value[index]
+      categories.value[index] = temp
+    }
+  }
+}
+
+const moveCategoryDown = async (index) => {
+  if (index < categories.value.length - 1) {
+    const temp = categories.value[index]
+    categories.value[index] = categories.value[index + 1]
+    categories.value[index + 1] = temp
+    // 保存排序到后端
+    try {
+      const categoryIds = categories.value.map(cat => cat.id)
+      await updateCategoryOrder(categoryIds)
+      ElMessage.success('分类已下移')
+    } catch (error) {
+      console.error('保存排序失败:', error)
+      ElMessage.error('保存排序失败，请稍后重试')
+      // 恢复原排序
+      categories.value[index + 1] = categories.value[index]
+      categories.value[index] = temp
+    }
+  }
+}
+
+const toggleCategoryHidden = (category) => {
+  category.is_hidden = !category.is_hidden
+  ElMessage.success(category.is_hidden ? '分类已隐藏' : '分类已显示')
+}
+
 const openReviewDialog = (application) => {
   currentApplication.value = application
   reviewData.value = {
@@ -205,16 +250,6 @@ onMounted(() => {
 <template>
   <div class="category-manage-page">
     <PageHeader title="分类管理" subtitle="管理文章分类和描述">
-      <template #actions>
-        <el-button
-          type="primary"
-          size="large"
-          @click="openCreateDialog"
-        >
-          <el-icon><Plus /></el-icon>
-          新建分类
-        </el-button>
-      </template>
     </PageHeader>
 
     <div class="content-card">
@@ -240,28 +275,45 @@ onMounted(() => {
       </div>
 
       <div v-if="activeTab === 'categories'" class="categories-container" v-loading="loading">
-        <div class="category-grid">
-          <div class="category-card" v-for="category in categories" :key="category.id">
-            <div class="category-icon">
+        <div class="section-header">
+          <h3 class="section-title">分类列表</h3>
+          <el-button type="primary" @click="openCreateDialog">
+            <el-icon><Plus /></el-icon>
+            新增分类
+          </el-button>
+        </div>
+
+        <div class="category-list">
+          <div v-for="(category, index) in categories" :key="category.id" class="category-card" :class="{ 'is-hidden': category.is_hidden }">
+            <div class="category-icon-wrapper">
               <span>{{ category.name.charAt(0) }}</span>
             </div>
             <div class="category-info">
-              <h3 class="category-name">{{ category.name }}</h3>
-              <p class="category-desc" v-if="category.description">{{ category.description }}</p>
-              <p class="category-desc empty" v-else>暂无描述</p>
+              <h4 class="category-name">{{ category.name }}</h4>
+              <p class="category-desc">{{ category.description || '暂无描述' }}</p>
+              <el-tag v-if="category.is_hidden" size="small" type="info" class="hidden-tag">已隐藏</el-tag>
             </div>
             <div class="category-actions">
-              <el-button circle size="small" @click="openEditDialog(category)">
+              <el-button link @click="moveCategoryUp(index)" :disabled="index === 0">
+                <el-icon><ArrowUp /></el-icon>
+              </el-button>
+              <el-button link @click="moveCategoryDown(index)" :disabled="index === categories.length - 1">
+                <el-icon><ArrowDown /></el-icon>
+              </el-button>
+              <el-button :type="category.is_hidden ? 'success' : 'warning'" link @click="toggleCategoryHidden(category)">
+                <el-icon><View v-if="category.is_hidden" /><Hide v-else /></el-icon>
+              </el-button>
+              <el-button type="primary" link @click="openEditDialog(category)">
                 <el-icon><Edit /></el-icon>
               </el-button>
-              <el-button circle size="small" type="danger" @click="handleDelete(category)">
+              <el-button type="danger" link @click="handleDelete(category)">
                 <el-icon><Delete /></el-icon>
               </el-button>
             </div>
           </div>
-        </div>
 
-        <el-empty v-if="categories.length === 0 && !loading" description="暂无分类" />
+          <el-empty v-if="categories.length === 0 && !loading" description="暂无分类" />
+        </div>
       </div>
 
       <div v-if="activeTab === 'applications'" class="applications-container" v-loading="applicationsLoading">
@@ -308,9 +360,16 @@ onMounted(() => {
             <template #default="{ row }">
               <div class="applicant-info" @click.stop="goToUserProfile(row.user_id)">
                 <div class="applicant-avatar-wrapper">
-                  <el-avatar v-if="row.avatar" :size="32" :src="getFullUrl(row.avatar)" />
-                  <el-avatar v-else :size="32">{{ (row.nickname || row.username || '').charAt(0) }}</el-avatar>
-                  <span v-if="row.is_admin === 1" class="avatar-admin-badge">管</span>
+                  <UserAvatar :user="{
+                    id: row.user_id,
+                    nickname: row.nickname,
+                    username: row.username,
+                    avatar: row.avatar,
+                    show_avatar_badge: row.show_avatar_badge === 1 && row.avatar_badge && row.avatar_badge_bg_color && row.avatar_badge_text_color,
+                    avatar_badge: row.avatar_badge,
+                    avatar_badge_bg_color: row.avatar_badge_bg_color,
+                    avatar_badge_text_color: row.avatar_badge_text_color
+                  }" size="small" />
                 </div>
                 <span>{{ row.nickname || row.username }}</span>
               </div>
@@ -360,8 +419,16 @@ onMounted(() => {
             <div class="card-meta-row">
               <div class="card-applicant" @click="goToUserProfile(app.user_id)">
                 <div class="applicant-avatar-tiny">
-                  <img v-if="app.avatar" :src="getFullUrl(app.avatar)" alt="avatar">
-                  <span v-else>{{ (app.nickname || app.username || '').charAt(0) }}</span>
+                  <UserAvatar :user="{
+                    id: app.user_id,
+                    nickname: app.nickname,
+                    username: app.username,
+                    avatar: app.avatar,
+                    show_avatar_badge: app.show_avatar_badge === 1 && app.avatar_badge && app.avatar_badge_bg_color && app.avatar_badge_text_color,
+                    avatar_badge: app.avatar_badge,
+                    avatar_badge_bg_color: app.avatar_badge_bg_color,
+                    avatar_badge_text_color: app.avatar_badge_text_color
+                  }" size="tiny" />
                 </div>
                 <span class="applicant-name">{{ app.nickname || app.username }}</span>
               </div>
@@ -558,81 +625,88 @@ onMounted(() => {
   padding: 24px;
 }
 
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 20px;
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+  margin: 0;
+}
+
+.category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .category-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
   display: flex;
-  gap: 16px;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  gap: 16px;
+  background: #f7f8fa;
+  border: 1px solid #e5e6eb;
+  border-radius: 12px;
+  padding: 16px 20px;
   transition: all 0.3s ease;
-  border: 1px solid #f0f0f0;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    border-color: #165dff;
+    box-shadow: 0 4px 12px rgba(22, 93, 255, 0.1);
+  }
+
+  &.is-hidden {
+    opacity: 0.6;
+    background: #f0f0f0;
   }
 }
 
-.category-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
+.hidden-tag {
+  margin-top: 4px;
+}
+
+.category-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #165dff 0%, #722ed1 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #fff;
   flex-shrink: 0;
 
   span {
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 700;
-    color: #ffffff;
   }
 }
 
 .category-info {
   flex: 1;
-  min-width: 0;
 }
 
 .category-name {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: #1d2129;
-  margin: 0 0 6px 0;
+  margin: 0 0 4px;
 }
 
 .category-desc {
   font-size: 14px;
-  color: #86909c;
-  line-height: 1.6;
-  margin: 0;
-
-  &.empty {
-    color: #c9cdd4;
-    font-style: italic;
-  }
+  color: #4e5969;
+  margin: 0 0 2px;
 }
 
 .category-actions {
   display: flex;
-  flex-direction: row;
-  gap: 8px;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-
-  .category-card:hover & {
-    opacity: 1;
-  }
+  gap: 4px;
 }
 
 .applicant-info {
@@ -803,26 +877,21 @@ onMounted(() => {
     padding: 16px;
   }
 
-  .category-grid {
-    grid-template-columns: 1fr;
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
   }
 
   .category-card {
-    padding: 16px;
-  }
-
-  .category-icon {
-    width: 48px;
-    height: 48px;
-
-    span {
-      font-size: 20px;
-    }
+    flex-wrap: wrap;
   }
 
   .category-actions {
-    opacity: 1;
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 12px;
+    border-top: 1px solid #e5e6eb;
   }
 }
 </style>

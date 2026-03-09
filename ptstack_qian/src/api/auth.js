@@ -71,8 +71,8 @@ export async function uploadAvatar(file) {
   formData.append('avatar', file)
   return request.post('/upload/avatar', formData, {
     headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+      'Content-Type': 'multipart/form-data',
+    },
   })
 }
 

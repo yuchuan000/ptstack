@@ -23,11 +23,9 @@ import {
   Warning
 } from '@element-plus/icons-vue'
 // 导入文章筛选组件
-import ArticleFilter from '@/components/ArticleFilter/ArticleFilter.vue'
-// 导入页面标题组件
-import PageHeader from '@/components/PageHeader/PageHeader.vue'
-// 导入URL处理工具函数
-import { getFullUrl } from '@/utils/url'
+import ArticleFilter from '@/components/ArticleFilter/ArticleFilter.vue' // 导入文章筛选组件
+import PageHeader from '@/components/PageHeader/PageHeader.vue' // 导入页面标题组件
+import UserAvatar from '@/components/Common/UserAvatar.vue' // 导入用户头像组件
 
 // 创建用户状态管理实例，用于获取当前登录用户信息
 const userStore = useUserStore()
@@ -344,9 +342,16 @@ onMounted(() => {
             <template #default="{ row }">
               <div class="author-cell" :class="{ 'is-mine': row.author_id === userStore.userInfo?.id }" @click.stop="goToUserProfile(row.author_id)">
                 <div class="author-avatar-small">
-                  <img v-if="row.author_avatar" :src="getFullUrl(row.author_avatar)" alt="avatar" class="author-avatar-img-small">
-                  <span v-else>{{ (row.author_nickname || row.author_name)?.charAt(0)?.toUpperCase() || 'U' }}</span>
-                  <span v-if="row.author_is_admin === 1" class="avatar-admin-badge">管</span>
+                  <UserAvatar :user="{
+                    id: row.author_id,
+                    nickname: row.author_nickname,
+                    username: row.author_name,
+                    avatar: row.author_avatar,
+                    show_avatar_badge: row.author_show_avatar_badge === 1 && row.author_avatar_badge && row.author_avatar_badge_bg_color && row.author_avatar_badge_text_color,
+                    avatar_badge: row.author_avatar_badge,
+                    avatar_badge_bg_color: row.author_avatar_badge_bg_color,
+                    avatar_badge_text_color: row.author_avatar_badge_text_color
+                  }" size="small" />
                 </div>
                 <el-tooltip :content="row.author_nickname || row.author_name" placement="top" :show-after="300">
                   <span class="author-name clickable">{{ row.author_nickname || row.author_name }}</span>
@@ -443,8 +448,16 @@ onMounted(() => {
             <div class="card-meta-row" v-if="activeTab !== 'my'">
               <div class="card-author" @click.stop="goToUserProfile(article.author_id)">
                 <div class="author-avatar-tiny">
-                  <img v-if="article.author_avatar" :src="getFullUrl(article.author_avatar)" alt="avatar">
-                  <span v-else>{{ (article.author_nickname || article.author_name)?.charAt(0)?.toUpperCase() || 'U' }}</span>
+                  <UserAvatar :user="{
+                    id: article.author_id,
+                    nickname: article.author_nickname,
+                    username: article.author_name,
+                    avatar: article.author_avatar,
+                    show_avatar_badge: article.author_show_avatar_badge === 1 && article.author_avatar_badge && article.author_avatar_badge_bg_color && article.author_avatar_badge_text_color,
+                    avatar_badge: article.author_avatar_badge,
+                    avatar_badge_bg_color: article.author_avatar_badge_bg_color,
+                    avatar_badge_text_color: article.author_avatar_badge_text_color
+                  }" size="tiny" />
                 </div>
                 <span class="author-name-tiny">{{ article.author_nickname || article.author_name }}</span>
               </div>
@@ -749,40 +762,7 @@ onMounted(() => {
 }
 
 .author-avatar-small {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  flex-shrink: 0;
-  overflow: visible;
-  position: relative;
   margin-right: 8px;
-
-// 管理员标识
-  .avatar-admin-badge {
-    position: absolute;
-    bottom: -4px;
-    right: -4px;
-    width: 19px;
-    height: 19px;
-    background: linear-gradient(135deg, #ff7d00 0%, #ff9a2e 100%);
-    border: 2px solid white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    font-weight: 700;
-    color: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-    z-index: 1;
-  }
 }
 
 // 去除管理员标识父级遮挡
@@ -879,23 +859,7 @@ onMounted(() => {
 }
 
 .author-avatar-tiny {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #165dff 0%, #4080ff 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  // 使用封装的UserAvatar组件
 }
 
 .author-name-tiny {

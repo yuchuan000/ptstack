@@ -1,6 +1,6 @@
 <template>
-<!-- 公告管理页面组件 -->
-<!-- 功能：管理系统公告，支持创建、编辑、删除和状态切换 -->
+  <!-- 公告管理页面组件 -->
+  <!-- 功能：管理系统公告，支持创建、编辑、删除和状态切换 -->
   <div class="announcement-manage-page">
     <PageHeader title="公告管理" subtitle="管理系统公告，支持精准投放和多种发送方式">
       <template #actions>
@@ -42,7 +42,12 @@
           </el-table-column>
           <el-table-column label="发送方式" width="200">
             <template #default="{ row }">
-              <el-tag v-for="method in parseDeliveryMethods(row.delivery_methods)" :key="method" size="small" style="margin-right: 4px;">
+              <el-tag
+                v-for="method in parseDeliveryMethods(row.delivery_methods)"
+                :key="method"
+                size="small"
+                style="margin-right: 4px"
+              >
                 {{ method === 'email' ? '邮箱' : method === 'popup' ? '弹窗' : '消息中心' }}
               </el-tag>
             </template>
@@ -79,23 +84,36 @@
             <div class="card-tags-row">
               <el-tag v-if="announcement.is_marquee" type="success" size="small">首页通告</el-tag>
               <el-tag size="small">优先级: {{ announcement.priority }}</el-tag>
-              <el-tag v-if="announcement.target_type === 'all'" type="success" size="small">全部用户</el-tag>
-              <el-tag v-else-if="announcement.target_type === 'group'" type="warning" size="small">用户组</el-tag>
+              <el-tag v-if="announcement.target_type === 'all'" type="success" size="small"
+                >全部用户</el-tag
+              >
+              <el-tag v-else-if="announcement.target_type === 'group'" type="warning" size="small"
+                >用户组</el-tag
+              >
               <el-tag v-else type="primary" size="small">指定用户</el-tag>
             </div>
             <div class="card-methods-row">
               <span class="methods-label">发送方式:</span>
-              <el-tag v-for="method in parseDeliveryMethods(announcement.delivery_methods)" :key="method" size="small">
+              <el-tag
+                v-for="method in parseDeliveryMethods(announcement.delivery_methods)"
+                :key="method"
+                size="small"
+              >
                 {{ method === 'email' ? '邮箱' : method === 'popup' ? '弹窗' : '消息中心' }}
               </el-tag>
             </div>
             <div class="card-meta-row">
               <span class="card-time">{{ formatDate(announcement.created_at) }}</span>
-              <el-switch v-model="announcement.is_active" @change="(val) => handleToggleActive(announcement, val)" />
+              <el-switch
+                v-model="announcement.is_active"
+                @change="(val) => handleToggleActive(announcement, val)"
+              />
             </div>
             <div class="card-actions-row">
               <el-button size="small" @click="handleEdit(announcement)">编辑</el-button>
-              <el-button size="small" type="danger" @click="handleDelete(announcement)">删除</el-button>
+              <el-button size="small" type="danger" @click="handleDelete(announcement)"
+                >删除</el-button
+              >
             </div>
           </div>
         </div>
@@ -115,7 +133,7 @@ import PageHeader from '@/components/PageHeader/PageHeader.vue'
 import {
   getAllAnnouncementsAdmin,
   updateAnnouncement,
-  deleteAnnouncement
+  deleteAnnouncement,
 } from '@/api/announcements'
 
 const router = useRouter()
@@ -132,10 +150,10 @@ const loadAnnouncements = async () => {
   isInitializing.value = true
   try {
     const res = await getAllAnnouncementsAdmin()
-    announcements.value = (res.announcements || []).map(item => ({
+    announcements.value = (res.announcements || []).map((item) => ({
       ...item,
       is_active: !!item.is_active,
-      is_marquee: !!item.is_marquee
+      is_marquee: !!item.is_marquee,
     }))
   } catch {
     ElMessage.error('获取公告列表失败')
@@ -158,7 +176,7 @@ const handleEdit = (row) => {
 const handleDelete = async (row) => {
   try {
     await ElMessageBox.confirm('确定要删除这条公告吗？', '提示', {
-      type: 'warning'
+      type: 'warning',
     })
     await deleteAnnouncement(row.id)
     ElMessage.success('删除成功')

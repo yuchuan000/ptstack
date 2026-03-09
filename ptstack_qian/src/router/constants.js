@@ -13,6 +13,9 @@ export const ROUTE_PATHS = {
   // 管理端
   ADMIN: '/admin',
 
+  // AI管理
+  AI_CONFIG: '/admin/ai-config',
+
   // 用户资料
   COMPLETE_PROFILE: '/complete-profile',
   PROFILE: '/profile',
@@ -52,6 +55,8 @@ export const ROUTE_NAMES = {
   ADMIN_ANNOUNCEMENTS: 'AdminAnnouncements',
   ADMIN_USERS: 'AdminUsers',
   ADMIN_SETTINGS: 'AdminSettings',
+  ADMIN_ABOUT_CONFIG: 'AdminAboutConfig',
+  ADMIN_AI_CONFIG: 'AdminAiConfig',
 }
 
 /**

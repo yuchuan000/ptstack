@@ -13,23 +13,23 @@ export const clientRoutes = [
       {
         path: '',
         component: () => import('@/views/ClientHomePage/ClientHomePage.vue'),
-        meta: { requiresAuth: false }
+        meta: { requiresAuth: false },
       },
       {
         path: 'articles',
         component: () => import('@/views/ClientArticleCenterPage/ClientArticleCenterPage.vue'),
-        meta: { requiresAuth: false }
+        meta: { requiresAuth: false },
       },
       {
         path: 'about',
         component: () => import('@/views/ClientAboutPage/ClientAboutPage.vue'),
-        meta: { requiresAuth: false }
+        meta: { requiresAuth: false },
       },
       {
         path: 'profile',
         component: () => import('@/views/ClientProfilePage/ClientProfilePage.vue'),
-        meta: { requiresAuth: true }
-      }
-    ]
-  }
+        meta: { requiresAuth: true },
+      },
+    ],
+  },
 ]

@@ -1,3 +1,7 @@
+/**
+ * 认证相关路由
+ * 处理用户注册、登录、邮箱验证和令牌刷新
+ */
 import express from 'express'
 import {
   register,

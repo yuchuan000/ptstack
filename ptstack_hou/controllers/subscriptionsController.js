@@ -90,7 +90,9 @@ export const getUserFollowers = async (req, res) => {
     const currentUserId = req.user?.id
 
     // 转换userId为内部id
-    const [user] = await execute('SELECT id, show_followers FROM users WHERE public_id = ?', [userId])
+    const [user] = await execute('SELECT id, show_followers FROM users WHERE public_id = ?', [
+      userId,
+    ])
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
@@ -124,7 +126,7 @@ export const getUserFollowers = async (req, res) => {
 
     const followers = await execute(
       `
-      SELECT u.public_id as id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.is_admin,
+      SELECT u.public_id as id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.show_avatar_badge, u.avatar_badge, u.avatar_badge_bg_color, u.avatar_badge_text_color,
              (SELECT COUNT(*) FROM articles WHERE author_id = u.id) as article_count
       FROM subscriptions s
       JOIN users u ON s.follower_id = u.id
@@ -179,7 +181,9 @@ export const getUserFollowing = async (req, res) => {
     const currentUserId = req.user?.id
 
     // 转换userId为内部id
-    const [user] = await execute('SELECT id, show_following FROM users WHERE public_id = ?', [userId])
+    const [user] = await execute('SELECT id, show_following FROM users WHERE public_id = ?', [
+      userId,
+    ])
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
@@ -213,7 +217,7 @@ export const getUserFollowing = async (req, res) => {
 
     const following = await execute(
       `
-      SELECT u.public_id as id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.is_admin,
+      SELECT u.public_id as id, u.username, u.nickname, u.avatar, u.bio, u.created_at, u.show_avatar_badge, u.avatar_badge, u.avatar_badge_bg_color, u.avatar_badge_text_color,
              (SELECT COUNT(*) FROM articles WHERE author_id = u.id) as article_count
       FROM subscriptions s
       JOIN users u ON s.following_id = u.id

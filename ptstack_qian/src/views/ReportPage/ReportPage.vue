@@ -10,12 +10,7 @@ import { getArticleById } from '@/api/articles'
 // 导入Element Plus的ElMessage组件
 import { ElMessage } from 'element-plus'
 // 导入Element Plus图标组件
-import {
-  ArrowLeft,
-  Warning,
-  Document,
-  CircleCheck
-} from '@element-plus/icons-vue'
+import { ArrowLeft, Warning, Document, CircleCheck } from '@element-plus/icons-vue'
 
 // 创建路由实例，用于页面跳转
 const router = useRouter()
@@ -41,7 +36,7 @@ const reportTypes = [
   { value: 'plagiarism', label: '抄袭/侵权' }, // 抄袭/侵权
   { value: 'inappropriate', label: '不当内容' }, // 不当内容
   { value: 'fake', label: '虚假信息' }, // 虚假信息
-  { value: 'other', label: '其他' } // 其他
+  { value: 'other', label: '其他' }, // 其他
 ]
 
 // 返回上一页的函数
@@ -89,7 +84,7 @@ const handleSubmit = async () => {
     // 设置提交状态为true
     submitting.value = true
     // 模拟API请求延迟1秒
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
     // 设置举报成功状态为true
     reportSuccess.value = true
     // 显示成功提示
@@ -117,9 +112,15 @@ onMounted(() => {
     <el-skeleton :loading="loading" animated>
       <template #template>
         <div class="skeleton-content">
-          <el-skeleton-item variant="text" style="width: 200px; height: 36px; margin-bottom: 32px;" />
-          <el-skeleton-item variant="text" style="width: 100%; height: 120px; margin-bottom: 24px;" />
-          <el-skeleton-item variant="text" style="width: 100%; height: 200px;" />
+          <el-skeleton-item
+            variant="text"
+            style="width: 200px; height: 36px; margin-bottom: 32px"
+          />
+          <el-skeleton-item
+            variant="text"
+            style="width: 100%; height: 120px; margin-bottom: 24px"
+          />
+          <el-skeleton-item variant="text" style="width: 100%; height: 200px" />
         </div>
       </template>
       <template #default>
@@ -140,8 +141,12 @@ onMounted(() => {
               <div class="article-info">
                 <h3 class="article-title">{{ article.title }}</h3>
                 <div class="article-meta">
-                  <span class="meta-item">作者：{{ article.author_nickname || article.author_name }}</span>
-                  <span class="meta-item">发布于：{{ new Date(article.created_at).toLocaleDateString('zh-CN') }}</span>
+                  <span class="meta-item"
+                    >作者：{{ article.author_nickname || article.author_name }}</span
+                  >
+                  <span class="meta-item"
+                    >发布于：{{ new Date(article.created_at).toLocaleDateString('zh-CN') }}</span
+                  >
                 </div>
                 <p v-if="article.summary" class="article-summary">{{ article.summary }}</p>
               </div>
@@ -190,9 +195,7 @@ onMounted(() => {
               </div>
 
               <div class="form-actions">
-                <el-button size="large" @click="goBack" class="cancel-btn">
-                  取消
-                </el-button>
+                <el-button size="large" @click="goBack" class="cancel-btn"> 取消 </el-button>
                 <el-button
                   type="primary"
                   size="large"
@@ -215,9 +218,7 @@ onMounted(() => {
             <h2 class="success-title">举报提交成功</h2>
             <p class="success-desc">我们已收到您的举报，将在1-3个工作日内进行处理</p>
             <div class="success-actions">
-              <el-button size="large" @click="goBack" class="back-home-btn">
-                返回
-              </el-button>
+              <el-button size="large" @click="goBack" class="back-home-btn"> 返回 </el-button>
             </div>
           </div>
         </div>

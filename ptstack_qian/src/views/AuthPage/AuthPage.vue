@@ -15,7 +15,7 @@ import {
   register as registerAPI,
   sendEmailVerification,
   verifyEmailCode,
-  checkEmailVerified
+  checkEmailVerified,
 } from '@/api/auth'
 // 导入用户状态管理store
 import { useUserStore } from '@/stores/user'
@@ -48,14 +48,17 @@ onMounted(() => {
 })
 
 // 监听路由变化
-watch(() => route.path, () => {
-  // 根据路由meta信息设置当前视图
-  if (route.meta.view === 'register') {
-    currentView.value = 'register'
-  } else {
-    currentView.value = 'login'
-  }
-})
+watch(
+  () => route.path,
+  () => {
+    // 根据路由meta信息设置当前视图
+    if (route.meta.view === 'register') {
+      currentView.value = 'register'
+    } else {
+      currentView.value = 'login'
+    }
+  },
+)
 
 // 注册页面相关状态
 // 邮箱是否已验证
@@ -83,7 +86,7 @@ const loginForm = reactive({
   // 密码
   password: '',
   // 是否记住登录状态
-  remember: false
+  remember: false,
 })
 
 // 注册表单数据
@@ -97,28 +100,31 @@ const registerForm = reactive({
   // 确认密码
   confirmPassword: '',
   // 同意隐私政策和服务条款
-  agreeToTerms: false
+  agreeToTerms: false,
 })
 
 // 监听注册邮箱变化
-watch(() => registerForm.email, (newEmail) => {
-  // 如果邮箱为空
-  if (!newEmail) {
-    // 重置验证状态
+watch(
+  () => registerForm.email,
+  (newEmail) => {
+    // 如果邮箱为空
+    if (!newEmail) {
+      // 重置验证状态
+      emailVerified.value = false
+      showVerificationCodeInput.value = false
+      verificationCode.value = ''
+      emailVerificationToken.value = ''
+      // 提前返回
+      return
+    }
+    // 邮箱有变化，重置所有验证状态（强制用户重新验证，安全起见）
     emailVerified.value = false
     showVerificationCodeInput.value = false
     verificationCode.value = ''
     emailVerificationToken.value = ''
-    // 提前返回
-    return
-  }
-  // 邮箱有变化，重置所有验证状态（强制用户重新验证，安全起见）
-  emailVerified.value = false
-  showVerificationCodeInput.value = false
-  verificationCode.value = ''
-  emailVerificationToken.value = ''
-  // 不再自动检查旧状态，强制用户重新验证
-})
+    // 不再自动检查旧状态，强制用户重新验证
+  },
+)
 
 // 确认密码验证函数
 const validateConfirmPassword = (rule, value, callback) => {
@@ -144,13 +150,13 @@ const loginRules = {
   // 用户名验证规则
   username: [
     // 必填验证
-    { required: true, message: '请输入用户名或邮箱', trigger: 'blur' }
+    { required: true, message: '请输入用户名或邮箱', trigger: 'blur' },
   ],
   // 密码验证规则
   password: [
     // 必填验证
-    { required: true, message: '请输入密码', trigger: 'blur' }
-  ]
+    { required: true, message: '请输入密码', trigger: 'blur' },
+  ],
 }
 
 // 注册表单验证规则
@@ -160,26 +166,30 @@ const registerRules = {
     // 必填验证
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     // 邮箱格式验证
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
   ],
   // 用户名验证规则
   username: [
     // 必填验证
     { required: true, message: '请输入用户名', trigger: 'blur' },
     // 用户名格式验证：只能是英文、数字、下划线，长度3-20个字符
-    { pattern: /^[a-zA-Z0-9_]{3,20}$/, message: '用户名只能包含英文、数字和下划线，长度3-20个字符', trigger: 'blur' }
+    {
+      pattern: /^[a-zA-Z0-9_]{3,20}$/,
+      message: '用户名只能包含英文、数字和下划线，长度3-20个字符',
+      trigger: 'blur',
+    },
   ],
   // 密码验证规则
   password: [
     // 必填验证
     { required: true, message: '请输入密码', trigger: 'blur' },
     // 密码长度验证：至少6个字符
-    { min: 6, message: '密码长度不能少于 6 个字符', trigger: 'blur' }
+    { min: 6, message: '密码长度不能少于 6 个字符', trigger: 'blur' },
   ],
   // 确认密码验证规则
   confirmPassword: [
     // 必填验证 + 自定义验证
-    { required: true, validator: validateConfirmPassword, trigger: 'blur' }
+    { required: true, validator: validateConfirmPassword, trigger: 'blur' },
   ],
   // 同意条款验证规则
   agreeToTerms: [
@@ -191,9 +201,9 @@ const registerRules = {
           callback()
         }
       },
-      trigger: 'change'
-    }
-  ]
+      trigger: 'change',
+    },
+  ],
 }
 
 // 切换到登录视图
@@ -616,7 +626,11 @@ onUnmounted(() => {
                 type="primary"
                 size="large"
                 :loading="sendingEmail"
-                :disabled="!registerForm.email || emailRegex.test(registerForm.email) === false || emailCountdown > 0"
+                :disabled="
+                  !registerForm.email ||
+                  emailRegex.test(registerForm.email) === false ||
+                  emailCountdown > 0
+                "
                 @click="handleSendVerification"
                 class="verify-button"
               >
@@ -855,7 +869,9 @@ onUnmounted(() => {
     /* 圆角 */
     border-radius: 12px;
     /* 阴影 */
-    box-shadow: 0 4px 20px rgba(22, 93, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow:
+      0 4px 20px rgba(22, 93, 255, 0.12),
+      0 2px 8px rgba(0, 0, 0, 0.04);
     /* 边框 */
     border: 1px solid rgba(22, 93, 255, 0.1);
   }

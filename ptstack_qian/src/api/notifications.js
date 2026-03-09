@@ -13,7 +13,7 @@ export function getNotifications(params) {
   return request({
     url: '/notifications',
     method: 'get',
-    params
+    params,
   })
 }
 
@@ -24,7 +24,7 @@ export function getNotifications(params) {
 export function getUnreadCount() {
   return request({
     url: '/notifications/unread-count',
-    method: 'get'
+    method: 'get',
   })
 }
 
@@ -36,7 +36,7 @@ export function getUnreadCount() {
 export function markAsRead(id) {
   return request({
     url: `/notifications/${id}/read`,
-    method: 'put'
+    method: 'put',
   })
 }
 
@@ -47,7 +47,7 @@ export function markAsRead(id) {
 export function markAllAsRead() {
   return request({
     url: '/notifications/read-all',
-    method: 'put'
+    method: 'put',
   })
 }
 
@@ -59,6 +59,6 @@ export function markAllAsRead() {
 export function deleteNotification(id) {
   return request({
     url: `/notifications/${id}`,
-    method: 'delete'
+    method: 'delete',
   })
 }

@@ -27,13 +27,7 @@
           <p class="auth-subtitle">请设置您的昵称和头像，让大家认识您</p>
         </div>
 
-        <el-form
-          ref="formRef"
-          :model="form"
-          :rules="rules"
-          label-width="0"
-          class="auth-form"
-        >
+        <el-form ref="formRef" :model="form" :rules="rules" label-width="0" class="auth-form">
           <div class="avatar-section">
             <div class="avatar-upload">
               <div class="avatar-display" @click="openAvatarDialog">
@@ -45,9 +39,17 @@
                     accept="image/*"
                   >
                     <div class="avatar-container">
-                      <img v-if="form.avatar" :src="getFullUrl(form.avatar)" class="avatar-preview" />
+                      <img
+                        v-if="form.avatar"
+                        :src="getFullUrl(form.avatar)"
+                        class="avatar-preview"
+                      />
                       <span v-else class="avatar-placeholder">
-                        {{ (userStore.userInfo?.nickname || userStore.userInfo?.username)?.charAt(0).toUpperCase() || 'U' }}
+                        {{
+                          (userStore.userInfo?.nickname || userStore.userInfo?.username)
+                            ?.charAt(0)
+                            .toUpperCase() || 'U'
+                        }}
                       </span>
                     </div>
                   </el-upload>
@@ -191,7 +193,6 @@ const startY = ref(0)
 const imageRef = ref(null)
 const windowWidth = ref(window.innerWidth)
 
-
 const handleResize = () => {
   windowWidth.value = window.innerWidth
 }
@@ -207,7 +208,7 @@ onUnmounted(() => {
 const form = reactive({
   nickname: '',
   avatar: '',
-  bio: ''
+  bio: '',
 })
 
 const tempAvatarFile = ref(null)
@@ -215,8 +216,8 @@ const tempAvatarFile = ref(null)
 const rules = {
   nickname: [
     { required: true, message: '请输入昵称', trigger: 'blur' },
-    { min: 1, max: 50, message: '昵称长度在 1 到 50 个字符', trigger: 'blur' }
-  ]
+    { min: 1, max: 50, message: '昵称长度在 1 到 50 个字符', trigger: 'blur' },
+  ],
 }
 
 const openAvatarDialog = () => {
@@ -349,10 +350,14 @@ const getCroppedFile = () => {
       return
     }
 
-    canvasRef.value.toBlob((blob) => {
-      const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
-      resolve(croppedFile)
-    }, 'image/jpeg', 0.9)
+    canvasRef.value.toBlob(
+      (blob) => {
+        const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+        resolve(croppedFile)
+      },
+      'image/jpeg',
+      0.9,
+    )
   })
 }
 
@@ -391,7 +396,7 @@ const handleSubmit = async () => {
         const response = await updateProfile({
           nickname: form.nickname,
           avatar: form.avatar || undefined,
-          bio: form.bio || undefined
+          bio: form.bio || undefined,
         })
 
         ElMessage.success(response.message || '资料完善成功！')

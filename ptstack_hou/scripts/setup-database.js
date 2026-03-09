@@ -242,7 +242,7 @@ async function step2CreateBaseTables() {
         profile_completed TINYINT DEFAULT 0 COMMENT '资料是否已完善：0-未完善，1-已完善',
         follower_count INT DEFAULT 0 COMMENT '粉丝数',
         following_count INT DEFAULT 0 COMMENT '关注数',
-        is_admin TINYINT DEFAULT 0 COMMENT '是否为管理员：0-否，1-是',
+
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -299,17 +299,12 @@ async function step2CreateBaseTables() {
       'following_count',
       'INT DEFAULT 0 COMMENT "关注数" AFTER follower_count',
     )
-    await addColumnIfNotExists(
-      connection,
-      'users',
-      'is_admin',
-      'TINYINT DEFAULT 0 COMMENT "是否为管理员：0-否，1-是" AFTER following_count',
-    )
+
     await addColumnIfNotExists(
       connection,
       'users',
       'show_followers',
-      'TINYINT DEFAULT 1 COMMENT "是否显示粉丝列表：0-否，1-是" AFTER is_admin',
+      'TINYINT DEFAULT 1 COMMENT "是否显示粉丝列表：0-否，1-是" AFTER following_count',
     )
     await addColumnIfNotExists(
       connection,
@@ -470,6 +465,21 @@ async function step2CreateBaseTables() {
       COMMENT '发布状态：0-草稿，1-公开，2-私密'
     `)
     console.log('✓ articles.status 字段注释已更新（支持私密文章）')
+
+    // 创建文章附件表
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS article_attachments (
+        id INT AUTO_INCREMENT PRIMARY KEY COMMENT '附件ID',
+        article_id INT NOT NULL COMMENT '文章ID',
+        filename VARCHAR(255) NOT NULL COMMENT '文件名',
+        original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
+        url VARCHAR(500) NOT NULL COMMENT '文件URL',
+        size INT NOT NULL COMMENT '文件大小（字节）',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `)
+    console.log('✓ article_attachments 表创建成功（或已存在）')
 
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS article_tags (
@@ -695,6 +705,128 @@ async function step2CreateBaseTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `)
     console.log('✓ announcement_reads 表创建成功（或已存在）')
+
+    // AI配置表（重构后）
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS ai_providers (
+        id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'AI配置ID',
+        name VARCHAR(100) NOT NULL COMMENT 'AI名称',
+        provider VARCHAR(50) NOT NULL COMMENT '厂商：openai、doubao、anthropic等',
+        api_key VARCHAR(500) NOT NULL COMMENT 'API密钥',
+        api_url VARCHAR(500) NOT NULL COMMENT 'API地址',
+        model_id VARCHAR(100) NOT NULL COMMENT '模型ID',
+        ai_type ENUM('chat', 'image') NOT NULL COMMENT 'AI类型：chat-语言模型，image-图片模型',
+        purpose ENUM('summary', 'cover') NOT NULL COMMENT '用途：summary-生成总结，cover-生成封面',
+        is_enabled TINYINT DEFAULT 1 COMMENT '是否启用：0-禁用，1-启用',
+        priority INT DEFAULT 0 COMMENT '优先级，数字越小优先级越高',
+        config JSON DEFAULT NULL COMMENT '厂商特定配置',
+        description VARCHAR(500) DEFAULT NULL COMMENT '配置说明',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        INDEX idx_ai_type (ai_type),
+        INDEX idx_purpose (purpose),
+        INDEX idx_is_enabled (is_enabled),
+        INDEX idx_priority (priority),
+        INDEX idx_provider (provider)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `)
+    console.log('✓ ai_providers 表创建成功（或已存在）')
+
+    // 为现有表添加缺失的字段
+    await addColumnIfNotExists(
+      connection,
+      'ai_providers',
+      'provider',
+      'VARCHAR(50) NOT NULL COMMENT "厂商：openai、doubao、anthropic等" AFTER name',
+    )
+    await addColumnIfNotExists(
+      connection,
+      'ai_providers',
+      'config',
+      'JSON DEFAULT NULL COMMENT "厂商特定配置" AFTER priority',
+    )
+    // 添加缺失的索引
+    await addIndexIfNotExists(connection, 'ai_providers', 'idx_provider', '(provider)')
+
+    // 关于我们 - 团队成员表
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS about_team (
+        id INT AUTO_INCREMENT PRIMARY KEY COMMENT '团队成员ID',
+        name VARCHAR(100) NOT NULL COMMENT '姓名',
+        role VARCHAR(100) NOT NULL COMMENT '职位',
+        avatar VARCHAR(500) DEFAULT NULL COMMENT '头像URL',
+        bio TEXT DEFAULT NULL COMMENT '个人简介',
+        skills TEXT DEFAULT NULL COMMENT '技能列表，JSON格式',
+        portfolio TEXT DEFAULT NULL COMMENT '作品集，JSON格式',
+        sort_order INT DEFAULT 0 COMMENT '排序顺序',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `)
+    console.log('✓ about_team 表创建成功（或已存在）')
+
+    // 关于我们 - 联系信息表
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS about_contact (
+        id INT AUTO_INCREMENT PRIMARY KEY COMMENT '联系信息ID',
+        icon VARCHAR(50) NOT NULL COMMENT '图标名称',
+        name VARCHAR(100) NOT NULL COMMENT '名称',
+        info VARCHAR(255) NOT NULL COMMENT '联系信息',
+        link VARCHAR(500) DEFAULT NULL COMMENT '跳转链接',
+        sort_order INT DEFAULT 0 COMMENT '排序顺序',
+        is_hidden TINYINT(1) DEFAULT 0 COMMENT '是否隐藏',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `)
+    console.log('✓ about_contact 表创建成功（或已存在）')
+
+    await addColumnIfNotExists(
+      connection,
+      'about_contact',
+      'is_hidden',
+      'TINYINT(1) DEFAULT 0 COMMENT "是否隐藏"',
+    )
+
+    // 关于我们 - 底部信息表
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS about_footer (
+        id INT AUTO_INCREMENT PRIMARY KEY COMMENT '底部信息ID',
+        display VARCHAR(255) NOT NULL COMMENT '显示内容',
+        link VARCHAR(500) DEFAULT NULL COMMENT '跳转链接',
+        pc_row_id INT DEFAULT 1 COMMENT 'PC端行数ID',
+        mobile_row_id INT DEFAULT 1 COMMENT '移动端行数ID',
+        show_on_pc TINYINT(1) DEFAULT 1 COMMENT '是否在PC端显示',
+        show_on_mobile TINYINT(1) DEFAULT 1 COMMENT '是否在移动端显示',
+        sort_order INT DEFAULT 0 COMMENT '排序顺序',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `)
+    console.log('✓ about_footer 表创建成功（或已存在）')
+
+    // 为现有表添加pc_row_id和mobile_row_id字段
+    await addColumnIfNotExists(
+      connection,
+      'about_footer',
+      'pc_row_id',
+      'INT DEFAULT 1 COMMENT "PC端行数ID"',
+    )
+
+    await addColumnIfNotExists(
+      connection,
+      'about_footer',
+      'mobile_row_id',
+      'INT DEFAULT 1 COMMENT "移动端行数ID"',
+    )
+
+    // 为现有表添加sort_order字段
+    await addColumnIfNotExists(
+      connection,
+      'about_footer',
+      'sort_order',
+      'INT DEFAULT 0 COMMENT "排序顺序"',
+    )
 
     await addColumnIfNotExists(
       connection,

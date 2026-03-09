@@ -1,18 +1,48 @@
 <script setup>
+/**
+ * 标签容器组件
+ * 用于展示可切换的标签页
+ */
 
+/**
+ * 组件属性
+ */
 defineProps({
+  /**
+   * 标签数组
+   * @type {Array<{key: string, label: string, icon?: any}>}
+   * @required
+   */
   tabs: {
     type: Array,
-    required: true
+    required: true,
   },
+  /**
+   * 当前激活的标签键值
+   * @type {string}
+   * @required
+   */
   activeTab: {
     type: String,
-    required: true
-  }
+    required: true,
+  },
 })
 
-const emit = defineEmits(['tab-change'])
+/**
+ * 组件事件
+ */
+const emit = defineEmits([
+  /**
+   * 标签切换事件
+   * @param {string} key - 切换的标签键值
+   */
+  'tab-change',
+])
 
+/**
+ * 处理标签点击事件
+ * @param {string} key - 点击的标签键值
+ */
 const handleTabClick = (key) => {
   emit('tab-change', key)
 }
