@@ -1,23 +1,24 @@
-// tsconfig.json
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "module": "esnext",
-    "target": "esnext",
-    "types": [],
-    "lib": ["esnext"],
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "strict": true,
-    "verbatimModuleSyntax": false,
-    "moduleResolution": "bundler",
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true
+    // ========== 模块解析 ==========
+    "module": "esnext",                    // 输出 ESM 模块语法
+    "moduleResolution": "bundler",         // 按打包工具（Vite/Webpack）规则解析模块
+
+    // ========== 通用严格检查 ==========
+    "strict": true,                        // 开启所有严格类型检查选项
+    "noUncheckedIndexedAccess": true,      // 索引访问时必须处理 undefined（如 obj[key]）
+    "exactOptionalPropertyTypes": true,    // 可选属性不能显式赋 undefined，必须省略
+    "skipLibCheck": true,                  // 跳过 .d.ts 声明文件的类型检查，加快编译
+
+    // ========== 通用输出 ==========
+    "sourceMap": true,                     // 生成 .map 文件，方便调试时映射回源码
+    "declaration": true,                   // 生成 .d.ts 类型声明文件
+    "declarationMap": true,                // 为 .d.ts 也生成 source map
+    "isolatedModules": true,               // 确保每个文件都能被独立转译（打包工具要求）
+    "verbatimModuleSyntax": true,          // 强制保留 import/export 语法，不转换
+
+    // ========== 其他 ==========
+    "jsx": "preserve"                      // 保留 JSX 语法不转换，由后续工具（Vite/Vue）处理
   },
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "*.config.ts"]      // 排除这些目录，不参与编译
 }

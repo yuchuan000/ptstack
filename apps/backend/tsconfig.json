@@ -1,8 +1,7 @@
 {
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-        "types": ["node"],
-        "lib": ["ESNext"],
-        "outDir": "dist"
-    },
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ESNext"],
+  }
 }

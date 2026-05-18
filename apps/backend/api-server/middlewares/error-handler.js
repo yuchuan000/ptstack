@@ -1,17 +1,17 @@
 // middlewares/error-handler.js
 
-export default (err, req, res, next) => {
+export default (err, res) => {
   // set locals, only providing error in development
-  res.locals.message = err.message
-  res.locals.error = req.app.get('env') === 'development' ? err : {}
+  res.locals.message = err.message;
+  res.locals.error = req.app.get("env") === "development" ? err : {};
 
   // render the error page
-  res.status(err.status || 500)
+  res.status(err.status || 500);
 
   // if you want to use json, you can use res.json instead of res.render
   // res.json({
   //   status: false,
   //   message: err.message
   // })
-  res.render('error')
-}
+  res.render("error");
+};
