@@ -15,13 +15,22 @@
     "lint:spellcheck": "cspell lint \"(packages|apps)/**/*.{js,ts,mjs,cjs,json,css,less,scss,vue,html,md}\"",
     "commit": "git-cz",
     "prepare": "husky",
-    "ts:check": "tsc --noEmit"
+    "ts:check": "tsc --noEmit",
+    "tsc:admin": "pnpm -F @ptstack/web-admin exec vue-tsc --noEmit",
+    "tsc:client": "pnpm -F @ptstack/web-client exec nuxi typecheck",
+    "tsc:server": "pnpm -F @ptstack/api-server exec tsc --noEmit",
+    "dev": "concurrently -n server,admin,client -c yellow,green,blue \"pnpm -F @ptstack/api-server dev\" \"pnpm -F @ptstack/web-admin dev\" \"pnpm -F @ptstack/web-client dev\"",
+    "dev:server": "pnpm -F @ptstack/api-server dev",
+    "dev:admin": "pnpm -F @ptstack/web-admin dev",
+    "dev:client": "pnpm -F @ptstack/web-client dev",
+    "dev:frontend": "concurrently -n admin,client -c green,blue \"pnpm -F @ptstack/web-admin dev\" \"pnpm -F @ptstack/web-client dev\""
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.1",
     "@commitlint/config-conventional": "^21.0.1",
     "@types/node": "catalog:",
     "commitizen": "^4.3.1",
+    "concurrently": "^9.2.1",
     "cspell": "^10.0.0",
     "cz-git": "^1.13.1",
     "husky": "^9.1.7",

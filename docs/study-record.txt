@@ -1,3 +1,15 @@
+
+待做：完成
+1.将后端的nodemon替换成tsx（nodemon + ts-node）
+2.配置一键启动所有项目的命令 concurrently
+3.关于"packageManager": "pnpm@11.1.1"
+4.修改了apps\frontend\web-admin\env.d.ts
+5.改用"tsc:admin": "pnpm -F @ptstack/web-admin exec vue-tsc --noEmit",这种写法，但是其他包检查不到了，可以再给别的仓库写单独脚本或者排除vue的仓库
+6.提交代码执行钩子，里面的代码修复好像不会自动提交
+知识点：
+1.查看子仓库pnpm list -r --depth=-1
+====================================
+待做：
 1. 文件布局
 2. tsconfig
 3. oxc
