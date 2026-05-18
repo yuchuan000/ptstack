@@ -1,2 +1,1 @@
-const duyiab = "duyi";
-console.log(duyiab);
+console.log("hello world");

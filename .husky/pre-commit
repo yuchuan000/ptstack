@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-pnpm ts:check
-pnpm lint
-pnpm fmt
-pnpm lint:spellcheck
+pnpm ts:check # 检查类型
+pnpm lint # 检查代码质量 -- 不修复
+pnpm fmt # 格式化代码 -- 自动修复
+pnpm lint:spellcheck # 检查拼写错误

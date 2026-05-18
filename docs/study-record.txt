@@ -1,0 +1,17 @@
+1. 文件布局
+2. tsconfig
+3. oxc
+4. 后端clwy接口 完成
+5.  25：48（https://www.bilibili.com/video/BV1uinuzGEMK/?spm_id_from=333.337.search-card.all.click&vd_source=0a2d366696f87e241adc64419bf12cab）
+6. 拼写检查：安装cspell包，配置cspell.json，新增自定义字典，配置包命令
+7. commitizen：安装@commitlint/cli @commitlint/config-coonventional commitizen cz-git，前两个是必须的，一个核心库，一个配置模板，后两个是交互包，一个原生交互包，一个中文适配包，然后配置commitlint.config.js，配置packages.json脚本同时指定路径
+8. husky：安装husky包，初始化，配置pre-commit
+9. lint-staged  oxc系列不需要，过于繁琐
+
+
+
+知识点-速记：
+1.pnpm有生命周期，执行pnpm i会自动执行prepare等命令
+2.cz-git会自动执行precommit命令，然后出现交互
+3.pnpm-workspace.yaml配置子仓库时注意层级问题
+4.可以在pnpm-workspace.yaml中新增catalog配置某包的统一版本
