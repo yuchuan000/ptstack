@@ -11,9 +11,6 @@
     "skipLibCheck": true, // 跳过 .d.ts 声明文件的类型检查，加快编译
 
     // ========== 通用输出 ==========
-    "sourceMap": true, // 生成 .map 文件，方便调试时映射回源码
-    "declaration": true, // 生成 .d.ts 类型声明文件
-    "declarationMap": true, // 为 .d.ts 也生成 source map
     "isolatedModules": true, // 确保每个文件都能被独立转译（打包工具要求）
     "verbatimModuleSyntax": true, // 强制保留 import/export 语法，不转换
 

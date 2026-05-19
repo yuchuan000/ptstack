@@ -1,4 +1,13 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["node_modules", "dist", "public", ".local", "pnpm-lock.yaml"]
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "public",
+    ".local",
+    "pnpm-lock.yaml"
+  ],
+  "printWidth": 80,
+  "semi": false,
+  "singleQuote": true
 }
