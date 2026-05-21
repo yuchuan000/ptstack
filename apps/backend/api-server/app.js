@@ -7,7 +7,7 @@ import logger from 'morgan'
 import 'dotenv/config'
 import createError from 'http-errors'
 import errorHandler from './middlewares/error-handler.js'
-import routes from './config/routes.js'
+import routes from './src/routes.ts'
 
 const app = express()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
