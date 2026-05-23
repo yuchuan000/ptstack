@@ -23,6 +23,13 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@use "element-plus/theme-chalk/src/common/var.scss" as *;`,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -1,0 +1,29 @@
+@use 'tailwindcss';
+@use 'element-plus/dist/index.css';
+
+/* 全局隐藏所有滚动条，但保留滚动功能 */
+* {
+  /* Chrome / Edge / Safari */
+  ::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  /* Firefox */
+  scrollbar-width: none !important;
+
+  /* IE / Edge */
+  -ms-overflow-style: none !important;
+}
+
+/* 额外确保 html body 也隐藏 */
+html,
+body {
+  overflow: auto;
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
