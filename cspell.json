@@ -18,6 +18,7 @@
     "**/vendor/**",
     "**/public/**",
     "**/static/**",
+    "**/generated/**",
     "**/out/**",
     "**/tmp/**",
     "**/*.d.ts",

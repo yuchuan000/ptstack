@@ -40,3 +40,6 @@ coverage/
 *.js.map
 *.d.ts.map
 *.map
+
+# turborepo
+.turbo

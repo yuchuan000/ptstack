@@ -5,8 +5,8 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import logger from 'morgan'
 import 'dotenv/config'
-import createError from 'http-errors'
-import errorHandler from './middlewares/error-handler.js'
+import { HttpError } from './utils/HttpError.ts'
+import errorHandler from './middlewares/error-handler.ts'
 import routes from './src/routes.ts'
 
 const app = express()
@@ -28,7 +28,7 @@ app.use(routes)
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
-  next(createError(404))
+  next(HttpError.notFound())
 })
 
 // error handler

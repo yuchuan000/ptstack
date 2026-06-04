@@ -3,3 +3,8 @@ yuchuan
 ptstack
 Eleme
 openeds
+postgresql
+commitizen
+oxfmt
+oxlint
+nuxi

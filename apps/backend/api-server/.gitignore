@@ -55,13 +55,13 @@ typings/
 .yarn-integrity
 
 # dotenv environment variables file
-.env
+.env.before
 
 # next.js build output
 .next
 
 # Ignore environment files.
-/.env
+/.env.before
 
 # Ignore editor files.
 /.idea
@@ -73,3 +73,5 @@ Thumbs.db
 
 # Ignore Docker data.
 /data
+
+/generated/prisma

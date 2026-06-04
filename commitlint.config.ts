@@ -56,6 +56,10 @@ export default defineConfig({
         value: 'utils',
         name: 'utils: 工具项目',
       },
+      {
+        value: 'types',
+        name: 'types: 类型项目',
+      },
     ],
     issuePrefixes: [
       { value: 'close', name: 'close:   标记 Issue 已关闭' },

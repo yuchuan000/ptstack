@@ -1,75 +1,178 @@
-<script setup lang="ts" generic="T">
+<script setup lang="ts">
+///////////////////////组件接收参数与事件定义/////////////////////////////
 // 列配置
+import { computed, ref } from 'vue'
+
 interface TableColumns {
   prop: string
   label: string
   isImage?: boolean
-  buttons?: Array<{
-    label: string
-    show: boolean
-  }>
-}
-
-// 表格配置
-interface TableConfig<T> {
-  tableColumns: TableColumns[]
-  tableData: Array<T>
 }
 
 // 接收参数
 const props = defineProps<{
-  tableConfig: TableConfig<T>
+  tableColumns: TableColumns[]
+  tableData: any[]
+  currentPage: number
+  pageSize: number
+  total: number
+  loading: boolean
+  showDeleteBtn: boolean
+  showRestoreBtn: boolean
 }>()
-
 // 响应事件
-defineEmits(['buttonClick'])
-// const selectable = (row) => {
-//   console.log(row)
-//   return ![1, 2].includes(row.id)
-// }
+const emits = defineEmits([
+  'edit',
+  'delete',
+  'restore',
+  'selectionChange',
+  'pageChange',
+])
+/////////////////////////数据内部化处理///////////////////////////////
+const currentPageInner = computed({
+  get: () => props.currentPage,
+  set: (newValue) =>
+    emits('pageChange', { currentPage: newValue, pageSize: props.pageSize }),
+})
+
+const pageSizeInner = computed({
+  get: () => props.pageSize,
+  set: (newValue) =>
+    emits('pageChange', { currentPage: props.currentPage, pageSize: newValue }),
+})
+// 确认操作弹窗
+const dialogVisible = ref(false)
+const confirmText = ref('确认删除')
+const confirmMessage = ref('确认删除吗？')
+const confirmButtonType = ref<'danger' | 'success'>('danger')
+const action = ref<'delete' | 'restore'>('delete')
+const actionTitle = ref('删除操作')
+const currentRowData = ref({})
+// 删除按钮/恢复按钮点击事件
+const deleteClick = (rowData: any) => {
+  currentRowData.value = rowData
+  confirmText.value = '确认删除'
+  confirmMessage.value = `确认删除该条数据吗？ID=${rowData.id}`
+  actionTitle.value = '删除操作'
+  action.value = 'delete'
+  confirmButtonType.value = 'danger'
+  dialogVisible.value = true
+}
+const restoreClick = (rowData: any) => {
+  currentRowData.value = rowData
+  confirmText.value = '确认恢复'
+  confirmMessage.value = `确认恢复该条数据吗？ID=${rowData.id}`
+  actionTitle.value = '恢复操作'
+  action.value = 'restore'
+  confirmButtonType.value = 'success'
+  dialogVisible.value = true
+}
+// 确认执行事件
+const confirm = () => {
+  dialogVisible.value = false
+  emits(action.value, { data: currentRowData.value })
+}
 </script>
 
 <template>
-  <el-table
-    :data="props.tableConfig.tableData"
-    style="width: 100%"
-    height="100%"
-  >
-    <!--    <el-table-column type="selection" :selectable="selectable" width="55" />-->
-    <el-table-column
-      v-for="item in props.tableConfig.tableColumns"
-      :key="item.prop"
-      :prop="item.prop"
-      :label="item.label"
-    >
-      <template #default="scope">
-        <el-image
-          v-if="item.isImage"
-          style="width: 3rem; height: 3rem"
-          :src="scope.row.icon"
-          fit="cover"
-          lazy
-        />
-        <el-button-group v-if="item.buttons">
-          <span v-for="button in item.buttons">
-            <el-button
-              text
-              size="small"
-              v-if="button.show"
-              :key="button.label"
-              @click="
-                $emit('buttonClick', {
-                  column: scope.column.rawColumnKey,
-                  button: button.label,
-                })
-              "
-              >{{ button.label }}</el-button
-            >
-          </span>
-        </el-button-group>
-      </template>
-    </el-table-column>
-  </el-table>
+  <div class="root">
+    <div class="table-list">
+      <el-table
+        v-loading="props.loading"
+        :data="props.tableData"
+        style="width: 100%"
+        height="100%"
+        @selection-change="
+          (selectionData: any) => $emit('selectionChange', { selectionData })
+        "
+      >
+        <el-table-column type="selection" width="55" />
+        <el-table-column
+          v-for="item in props.tableColumns"
+          :key="item.prop"
+          :prop="item.prop"
+          :label="item.label"
+        >
+          <template #default="scope">
+            <el-image
+              v-if="item.isImage"
+              style="width: 3rem; height: 3rem"
+              :src="scope.row.icon"
+              fit="cover"
+              lazy
+            />
+          </template>
+        </el-table-column>
+        <!--  固定操作按钮  -->
+        <el-table-column label="操作">
+          <template #default="scope">
+            <el-button-group>
+              <el-button
+                text
+                size="small"
+                @click="$emit('edit', { data: scope.row })"
+              >
+                编辑
+              </el-button>
+              <el-button
+                text
+                size="small"
+                v-show="props.showDeleteBtn"
+                @click="deleteClick(scope.row)"
+              >
+                删除
+              </el-button>
+              <el-button
+                text
+                size="small"
+                v-show="props.showRestoreBtn"
+                @click="restoreClick(scope.row)"
+              >
+                恢复
+              </el-button>
+            </el-button-group>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    <div class="pagination">
+      <el-pagination
+        v-model:current-page="currentPageInner"
+        v-model:page-size="pageSizeInner"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="props.total"
+      />
+    </div>
+    <div class="dialog">
+      <el-dialog v-model="dialogVisible" :title="actionTitle" width="500">
+        <span>{{ confirmMessage }}</span>
+        <template #footer>
+          <div class="dialog-footer">
+            <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button :type="confirmButtonType" @click="confirm">
+              {{ confirmText }}
+            </el-button>
+          </div>
+        </template>
+      </el-dialog>
+    </div>
+  </div>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.root {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.table-list {
+  flex: 1;
+  overflow: scroll;
+}
+.pagination {
+  display: flex;
+  justify-content: right;
+  padding: 2rem 0;
+}
+</style>

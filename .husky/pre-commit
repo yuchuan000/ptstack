@@ -7,3 +7,4 @@ pnpm tsc:client # 检查 client 项目的类型
 pnpm tsc:server # 检查 server 项目的类型
 pnpm tsc:components # 检查 components 项目的类型
 pnpm tsc:utils # 检查 utils 项目的类型
+pnpm tsc:types # 检查 types 项目的类型

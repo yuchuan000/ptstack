@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 
-export const authAdmin = (username: string, password: string) => {
+export const loginService = (username: string, password: string) => {
   const truePassword = 'yuchuan' + dayjs().format('HHmm')
   if (username === 'yuchuan' && password === truePassword) {
     return {

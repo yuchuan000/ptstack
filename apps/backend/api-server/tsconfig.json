@@ -1,6 +1,10 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "target": "ES2023",
+    "esModuleInterop": true,
+    "ignoreDeprecations": "6.0"
   }
 }
