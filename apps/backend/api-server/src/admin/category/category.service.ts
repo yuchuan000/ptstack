@@ -10,7 +10,7 @@ export const getListService = async (query: category.GetListQuery) => {
   // 状态
   const status =
     Number.isNaN(query.status) || query.status == null ? 2 : query.status
-  const condition = {
+  const commonCondition = {
     where: {
       deletedAt: query.isDeleted ? { not: null } : null, // 1：查非空，即已删除 其他情况：空，即未删除
       ...(status === 2 ? {} : { status }),
@@ -18,12 +18,15 @@ export const getListService = async (query: category.GetListQuery) => {
     orderBy: {
       [query.sortField || 'sort']: query.sortOrder || 'desc',
     },
+  }
+  const condition = {
+    ...commonCondition,
     skip: (page - 1) * pageSize,
     take: pageSize,
   }
   const [list, total] = await Promise.all([
     prisma.category.findMany(condition),
-    prisma.category.count(condition),
+    prisma.category.count(commonCondition),
   ])
   const pagination = {
     page,

@@ -1,19 +1,21 @@
 <script setup lang="ts">
 ///////////////////////组件接收参数与事件定义/////////////////////////////
 // 列配置
-import { computed, ref } from 'vue'
+import { computed, type Ref, ref } from 'vue'
 
-interface TableColumns {
+export interface TableColumns {
+  // prop既用于绑定数据，也作为插槽名
   prop: string
   label: string
   isImage?: boolean
+  slot?: boolean
 }
 
 // 接收参数
 const props = defineProps<{
   tableColumns: TableColumns[]
   tableData: any[]
-  currentPage: number
+  page: number
   pageSize: number
   total: number
   loading: boolean
@@ -29,16 +31,16 @@ const emits = defineEmits([
   'pageChange',
 ])
 /////////////////////////数据内部化处理///////////////////////////////
-const currentPageInner = computed({
-  get: () => props.currentPage,
+const pageInner = computed({
+  get: () => props.page,
   set: (newValue) =>
-    emits('pageChange', { currentPage: newValue, pageSize: props.pageSize }),
+    emits('pageChange', { page: newValue, pageSize: props.pageSize }),
 })
 
 const pageSizeInner = computed({
   get: () => props.pageSize,
   set: (newValue) =>
-    emits('pageChange', { currentPage: props.currentPage, pageSize: newValue }),
+    emits('pageChange', { page: props.page, pageSize: newValue }),
 })
 // 确认操作弹窗
 const dialogVisible = ref(false)
@@ -70,7 +72,14 @@ const restoreClick = (rowData: any) => {
 // 确认执行事件
 const confirm = () => {
   dialogVisible.value = false
-  emits(action.value, { data: currentRowData.value })
+  emits(action.value, { ...currentRowData.value })
+}
+// 选中更新事件
+const selectionChange = (data: any[]) => {
+  const newData = data.map((item: any[]) => {
+    return { ...item }
+  })
+  emits('selectionChange', [...newData])
 }
 </script>
 
@@ -83,7 +92,7 @@ const confirm = () => {
         style="width: 100%"
         height="100%"
         @selection-change="
-          (selectionData: any) => $emit('selectionChange', { selectionData })
+          (selectionData: any) => selectionChange(selectionData)
         "
       >
         <el-table-column type="selection" width="55" />
@@ -100,7 +109,16 @@ const confirm = () => {
               :src="scope.row.icon"
               fit="cover"
               lazy
-            />
+              :preview-src-list="[scope.row.icon]"
+              preview-teleported
+            >
+              <template #placeholder>
+                <el-avatar shape="square" :size="50">{{
+                  scope.row.name[0]
+                }}</el-avatar>
+              </template>
+            </el-image>
+            <slot v-if="item.slot" :row="scope.row" :name="item.prop" />
           </template>
         </el-table-column>
         <!--  固定操作按钮  -->
@@ -110,7 +128,7 @@ const confirm = () => {
               <el-button
                 text
                 size="small"
-                @click="$emit('edit', { data: scope.row })"
+                @click="$emit('edit', { ...scope.row })"
               >
                 编辑
               </el-button>
@@ -137,7 +155,7 @@ const confirm = () => {
     </div>
     <div class="pagination">
       <el-pagination
-        v-model:current-page="currentPageInner"
+        v-model:current-page="pageInner"
         v-model:page-size="pageSizeInner"
         layout="total, sizes, prev, pager, next, jumper"
         :total="props.total"

@@ -4,10 +4,10 @@ import { Plus } from '@element-plus/icons-vue'
 ///////////////////////组件接收参数与事件定义/////////////////////////////
 interface FormData {
   name: string
-  icon: string
-  description: string
-  status: number
-  sort: number
+  icon?: string | null
+  description?: string | null
+  status?: number
+  sort?: number
 }
 const props = defineProps<{
   dialogVisible: boolean
@@ -18,7 +18,7 @@ const props = defineProps<{
 }>()
 const emits = defineEmits(['save', 'update:dialogVisible'])
 // 干净数据
-const initialValues = {
+const initialValues: FormData = {
   name: '',
   icon: '',
   description: '',
@@ -37,11 +37,17 @@ watch(
   },
   {
     immediate: true, // 第一次传数据就执行
+    deep: true,
   },
 )
 // 弹窗关闭处理
 const cancel = () => {
   emits('update:dialogVisible', false)
+}
+// 弹窗保存处理
+const save = () => {
+  emits('save', { ...formDataInner.value })
+  formDataInner.value = { ...initialValues }
 }
 /////////////////////////上传图片处理///////////////////////////////
 import type { UploadProps } from 'element-plus'
@@ -101,10 +107,12 @@ const statusOptions = [
           :on-success="handleAvatarSuccess"
           :before-upload="beforeAvatarUpload"
         >
-          <img
+          <el-image
             alt="图标"
+            style="width: 5rem; height: 5rem"
             v-if="formDataInner.icon"
             :src="formDataInner.icon"
+            fit="cover"
             class="avatar"
           />
           <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
@@ -137,15 +145,13 @@ const statusOptions = [
       </el-form-item>
       <!--  优先级    -->
       <el-form-item label="优先级">
-        <el-input-number v-model="formDataInner.sort" :min="1" :max="99" />
+        <el-input-number v-model="formDataInner.sort" :min="0" :max="99" />
       </el-form-item>
     </el-form>
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="cancel">取消</el-button>
-        <el-button type="primary" @click="$emit('save', formDataInner)">
-          保存
-        </el-button>
+        <el-button type="primary" @click="save"> 保存 </el-button>
       </div>
     </template>
   </el-dialog>

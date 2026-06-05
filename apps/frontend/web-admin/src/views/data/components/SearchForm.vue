@@ -125,7 +125,7 @@ const hasMarginTop = (index: number) => {
         <!--   操作栏   -->
         <el-col class="operation-column" :span="operationLength">
           <el-form-item>
-            <el-button type="primary" @click="$emit('query', { formData })"
+            <el-button type="primary" @click="$emit('query', { ...formData })"
               >查询</el-button
             >
             <el-button @click="reset">重置</el-button>

@@ -14,3 +14,5 @@ export const CategorySchema = z.object({
   updatedAt: commonField.updatedAt,
   deletedAt: commonField.deletedAt,
 })
+
+export type CategoryDataItem = z.infer<typeof CategorySchema>
