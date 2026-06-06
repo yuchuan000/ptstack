@@ -1,4 +1,13 @@
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
+// 声明自定义参数
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    custom?: {
+      noMessage?: boolean
+    }
+  }
+}
 
 export const request = axios.create({
   baseURL: 'http://127.0.0.1:3000',
@@ -23,13 +32,15 @@ request.interceptors.response.use(
   function (response) {
     // 2xx 范围内的状态码都会触发该函数。
     // 对响应数据做点什么
-    console.log('成功响应')
+    if (!response.config.custom?.noMessage) {
+      ElMessage.success(response.data.message)
+    }
     return response
   },
   function (error) {
     // 超出 2xx 范围的状态码都会触发该函数。
     // 对响应错误做点什么
-    console.log('失败响应')
+    ElMessage.error(error.response.data.message)
     return Promise.reject(error)
   },
 )

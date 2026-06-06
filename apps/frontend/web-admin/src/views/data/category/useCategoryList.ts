@@ -1,4 +1,4 @@
-import { type Ref, ref } from 'vue'
+import { computed, type Ref, ref } from 'vue'
 import * as request from './request.ts'
 // import type { requestCategorySchemas as requestCategory, returnCategorySchemas as returnCategory } from '@ptstack/types'
 import type {
@@ -237,8 +237,8 @@ export function useCategoryList() {
   // </editor-fold>
 
   // <editor-fold> ==========新增/编辑弹窗==========
-  const DataDialog_showDialog = ref(false)
-  const DataDialog_title = ref('新增分类')
+  // ====不导出的内部数据====
+  // 初始表单静态数据
   const DataDialog_initialData: requestCategory.AddBody = {
     name: '',
     icon: null,
@@ -246,15 +246,23 @@ export function useCategoryList() {
     status: 1,
     sort: 0,
   }
+  // 操作标识（区分新增和编辑功能）
   const DataDialog_operationSign = ref<'add' | 'edit'>('add')
+  // 操作id（用于编辑功能）
   const DataDialog_currentId = ref<number>()
+  // ====导出的数据====
+  // 弹窗控制器
+  const DataDialog_showDialog = ref(false)
+  // 弹窗标题
+  const DataDialog_title = computed(() => {
+    return DataDialog_operationSign.value === 'add' ? '新增分类' : '编辑分类'
+  })
+  // 弹窗表单数据
   const DataDialog_data: Ref<requestCategory.AddBody> = ref({
     ...DataDialog_initialData,
   })
   // 保存事件
   const DataDialog_handleSave = async (data: requestCategory.AddBody) => {
-    console.log(data)
-
     if (DataDialog_operationSign.value === 'add') {
       // 新增数据
       const res = await request.addService(data)

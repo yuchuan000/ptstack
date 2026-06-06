@@ -113,7 +113,7 @@ const selectionChange = (data: any[]) => {
               preview-teleported
             >
               <template #placeholder>
-                <el-avatar shape="square" :size="50">{{
+                <el-avatar shape="square" :size="48">{{
                   scope.row.name[0]
                 }}</el-avatar>
               </template>
@@ -192,5 +192,9 @@ const selectionChange = (data: any[]) => {
   display: flex;
   justify-content: right;
   padding: 2rem 0;
+}
+.el-avatar {
+  background-color: var(--el-color-primary);
+  font-weight: bold;
 }
 </style>

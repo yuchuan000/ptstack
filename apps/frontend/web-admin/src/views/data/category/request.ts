@@ -10,6 +10,9 @@ export const getListService = async (
 ): Promise<returnCategory.List> => {
   const { data } = await request.get('/admin/categories', {
     params: query,
+    custom: {
+      noMessage: true,
+    },
   })
   return data
 }

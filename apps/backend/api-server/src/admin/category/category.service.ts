@@ -15,12 +15,12 @@ export const getListService = async (query: category.GetListQuery) => {
       deletedAt: query.isDeleted ? { not: null } : null, // 1：查非空，即已删除 其他情况：空，即未删除
       ...(status === 2 ? {} : { status }),
     },
-    orderBy: {
-      [query.sortField || 'sort']: query.sortOrder || 'desc',
-    },
   }
   const condition = {
     ...commonCondition,
+    orderBy: {
+      [query.sortField || 'sort']: query.sortOrder || 'desc',
+    },
     skip: (page - 1) * pageSize,
     take: pageSize,
   }
