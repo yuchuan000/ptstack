@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
+import {Category} from '@ptstack/types/src/schema/common'
 ///////////////////////组件接收参数与事件定义/////////////////////////////
 interface FormData {
   name: string
   icon?: string | null
   description?: string | null
-  status?: number
-  sort?: number
+  status?: 'PRIVATE'|'PUBLIC'
+  priority?: number
 }
 const props = defineProps<{
   dialogVisible: boolean
@@ -22,8 +23,8 @@ const initialValues: FormData = {
   name: '',
   icon: '',
   description: '',
-  status: 1,
-  sort: 0,
+  status: 'PUBLIC',
+  priority: 0,
 }
 /////////////////////////数据内部化处理///////////////////////////////
 // 内部表单
@@ -73,13 +74,17 @@ const handleAvatarSuccess: UploadProps['onSuccess'] = (
   formDataInner.value.icon = URL.createObjectURL(uploadFile.raw!)
 }
 /////////////////////////状态选择列表///////////////////////////////
-const statusOptions = [
+interface OptionsValue {
+  label: string,
+  value: Category.Field.StatusField
+}
+const statusOptions: OptionsValue[] = [
   {
-    value: 0,
+    value: 'PRIVATE',
     label: '私密',
   },
   {
-    value: 1,
+    value: 'PUBLIC',
     label: '正常',
   },
 ]
@@ -145,7 +150,7 @@ const statusOptions = [
       </el-form-item>
       <!--  优先级    -->
       <el-form-item label="优先级">
-        <el-input-number v-model="formDataInner.sort" :min="0" :max="99" />
+        <el-input-number v-model="formDataInner.priority" :min="0" :max="99" />
       </el-form-item>
     </el-form>
     <template #footer>

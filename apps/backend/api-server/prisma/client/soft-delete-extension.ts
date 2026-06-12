@@ -24,7 +24,10 @@ export const softDeleteExtension = Prisma.defineExtension({
       async softDelete<T>(this: T, where: Prisma.Args<T, 'update'>['where']) {
         const context = Prisma.getExtensionContext(this)
         return (context as any).update({
-          where,
+          where: {
+            deletedAt: null,
+            ...where,
+          },
           data: {
             deletedAt: new Date(),
           },
@@ -36,7 +39,10 @@ export const softDeleteExtension = Prisma.defineExtension({
       ) {
         const context = Prisma.getExtensionContext(this)
         return (context as any).updateMany({
-          where,
+          where: {
+            deletedAt: null, // 恢复执行的更新需要带上删除标识为空的条件，因为只软删除未软删除的数据
+            ...where,
+          },
           data: {
             deletedAt: new Date(),
           },

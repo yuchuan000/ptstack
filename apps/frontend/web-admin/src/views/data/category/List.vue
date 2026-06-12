@@ -72,53 +72,53 @@ DataTable_getData()
     >
       <template #status="{ row }">
         <el-tag
-          v-show="row.status === 1"
+          v-show="row.status === 'PUBLIC'"
           type="primary"
           :disable-transitions="true"
           >正常</el-tag
         >
         <el-tag
-          v-show="row.status === 0"
+          v-show="row.status === 'PRIVATE'"
           type="info"
           :disable-transitions="true"
           >私密</el-tag
         >
       </template>
-      <template #sort="{ row }">
+      <template #priority="{ row }">
         <el-tag
-          v-if="row.sort >= 75"
+          v-if="row.priority >= 75"
           type="danger"
           effect="plain"
           :disable-transitions="true"
-          >{{ row.sort }}</el-tag
+          >{{ row.priority }}</el-tag
         >
         <el-tag
-          v-else-if="row.sort >= 50"
+          v-else-if="row.priority >= 50"
           type="warning"
           effect="plain"
           :disable-transitions="true"
-          >{{ row.sort }}</el-tag
+          >{{ row.priority }}</el-tag
         >
         <el-tag
-          v-else-if="row.sort >= 25"
+          v-else-if="row.priority >= 25"
           type="success"
           effect="plain"
           :disable-transitions="true"
-          >{{ row.sort }}</el-tag
+          >{{ row.priority }}</el-tag
         >
         <el-tag
-          v-else-if="row.sort > 0"
+          v-else-if="row.priority > 0"
           type="primary"
           effect="plain"
           :disable-transitions="true"
-          >{{ row.sort }}</el-tag
+          >{{ row.priority }}</el-tag
         >
         <el-tag
-          v-else-if="row.sort === 0"
+          v-else-if="row.priority === 0"
           type="info"
           effect="plain"
           :disable-transitions="true"
-          >{{ row.sort }}</el-tag
+          >{{ row.priority }}</el-tag
         >
       </template>
       <template #createdAt="{ row }">

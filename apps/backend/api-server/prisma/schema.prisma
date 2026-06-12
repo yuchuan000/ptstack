@@ -12,6 +12,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum BaseStatus {
+  private @map("private")
+  public  @map("public")
+}
+
 model Category {
   id          Int       @id @default(autoincrement())
   /// 分类名称，唯一，最长64字符
@@ -20,16 +25,56 @@ model Category {
   icon        String?   @db.VarChar(255)
   /// 描述，长文本，可为空
   description String?   @db.Text
-  /// 状态：0 私密 / 1 正常，默认值 1
-  status      Int       @default(1)
-  /// 排序优先级，数值越大排序越靠前，默认值 0
-  sort        Int       @default(0)
+  /// 状态
+  status      BaseStatus     @default(public)
+  /// 排序优先级，数值越大排序越靠前，默认值 0，范围0-99
+  priority        Int       @db.SmallInt @default(0)
+  /// 创建时间
   createdAt   DateTime  @default(now()) @map("created_at")
+  /// 更新时间
   updatedAt   DateTime  @updatedAt @map("updated_at")
   /// 软删除时间，非空表示已删除
   deletedAt   DateTime? @map("deleted_at")
-  // 联合索引，优化 “status = 1 AND deletedAt IS NULL” 这类常用查询
-  @@index([status, deletedAt])
+  // 索引
+  @@index([deletedAt])
+  @@index([deletedAt, status])
   // 映射到数据库中的实际表名
   @@map("categories")
+}
+
+enum AttachmentType {
+  image
+  document
+  video
+  audio
+  other
+}
+
+model Attachment {
+  id          Int       @id @default(autoincrement())
+  /// 附件名称，最长64字符
+  name        String    @db.VarChar(64)
+  /// 类型
+  type        AttachmentType
+  /// 文件大小（单位：字节）
+  size        BigInt    @db.BigInt
+  /// 文件URL
+  url         String    @db.Text
+  /// 描述，长文本，可为空
+  description String?   @db.Text
+  /// 下载量，默认值0
+  downloads   Int       @default(0)
+  /// 状态
+  status      BaseStatus @default(public)
+  /// 创建时间
+  createdAt   DateTime  @default(now()) @map("created_at")
+  /// 更新时间
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  /// 软删除时间，非空表示已删除
+  deletedAt   DateTime? @map("deleted_at")
+  // 联合索引
+  @@index([deletedAt])
+  @@index([deletedAt, status])
+  // 映射到数据库中的实际表名
+  @@map("attachments")
 }

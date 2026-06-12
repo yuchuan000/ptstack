@@ -52,9 +52,13 @@ export const failure = (res: Response, params: Params) => {
     } else if (params.error instanceof Prisma.PrismaClientValidationError) {
       code = 400
       message = '参数错误'
+    } else if (params.error instanceof Prisma.PrismaClientUnknownRequestError) {
+      code = 500
+      message = '数据库操作未知错误'
+      console.log(params.error)
+      console.log('请检查Prisma的generate文件')
     }
   }
-  console.log(params.error)
   res.status(code).json({
     status: false,
     message,

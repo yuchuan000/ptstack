@@ -1,10 +1,7 @@
 import { computed, type Ref, ref } from 'vue'
 import * as request from './request.ts'
 // import type { requestCategorySchemas as requestCategory, returnCategorySchemas as returnCategory } from '@ptstack/types'
-import type {
-  requestCategorySchemas as requestCategory,
-  databaseSchemas as Category,
-} from '@ptstack/types'
+import type {Category} from '@ptstack/types/src/schema/common'
 import type { TableColumns } from '../components/DataTable.vue'
 import dayjs from 'dayjs'
 // 命名规范：
@@ -24,15 +21,15 @@ export function useCategoryList() {
         placeholder: '请选择状态',
         options: [
           {
-            value: 0,
+            value: 'PRIVATE',
             label: '私密',
           },
           {
-            value: 1,
+            value: 'PUBLIC',
             label: '正常',
           },
           {
-            value: 2,
+            value: 'ALL',
             label: '全部',
           },
         ],
@@ -59,12 +56,12 @@ export function useCategoryList() {
   ])
   // 表单初始数据
   const SearchForm_initialData = ref({
-    status: 2,
+    status: 'ALL',
     isDeleted: 0,
   })
   // 查询事件
   const SearchForm_handleQuery = async (
-    query: requestCategory.GetListQuery,
+    query: Category.Request.GetListQuery,
   ) => {
     // 更新数据
     await DataTable_getData(query)
@@ -124,7 +121,7 @@ export function useCategoryList() {
       slot: true,
     },
     {
-      prop: 'sort',
+      prop: 'priority',
       label: '优先级',
       slot: true,
     },
@@ -146,9 +143,9 @@ export function useCategoryList() {
   const DataTable_showDeleteBtn = ref(true)
   const DataTable_showRestoreBtn = ref(false)
   // 选中的数据列表
-  const DataTable_selectionList = ref<Category.CategoryDataItem[]>([])
+  const DataTable_selectionList = ref<Category.Database.CategoryBaseMustWrite[]>([])
   // 事件处理
-  const DataTable_handleEdit = (data: Category.CategoryDataItem) => {
+  const DataTable_handleEdit = (data: Category.Database.CategoryBaseMustWrite) => {
     // 更新操作标记为编辑
     DataDialog_operationSign.value = 'edit'
     // 传递编辑的id
@@ -159,17 +156,17 @@ export function useCategoryList() {
     DataDialog_data.value.description =
       data.description ?? DataDialog_initialData.description
     DataDialog_data.value.status = data.status ?? DataDialog_initialData.status
-    DataDialog_data.value.sort = data.sort ?? DataDialog_initialData.sort
+    DataDialog_data.value.priority = data.priority ?? DataDialog_initialData.priority
     DataDialog_showDialog.value = true
   }
-  const DataTable_handleDelete = async (data: Category.CategoryDataItem) => {
+  const DataTable_handleDelete = async (data: Category.Database.CategoryBaseMustWrite) => {
     // 请求数据
     const res = await request.softDeleteService({ id: data.id })
     console.log('删除事件', res)
     // 刷新列表数据
     await DataTable_getData()
   }
-  const DataTable_handleRestore = async (data: Category.CategoryDataItem) => {
+  const DataTable_handleRestore = async (data: Category.Database.CategoryBaseMustWrite) => {
     console.log('恢复事件', data)
     // 发送请求
     await request.restoreService({ id: data.id })
@@ -177,7 +174,7 @@ export function useCategoryList() {
     await DataTable_getData({ isDeleted: 1 })
   }
   const DataTable_handleSelectionChange = (
-    data: Category.CategoryDataItem[],
+    data: Category.Database.CategoryBaseMustWrite[],
   ) => {
     console.log('选中事件', data)
     // 控制工具栏按钮
@@ -210,7 +207,7 @@ export function useCategoryList() {
   // </editor-fold>
 
   // <editor-fold> ==========数据请求==========
-  const DataTable_getData = async (params?: requestCategory.GetListQuery) => {
+  const DataTable_getData = async (params?: Category.Request.GetListQuery) => {
     // 开启加载器
     DataTable_showLoading.value = true
     // 获取表格数据
@@ -239,12 +236,12 @@ export function useCategoryList() {
   // <editor-fold> ==========新增/编辑弹窗==========
   // ====不导出的内部数据====
   // 初始表单静态数据
-  const DataDialog_initialData: requestCategory.AddBody = {
+  const DataDialog_initialData: Category.Request.AddBody = {
     name: '',
     icon: null,
     description: '',
-    status: 1,
-    sort: 0,
+    status: 'PUBLIC',
+    priority: 0,
   }
   // 操作标识（区分新增和编辑功能）
   const DataDialog_operationSign = ref<'add' | 'edit'>('add')
@@ -258,14 +255,14 @@ export function useCategoryList() {
     return DataDialog_operationSign.value === 'add' ? '新增分类' : '编辑分类'
   })
   // 弹窗表单数据
-  const DataDialog_data: Ref<requestCategory.AddBody> = ref({
+  const DataDialog_data: Ref<Category.Request.AddBody> = ref({
     ...DataDialog_initialData,
   })
   // 保存事件
-  const DataDialog_handleSave = async (data: requestCategory.AddBody) => {
+  const DataDialog_handleSave = async (data: Category.Request.AddBody | Category.Request.UpdateBody) => {
     if (DataDialog_operationSign.value === 'add') {
       // 新增数据
-      const res = await request.addService(data)
+      const res = await request.addService(data as Category.Request.AddBody)
       console.log(res)
     } else if (
       DataDialog_operationSign.value === 'edit' &&
@@ -274,7 +271,7 @@ export function useCategoryList() {
       // 更新数据
       const res = await request.updateService(
         { id: DataDialog_currentId.value },
-        data,
+        data as Category.Request.UpdateBody,
       )
       console.log(res)
     }

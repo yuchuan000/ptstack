@@ -1,5 +1,5 @@
 // import { ref } from 'vue'
-// import * as request from './request.ts'
+// import * as request from './category.request.schema.ts'
 // // import type { requestCategorySchemas as requestCategory, returnCategorySchemas as returnCategory } from '@ptstack/types'
 // import type { requestCategorySchemas as requestCategory } from '@ptstack/types'
 // // 命名规范：
